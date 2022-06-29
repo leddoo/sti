@@ -1,14 +1,12 @@
-use crate::types::*;
-
 use core::simd::*;
 
 pub use core::simd::{LaneCount, SupportedLaneCount};
 
 
-pub type B32x<const N: usize> = Mask<I32, N>;
-pub type U32x<const N: usize> = Simd<U32, N>;
-pub type I32x<const N: usize> = Simd<I32, N>;
-pub type F32x<const N: usize> = Simd<F32, N>;
+pub type B32x<const N: usize> = Mask<i32, N>;
+pub type U32x<const N: usize> = Simd<u32, N>;
+pub type I32x<const N: usize> = Simd<i32, N>;
+pub type F32x<const N: usize> = Simd<f32, N>;
 
 pub type B32x2 = B32x<2>;
 pub type U32x2 = U32x<2>;
@@ -54,18 +52,18 @@ pub trait F32Ext<const N: usize> where LaneCount<N>: SupportedLaneCount {
     unsafe fn ceilf_unck(self) -> Self;
     unsafe fn roundf_fast_unck(self) -> Self;
 
-    fn dot(self, other: Self) -> F32;
-    fn length_squared(self) -> F32;
-    fn length(self) -> F32;
+    fn dot(self, other: Self) -> f32;
+    fn length_squared(self) -> f32;
+    fn length(self) -> f32;
     fn normalized(self) -> Self;
-    fn lerpf(self, other: Self, t: F32) -> Self;
+    fn lerpf(self, other: Self, t: f32) -> Self;
 }
 
 pub trait F32x2Ext: Sized {
     fn rotated_acw(self) -> Self;
     fn rotated_cw(self) -> Self;
     fn left_normal_unck(self) -> Self;
-    fn left_normal(self, tolerance_squared: F32) -> Option<Self>;
+    fn left_normal(self, tolerance_squared: f32) -> Option<Self>;
 }
 
 pub trait V2Ext<T> where T: SimdElement {
@@ -127,7 +125,7 @@ impl<const N: usize> F32Ext<N> for F32x<N> where LaneCount<N>: SupportedLaneCoun
 
     #[inline(always)]
     unsafe fn to_i32_unck(self) -> I32x<N> {
-        self.to_int_unchecked::<I32>()
+        self.to_int_unchecked::<i32>()
     }
 
     #[inline(always)]
@@ -178,17 +176,17 @@ impl<const N: usize> F32Ext<N> for F32x<N> where LaneCount<N>: SupportedLaneCoun
     }
 
     #[inline(always)]
-    fn dot(self, other: Self) -> F32 {
+    fn dot(self, other: Self) -> f32 {
         (self * other).reduce_sum()
     }
 
     #[inline(always)]
-    fn length_squared(self) -> F32 {
+    fn length_squared(self) -> f32 {
         self.dot(self)
     }
 
     #[inline(always)]
-    fn length(self) -> F32 {
+    fn length(self) -> f32 {
         self.dot(self).sqrt()
     }
 
@@ -198,7 +196,7 @@ impl<const N: usize> F32Ext<N> for F32x<N> where LaneCount<N>: SupportedLaneCoun
     }
 
     #[inline(always)]
-    fn lerpf(self, other: Self, t: F32) -> Self {
+    fn lerpf(self, other: Self, t: f32) -> Self {
         Self::splat(1.0 - t)*self + Self::splat(t)*other
     }
 }
@@ -220,7 +218,7 @@ impl F32x2Ext for F32x<2> {
     }
 
     #[inline(always)]
-    fn left_normal(self, tolerance_squared: F32) -> Option<F32x2> {
+    fn left_normal(self, tolerance_squared: f32) -> Option<F32x2> {
         if self.length_squared() > tolerance_squared {
             return Some(self.left_normal_unck());
         }
@@ -249,22 +247,22 @@ impl<T> V4Ext<T> for Simd<T, 4> where T: SimdElement {
 impl<const N: usize> NumExt for U32x<N> where LaneCount<N>: SupportedLaneCount {
     const ZERO: Self = Self::splat(0);
     const ONE: Self  = Self::splat(1);
-    const MIN: Self  = Self::splat(U32::MIN);
-    const MAX: Self  = Self::splat(U32::MAX);
+    const MIN: Self  = Self::splat(u32::MIN);
+    const MAX: Self  = Self::splat(u32::MAX);
 }
 
 impl<const N: usize> NumExt for I32x<N> where LaneCount<N>: SupportedLaneCount {
     const ZERO: Self = Self::splat(0);
     const ONE: Self  = Self::splat(1);
-    const MIN: Self  = Self::splat(I32::MIN);
-    const MAX: Self  = Self::splat(I32::MAX);
+    const MIN: Self  = Self::splat(i32::MIN);
+    const MAX: Self  = Self::splat(i32::MAX);
 }
 
 impl<const N: usize> NumExt for F32x<N> where LaneCount<N>: SupportedLaneCount {
     const ZERO: Self = Self::splat(0.0);
     const ONE: Self  = Self::splat(1.0);
-    const MIN: Self  = Self::splat(F32::MIN);
-    const MAX: Self  = Self::splat(F32::MAX);
+    const MIN: Self  = Self::splat(f32::MIN);
+    const MAX: Self  = Self::splat(f32::MAX);
 }
 
 impl<T, const N: usize> ScalarExt<T, N> for T
