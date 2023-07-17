@@ -5,6 +5,7 @@ mod tests {
     #[test]
     fn b32x2() {
         let b = B32x2::new;
+        let f = F32x2::new;
 
         assert_eq!(b(false, false).to_array(), [false, false]);
         assert_eq!(b(false, true).to_array(),  [false, true]);
@@ -26,6 +27,16 @@ mod tests {
         assert_eq!((b(false, false) | b(true,  false)).to_array(), [true, false]);
         assert_eq!((b(false, true)  | b(false, false)).to_array(), [false, true]);
         assert_eq!((b(true,  false) | b(false, false)).to_array(), [true, false]);
+
+        assert_eq!(b(false, false).select_b32(b(false, true), b(true, false)).to_array(), [false, true]);
+        assert_eq!(b(false, true ).select_b32(b(false, true), b(true, false)).to_array(), [false, false]);
+        assert_eq!(b(true,  false).select_b32(b(false, true), b(true, false)).to_array(), [true,  true]);
+        assert_eq!(b(true,  true ).select_b32(b(false, true), b(true, false)).to_array(), [true,  false]);
+
+        assert_eq!(b(false, false).select_f32(f(1.0, 2.0), f(3.0, 4.0)).to_array(), [1.0, 2.0]);
+        assert_eq!(b(false, true ).select_f32(f(1.0, 2.0), f(3.0, 4.0)).to_array(), [1.0, 4.0]);
+        assert_eq!(b(true,  false).select_f32(f(1.0, 2.0), f(3.0, 4.0)).to_array(), [3.0, 2.0]);
+        assert_eq!(b(true,  true ).select_f32(f(1.0, 2.0), f(3.0, 4.0)).to_array(), [3.0, 4.0]);
     }
 
     #[test]
