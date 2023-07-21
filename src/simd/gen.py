@@ -40,19 +40,22 @@ pub struct {name} {{
 }}
 
 impl {name} {{
+    pub const NONE: {name} = {name}::splat(false);
+    pub const ALL:  {name} = {name}::splat(true);
+
     #[inline(always)]
-    pub fn new({v_decls}) -> Self {{
+    pub const fn new({v_decls}) -> Self {{
         {neg_vars}
         unsafe {{ transmute([{v_vars}]) }}
     }}
 
     #[inline(always)]
-    pub fn splat(v: bool) -> Self {{
+    pub const fn splat(v: bool) -> Self {{
         Self::from_array([v; {n}])
     }}
 
     #[inline(always)]
-    pub fn from_array(vs: [bool; {n}]) -> Self {{
+    pub const fn from_array(vs: [bool; {n}]) -> Self {{
         Self::new({vs_vars})
     }}
 
@@ -158,7 +161,7 @@ impl core::ops::BitOr for B32x{n} {{
 
 
 
-def basics(n, name, rep, impl, ty):
+def basics(n, name, rep, impl, ty, kzero, kone, kmin, kmax):
     v_decls = joined(n, ", ", lambda i: f"v{i}: {ty}")
     v_vars  = joined(n, ", ", lambda i: f"v{i}")
 
@@ -170,23 +173,28 @@ pub struct {name} {{
 }}
 
 impl {name} {{
+    pub const ZERO: {name} = {name}::splat({kzero});
+    pub const ONE:  {name} = {name}::splat({kone});
+    pub const MIN:  {name} = {name}::splat({kmin});
+    pub const MAX:  {name} = {name}::splat({kmax});
+
     #[inline(always)]
-    pub fn new({v_decls}) -> Self {{
+    pub const fn new({v_decls}) -> Self {{
         Self::from_array([{v_vars}])
     }}
 
     #[inline(always)]
-    pub fn splat(v: {ty}) -> Self {{
+    pub const fn splat(v: {ty}) -> Self {{
         Self::from_array([v; {n}])
     }}
 
     #[inline(always)]
-    pub fn from_array(vs: [{ty}; {n}]) -> Self {{
+    pub const fn from_array(vs: [{ty}; {n}]) -> Self {{
         unsafe {{ transmute(vs) }}
     }}
 
     #[inline(always)]
-    pub fn to_array(self) -> [{ty}; {n}] {{
+    pub const fn to_array(self) -> [{ty}; {n}] {{
         unsafe {{ transmute(self.v) }}
     }}
 }}
@@ -433,7 +441,7 @@ def i32(
     store = store or (lambda v: v)
 
     return f"""\
-{basics(n, name, rep, impl, "i32")}
+{basics(n, name, rep, impl, "i32", "0", "1", "i32::MIN", "i32::MAX")}
 
 {elements(name, "i32", n)}
 
@@ -477,7 +485,7 @@ def u32(
     store = store or (lambda v: v)
 
     return f"""\
-{basics(n, name, rep, impl, "u32")}
+{basics(n, name, rep, impl, "u32", "0", "1", "u32::MIN", "u32::MAX")}
 
 {elements(name, "u32", n)}
 
@@ -517,7 +525,7 @@ def f32(
     store = store or (lambda v: v)
 
     return f"""\
-{basics(n, name, rep, impl, "f32")}
+{basics(n, name, rep, impl, "f32", "0.0", "1.0", "f32::MIN", "f32::MAX")}
 
 {elements(name, "f32", n)}
 
@@ -535,10 +543,10 @@ impl {name} {{
 
 impl {name} {{
     #[inline(always)]
-    pub fn to_bits(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
+    pub const fn to_bits(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
 
     #[inline(always)]
-    pub fn from_bits(v: U32x{n}) -> Self {{ unsafe {{ transmute(v) }} }}
+    pub const fn from_bits(v: U32x{n}) -> Self {{ unsafe {{ transmute(v) }} }}
 }}
 
 

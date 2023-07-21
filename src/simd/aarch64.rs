@@ -8,20 +8,23 @@ pub struct B32x2 {
 }
 
 impl B32x2 {
+    pub const NONE: B32x2 = B32x2::splat(false);
+    pub const ALL:  B32x2 = B32x2::splat(true);
+
     #[inline(always)]
-    pub fn new(v0: bool, v1: bool) -> Self {
+    pub const fn new(v0: bool, v1: bool) -> Self {
         let v0 = -(v0 as i32);
         let v1 = -(v1 as i32);
         unsafe { transmute([v0, v1]) }
     }
 
     #[inline(always)]
-    pub fn splat(v: bool) -> Self {
+    pub const fn splat(v: bool) -> Self {
         Self::from_array([v; 2])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [bool; 2]) -> Self {
+    pub const fn from_array(vs: [bool; 2]) -> Self {
         Self::new(vs[0], vs[1])
     }
 
@@ -130,8 +133,11 @@ pub struct B32x4 {
 }
 
 impl B32x4 {
+    pub const NONE: B32x4 = B32x4::splat(false);
+    pub const ALL:  B32x4 = B32x4::splat(true);
+
     #[inline(always)]
-    pub fn new(v0: bool, v1: bool, v2: bool, v3: bool) -> Self {
+    pub const fn new(v0: bool, v1: bool, v2: bool, v3: bool) -> Self {
         let v0 = -(v0 as i32);
         let v1 = -(v1 as i32);
         let v2 = -(v2 as i32);
@@ -140,12 +146,12 @@ impl B32x4 {
     }
 
     #[inline(always)]
-    pub fn splat(v: bool) -> Self {
+    pub const fn splat(v: bool) -> Self {
         Self::from_array([v; 4])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [bool; 4]) -> Self {
+    pub const fn from_array(vs: [bool; 4]) -> Self {
         Self::new(vs[0], vs[1], vs[2], vs[3])
     }
 
@@ -254,23 +260,28 @@ pub struct I32x2 {
 }
 
 impl I32x2 {
+    pub const ZERO: I32x2 = I32x2::splat(0);
+    pub const ONE:  I32x2 = I32x2::splat(1);
+    pub const MIN:  I32x2 = I32x2::splat(i32::MIN);
+    pub const MAX:  I32x2 = I32x2::splat(i32::MAX);
+
     #[inline(always)]
-    pub fn new(v0: i32, v1: i32) -> Self {
+    pub const fn new(v0: i32, v1: i32) -> Self {
         Self::from_array([v0, v1])
     }
 
     #[inline(always)]
-    pub fn splat(v: i32) -> Self {
+    pub const fn splat(v: i32) -> Self {
         Self::from_array([v; 2])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [i32; 2]) -> Self {
+    pub const fn from_array(vs: [i32; 2]) -> Self {
         unsafe { transmute(vs) }
     }
 
     #[inline(always)]
-    pub fn to_array(self) -> [i32; 2] {
+    pub const fn to_array(self) -> [i32; 2] {
         unsafe { transmute(self.v) }
     }
 }
@@ -448,23 +459,28 @@ pub struct I32x4 {
 }
 
 impl I32x4 {
+    pub const ZERO: I32x4 = I32x4::splat(0);
+    pub const ONE:  I32x4 = I32x4::splat(1);
+    pub const MIN:  I32x4 = I32x4::splat(i32::MIN);
+    pub const MAX:  I32x4 = I32x4::splat(i32::MAX);
+
     #[inline(always)]
-    pub fn new(v0: i32, v1: i32, v2: i32, v3: i32) -> Self {
+    pub const fn new(v0: i32, v1: i32, v2: i32, v3: i32) -> Self {
         Self::from_array([v0, v1, v2, v3])
     }
 
     #[inline(always)]
-    pub fn splat(v: i32) -> Self {
+    pub const fn splat(v: i32) -> Self {
         Self::from_array([v; 4])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [i32; 4]) -> Self {
+    pub const fn from_array(vs: [i32; 4]) -> Self {
         unsafe { transmute(vs) }
     }
 
     #[inline(always)]
-    pub fn to_array(self) -> [i32; 4] {
+    pub const fn to_array(self) -> [i32; 4] {
         unsafe { transmute(self.v) }
     }
 }
@@ -648,23 +664,28 @@ pub struct U32x2 {
 }
 
 impl U32x2 {
+    pub const ZERO: U32x2 = U32x2::splat(0);
+    pub const ONE:  U32x2 = U32x2::splat(1);
+    pub const MIN:  U32x2 = U32x2::splat(u32::MIN);
+    pub const MAX:  U32x2 = U32x2::splat(u32::MAX);
+
     #[inline(always)]
-    pub fn new(v0: u32, v1: u32) -> Self {
+    pub const fn new(v0: u32, v1: u32) -> Self {
         Self::from_array([v0, v1])
     }
 
     #[inline(always)]
-    pub fn splat(v: u32) -> Self {
+    pub const fn splat(v: u32) -> Self {
         Self::from_array([v; 2])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [u32; 2]) -> Self {
+    pub const fn from_array(vs: [u32; 2]) -> Self {
         unsafe { transmute(vs) }
     }
 
     #[inline(always)]
-    pub fn to_array(self) -> [u32; 2] {
+    pub const fn to_array(self) -> [u32; 2] {
         unsafe { transmute(self.v) }
     }
 }
@@ -833,23 +854,28 @@ pub struct U32x4 {
 }
 
 impl U32x4 {
+    pub const ZERO: U32x4 = U32x4::splat(0);
+    pub const ONE:  U32x4 = U32x4::splat(1);
+    pub const MIN:  U32x4 = U32x4::splat(u32::MIN);
+    pub const MAX:  U32x4 = U32x4::splat(u32::MAX);
+
     #[inline(always)]
-    pub fn new(v0: u32, v1: u32, v2: u32, v3: u32) -> Self {
+    pub const fn new(v0: u32, v1: u32, v2: u32, v3: u32) -> Self {
         Self::from_array([v0, v1, v2, v3])
     }
 
     #[inline(always)]
-    pub fn splat(v: u32) -> Self {
+    pub const fn splat(v: u32) -> Self {
         Self::from_array([v; 4])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [u32; 4]) -> Self {
+    pub const fn from_array(vs: [u32; 4]) -> Self {
         unsafe { transmute(vs) }
     }
 
     #[inline(always)]
-    pub fn to_array(self) -> [u32; 4] {
+    pub const fn to_array(self) -> [u32; 4] {
         unsafe { transmute(self.v) }
     }
 }
@@ -1024,23 +1050,28 @@ pub struct F32x2 {
 }
 
 impl F32x2 {
+    pub const ZERO: F32x2 = F32x2::splat(0.0);
+    pub const ONE:  F32x2 = F32x2::splat(1.0);
+    pub const MIN:  F32x2 = F32x2::splat(f32::MIN);
+    pub const MAX:  F32x2 = F32x2::splat(f32::MAX);
+
     #[inline(always)]
-    pub fn new(v0: f32, v1: f32) -> Self {
+    pub const fn new(v0: f32, v1: f32) -> Self {
         Self::from_array([v0, v1])
     }
 
     #[inline(always)]
-    pub fn splat(v: f32) -> Self {
+    pub const fn splat(v: f32) -> Self {
         Self::from_array([v; 2])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [f32; 2]) -> Self {
+    pub const fn from_array(vs: [f32; 2]) -> Self {
         unsafe { transmute(vs) }
     }
 
     #[inline(always)]
-    pub fn to_array(self) -> [f32; 2] {
+    pub const fn to_array(self) -> [f32; 2] {
         unsafe { transmute(self.v) }
     }
 }
@@ -1093,10 +1124,10 @@ impl F32x2 {
 
 impl F32x2 {
     #[inline(always)]
-    pub fn to_bits(self) -> U32x2 { unsafe { transmute(self) } }
+    pub const fn to_bits(self) -> U32x2 { unsafe { transmute(self) } }
 
     #[inline(always)]
-    pub fn from_bits(v: U32x2) -> Self { unsafe { transmute(v) } }
+    pub const fn from_bits(v: U32x2) -> Self { unsafe { transmute(v) } }
 }
 
 
@@ -1247,23 +1278,28 @@ pub struct F32x4 {
 }
 
 impl F32x4 {
+    pub const ZERO: F32x4 = F32x4::splat(0.0);
+    pub const ONE:  F32x4 = F32x4::splat(1.0);
+    pub const MIN:  F32x4 = F32x4::splat(f32::MIN);
+    pub const MAX:  F32x4 = F32x4::splat(f32::MAX);
+
     #[inline(always)]
-    pub fn new(v0: f32, v1: f32, v2: f32, v3: f32) -> Self {
+    pub const fn new(v0: f32, v1: f32, v2: f32, v3: f32) -> Self {
         Self::from_array([v0, v1, v2, v3])
     }
 
     #[inline(always)]
-    pub fn splat(v: f32) -> Self {
+    pub const fn splat(v: f32) -> Self {
         Self::from_array([v; 4])
     }
 
     #[inline(always)]
-    pub fn from_array(vs: [f32; 4]) -> Self {
+    pub const fn from_array(vs: [f32; 4]) -> Self {
         unsafe { transmute(vs) }
     }
 
     #[inline(always)]
-    pub fn to_array(self) -> [f32; 4] {
+    pub const fn to_array(self) -> [f32; 4] {
         unsafe { transmute(self.v) }
     }
 }
@@ -1322,10 +1358,10 @@ impl F32x4 {
 
 impl F32x4 {
     #[inline(always)]
-    pub fn to_bits(self) -> U32x4 { unsafe { transmute(self) } }
+    pub const fn to_bits(self) -> U32x4 { unsafe { transmute(self) } }
 
     #[inline(always)]
-    pub fn from_bits(v: U32x4) -> Self { unsafe { transmute(v) } }
+    pub const fn from_bits(v: U32x4) -> Self { unsafe { transmute(v) } }
 }
 
 
