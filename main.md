@@ -1,8 +1,8 @@
 
 - todo:
     - simd:
-        - partialeq.
         - scalar mul/div.
+        - hadd.
         - dot product.
         - length/-squared
         - more platforms:

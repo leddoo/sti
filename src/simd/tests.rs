@@ -40,6 +40,16 @@ mod tests {
         assert_eq!(b(false, true ).select_f32(f(1.0, 2.0), f(3.0, 4.0)).to_array(), [1.0, 4.0]);
         assert_eq!(b(true,  false).select_f32(f(1.0, 2.0), f(3.0, 4.0)).to_array(), [3.0, 2.0]);
         assert_eq!(b(true,  true ).select_f32(f(1.0, 2.0), f(3.0, 4.0)).to_array(), [3.0, 4.0]);
+
+        assert_eq!(b(false, false).any(), false);
+        assert_eq!(b(false, true ).any(), true);
+        assert_eq!(b(true,  false).any(), true);
+        assert_eq!(b(true,  true ).any(), true);
+
+        assert_eq!(b(false, false).all(), false);
+        assert_eq!(b(false, true ).all(), false);
+        assert_eq!(b(true,  false).all(), false);
+        assert_eq!(b(true,  true ).all(), true);
     }
 
     #[test]
@@ -103,6 +113,9 @@ mod tests {
         assert_eq!((f(4.0, 5.0).min(f(3.0, 6.0))).to_array(), [3.0, 5.0]);
         assert_eq!((f(2.0, 5.0).min(f(3.0, 4.0))).to_array(), [2.0, 4.0]);
 
+        assert_eq!(f(2.0, 5.0).hmin(), 2.0);
+        assert_eq!(f(2.0, 5.0).hmax(), 5.0);
+
         assert_eq!(f(1.0, 2.0).x(), 1.0);
         assert_eq!(f(1.0, 2.0).y(), 2.0);
     }
@@ -115,6 +128,9 @@ mod tests {
 
         assert_eq!((i(4, 5).min(i(3, 6))).to_array(), [3, 5]);
         assert_eq!((i(2, 5).min(i(3, 4))).to_array(), [2, 4]);
+
+        assert_eq!(i(2, 5).hmin(), 2);
+        assert_eq!(i(2, 5).hmax(), 5);
     }
 }
 

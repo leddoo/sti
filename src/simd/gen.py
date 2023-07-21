@@ -110,6 +110,16 @@ impl B32x{n} {{
     pub fn select_f32(self, on_false: F32x{n}, on_true: F32x{n}) -> F32x{n} {{
         unsafe {{ transmute(self.select_u32(transmute(on_false), transmute(on_true))) }}
     }}
+
+    #[inline(always)]
+    pub fn any(self) -> bool {{
+        self.as_u32().hmax() != 0
+    }}
+
+    #[inline(always)]
+    pub fn all(self) -> bool {{
+        (!self).as_u32().hmax() == 0
+    }}
 }}
 
 
@@ -345,12 +355,19 @@ impl {name} {{
         B32x{n} {{ v: {store("r")} }}
     }}}}
 }}
+
+impl PartialEq for {name} {{
+    fn eq(&self, other: &Self) -> bool {{
+        {name}::eq(*self, *other).all()
+    }}
+}}
 """
 
 
 def ord_stuff(
-    name,
+    name, ty,
     vmin, vmax,
+    vhmin, vhmax,
     load, store
 ):
     return f"""\
@@ -381,6 +398,17 @@ impl {name} {{
     pub fn clamp(self, low: Self, high: Self) -> Self {{
         self.at_least(low).at_most(high)
     }}
+
+
+    #[inline(always)]
+    pub fn hmin(self) -> {ty} {{ unsafe {{
+        {vhmin}({load("self")})
+    }}}}
+
+    #[inline(always)]
+    pub fn hmax(self) -> {ty} {{ unsafe {{
+        {vhmax}({load("self")})
+    }}}}
 }}
 """
 
@@ -393,6 +421,7 @@ def i32(
     veq, vne, vle, vlt, vge, vgt,
     vneg,
     vmin, vmax,
+    vhmin, vhmax,
     vcvt_f32,
     align = None,
     load  = None,
@@ -422,7 +451,7 @@ impl {name} {{
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}
 
-{ord_stuff(name, vmin, vmax, load, store)}
+{ord_stuff(name, "i32", vmin, vmax, vhmin, vhmax, load, store)}
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
@@ -437,6 +466,7 @@ def u32(
     veq, vne, vle, vlt, vge, vgt,
     vneg,
     vmin, vmax,
+    vhmin, vhmax,
     align = None,
     load  = None,
     store = None,
@@ -459,7 +489,7 @@ impl {name} {{
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}
 
-{ord_stuff(name, vmin, vmax, load, store)}
+{ord_stuff(name, "u32", vmin, vmax, vhmin, vhmax, load, store)}
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
@@ -475,6 +505,7 @@ def f32(
     veq, vne, vle, vlt, vge, vgt,
     vneg,
     vmin, vmax,
+    vhmin, vhmax,
     vcvt_i32,
     align = None,
     load  = None,
@@ -513,7 +544,7 @@ impl {name} {{
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}\
 
-{ord_stuff(name, vmin, vmax, load, store)}
+{ord_stuff(name, "f32", vmin, vmax, vhmin, vhmax, load, store)}
 
 impl core::ops::Mul for {name} {{
     type Output = Self;
@@ -573,6 +604,7 @@ use core::mem::transmute;\n\n"""
         vge  = "vcge_s32", vgt  = "vcgt_s32",
         vneg = "vneg_s32",
         vmin = "vmin_s32", vmax = "vmax_s32",
+        vhmin = "vminv_s32", vhmax = "vmaxv_s32",
         vcvt_f32 = "vcvt_f32_s32",
     )
     r += i32(
@@ -584,6 +616,7 @@ use core::mem::transmute;\n\n"""
         vge  = "vcgeq_s32", vgt  = "vcgtq_s32",
         vneg = "vnegq_s32",
         vmin = "vminq_s32", vmax = "vmaxq_s32",
+        vhmin = "vminvq_s32", vhmax = "vmaxvq_s32",
         vcvt_f32 = "vcvtq_f32_s32",
     )
 
@@ -596,6 +629,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcle_u32", vlt  = "vclt_u32",
         vge  = "vcge_u32", vgt  = "vcgt_u32",
         vmin = "vmin_u32", vmax = "vmax_u32",
+        vhmin = "vminv_u32", vhmax = "vmaxv_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
     )
     r += u32(
@@ -606,6 +640,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcleq_u32", vlt  = "vcltq_u32",
         vge  = "vcgeq_u32", vgt  = "vcgtq_u32",
         vmin = "vminq_u32", vmax = "vmaxq_u32",
+        vhmin = "vminvq_u32", vhmax = "vmaxvq_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
     )
 
@@ -620,6 +655,7 @@ use core::mem::transmute;\n\n"""
         vge  = "vcge_f32", vgt  = "vcgt_f32",
         vneg = "vneg_f32",
         vmin = "vmin_f32", vmax = "vmax_f32",
+        vhmin = "vminv_f32", vhmax = "vmaxv_f32",
         vcvt_i32 = "vcvtm_s32_f32",
     )
     r += f32(
@@ -632,6 +668,7 @@ use core::mem::transmute;\n\n"""
         vge  = "vcgeq_f32", vgt  = "vcgtq_f32",
         vneg = "vnegq_f32",
         vmin = "vminq_f32", vmax = "vmaxq_f32",
+        vhmin = "vminvq_f32", vhmax = "vmaxvq_f32",
         vcvt_i32 = "vcvtmq_s32_f32",
     )
 

@@ -79,6 +79,16 @@ impl B32x2 {
     pub fn select_f32(self, on_false: F32x2, on_true: F32x2) -> F32x2 {
         unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
     }
+
+    #[inline(always)]
+    pub fn any(self) -> bool {
+        self.as_u32().hmax() != 0
+    }
+
+    #[inline(always)]
+    pub fn all(self) -> bool {
+        (!self).as_u32().hmax() == 0
+    }
 }
 
 
@@ -192,6 +202,16 @@ impl B32x4 {
     #[inline(always)]
     pub fn select_f32(self, on_false: F32x4, on_true: F32x4) -> F32x4 {
         unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
+    }
+
+    #[inline(always)]
+    pub fn any(self) -> bool {
+        self.as_u32().hmax() != 0
+    }
+
+    #[inline(always)]
+    pub fn all(self) -> bool {
+        (!self).as_u32().hmax() == 0
     }
 }
 
@@ -361,6 +381,17 @@ impl I32x2 {
     pub fn clamp(self, low: Self, high: Self) -> Self {
         self.at_least(low).at_most(high)
     }
+
+
+    #[inline(always)]
+    pub fn hmin(self) -> i32 { unsafe {
+        vminv_s32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn hmax(self) -> i32 { unsafe {
+        vmaxv_s32(self.v)
+    }}
 }
 
 
@@ -401,6 +432,12 @@ impl I32x2 {
         let r = vcgt_s32(self.v, other.v);
         B32x2 { v: r }
     }}
+}
+
+impl PartialEq for I32x2 {
+    fn eq(&self, other: &Self) -> bool {
+        I32x2::eq(*self, *other).all()
+    }
 }
 
 
@@ -544,6 +581,17 @@ impl I32x4 {
     pub fn clamp(self, low: Self, high: Self) -> Self {
         self.at_least(low).at_most(high)
     }
+
+
+    #[inline(always)]
+    pub fn hmin(self) -> i32 { unsafe {
+        vminvq_s32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn hmax(self) -> i32 { unsafe {
+        vmaxvq_s32(self.v)
+    }}
 }
 
 
@@ -584,6 +632,12 @@ impl I32x4 {
         let r = vcgtq_s32(self.v, other.v);
         B32x4 { v: r }
     }}
+}
+
+impl PartialEq for I32x4 {
+    fn eq(&self, other: &Self) -> bool {
+        I32x4::eq(*self, *other).all()
+    }
 }
 
 
@@ -712,6 +766,17 @@ impl U32x2 {
     pub fn clamp(self, low: Self, high: Self) -> Self {
         self.at_least(low).at_most(high)
     }
+
+
+    #[inline(always)]
+    pub fn hmin(self) -> u32 { unsafe {
+        vminv_u32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn hmax(self) -> u32 { unsafe {
+        vmaxv_u32(self.v)
+    }}
 }
 
 
@@ -752,6 +817,12 @@ impl U32x2 {
         let r = vcgt_u32(self.v, other.v);
         B32x2 { v: r }
     }}
+}
+
+impl PartialEq for U32x2 {
+    fn eq(&self, other: &Self) -> bool {
+        U32x2::eq(*self, *other).all()
+    }
 }
 
 
@@ -886,6 +957,17 @@ impl U32x4 {
     pub fn clamp(self, low: Self, high: Self) -> Self {
         self.at_least(low).at_most(high)
     }
+
+
+    #[inline(always)]
+    pub fn hmin(self) -> u32 { unsafe {
+        vminvq_u32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn hmax(self) -> u32 { unsafe {
+        vmaxvq_u32(self.v)
+    }}
 }
 
 
@@ -926,6 +1008,12 @@ impl U32x4 {
         let r = vcgtq_u32(self.v, other.v);
         B32x4 { v: r }
     }}
+}
+
+impl PartialEq for U32x4 {
+    fn eq(&self, other: &Self) -> bool {
+        U32x4::eq(*self, *other).all()
+    }
 }
 
 
@@ -1071,6 +1159,17 @@ impl F32x2 {
     pub fn clamp(self, low: Self, high: Self) -> Self {
         self.at_least(low).at_most(high)
     }
+
+
+    #[inline(always)]
+    pub fn hmin(self) -> f32 { unsafe {
+        vminv_f32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn hmax(self) -> f32 { unsafe {
+        vmaxv_f32(self.v)
+    }}
 }
 
 
@@ -1132,6 +1231,12 @@ impl F32x2 {
         let r = vcgt_f32(self.v, other.v);
         B32x2 { v: r }
     }}
+}
+
+impl PartialEq for F32x2 {
+    fn eq(&self, other: &Self) -> bool {
+        F32x2::eq(*self, *other).all()
+    }
 }
 
 
@@ -1283,6 +1388,17 @@ impl F32x4 {
     pub fn clamp(self, low: Self, high: Self) -> Self {
         self.at_least(low).at_most(high)
     }
+
+
+    #[inline(always)]
+    pub fn hmin(self) -> f32 { unsafe {
+        vminvq_f32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn hmax(self) -> f32 { unsafe {
+        vmaxvq_f32(self.v)
+    }}
 }
 
 
@@ -1344,6 +1460,12 @@ impl F32x4 {
         let r = vcgtq_f32(self.v, other.v);
         B32x4 { v: r }
     }}
+}
+
+impl PartialEq for F32x4 {
+    fn eq(&self, other: &Self) -> bool {
+        F32x4::eq(*self, *other).all()
+    }
 }
 
 
