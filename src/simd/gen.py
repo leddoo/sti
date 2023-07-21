@@ -6,6 +6,7 @@ def b32(
     n,
     impl, rep,
     vand, vor, vnot,
+    vselect = None,
     align = None,
     load  = None,
     store = None,
@@ -22,6 +23,14 @@ def b32(
     neg_vars = joined(n, "\n        ", lambda i: f"let v{i} = -(v{i} as i32);")
 
     u32s_as_u8s = joined(n, ", ", lambda i: f"u32s[{i}] as u8")
+
+    if vselect:
+        select_impl = vselect
+    else:
+        select_impl = f"""\
+        {vor}(
+            {vand}({vnot}(this), on_false),
+            {vand}(this, on_true))"""
 
     return f"""\
 #[derive(Clone, Copy)]
@@ -83,9 +92,7 @@ impl B32x{n} {{
         let this     = {load("self")};
         let on_false = {load("on_false")};
         let on_true  = {load("on_true")};
-        let r = {vor}(
-            {vand}({vnot}(this), on_false),
-            {vand}(this, on_true));
+        let r = {select_impl};
         U32x{n} {{ v: {store("r")} }}
     }}}}
 
@@ -425,11 +432,13 @@ use core::mem::transmute;\n\n"""
         n = 2,
         impl = "uint32x2_t", rep = "align(8)",
         vand = "vand_u32", vor = "vorr_u32", vnot = "vmvn_u32",
+        vselect = "vbsl_u32(this, on_true, on_false)",
     )
     r += b32(
         n = 4,
         impl = "uint32x4_t", rep = "align(16)",
         vand = "vandq_u32", vor = "vorrq_u32", vnot = "vmvnq_u32",
+        vselect = "vbslq_u32(this, on_true, on_false)",
     )
 
     # i32

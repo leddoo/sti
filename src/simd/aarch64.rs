@@ -61,9 +61,7 @@ impl B32x2 {
         let this     = self.v;
         let on_false = on_false.v;
         let on_true  = on_true.v;
-        let r = vorr_u32(
-            vand_u32(vmvn_u32(this), on_false),
-            vand_u32(this, on_true));
+        let r = vbsl_u32(this, on_true, on_false);
         U32x2 { v: r }
     }}
 
@@ -177,9 +175,7 @@ impl B32x4 {
         let this     = self.v;
         let on_false = on_false.v;
         let on_true  = on_true.v;
-        let r = vorrq_u32(
-            vandq_u32(vmvnq_u32(this), on_false),
-            vandq_u32(this, on_true));
+        let r = vbslq_u32(this, on_true, on_false);
         U32x4 { v: r }
     }}
 
