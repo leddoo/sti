@@ -1,6 +1,10 @@
 
 - todo:
     - simd:
+        - partialeq.
+        - scalar mul/div.
+        - dot product.
+        - length/-squared
         - more platforms:
             - `x86_64`.
             - `wasm`.

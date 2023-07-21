@@ -102,6 +102,9 @@ mod tests {
 
         assert_eq!((f(4.0, 5.0).min(f(3.0, 6.0))).to_array(), [3.0, 5.0]);
         assert_eq!((f(2.0, 5.0).min(f(3.0, 4.0))).to_array(), [2.0, 4.0]);
+
+        assert_eq!(f(1.0, 2.0).x(), 1.0);
+        assert_eq!(f(1.0, 2.0).y(), 2.0);
     }
 
     #[test]

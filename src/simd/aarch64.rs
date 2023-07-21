@@ -266,6 +266,31 @@ impl core::fmt::Debug for I32x2 {
 
 impl I32x2 {
     #[inline(always)]
+    pub fn x(self) -> i32 { self[0] }
+
+    #[inline(always)]
+    pub fn y(self) -> i32 { self[1] }
+}
+
+impl core::ops::Deref for I32x2 {
+    type Target = [i32; 2];
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { transmute(&self.v) }
+    }
+}
+
+impl core::ops::DerefMut for I32x2 {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { transmute(&mut self.v) }
+    }
+}
+
+
+impl I32x2 {
+    #[inline(always)]
     pub fn as_u32(self) -> U32x2 { unsafe { transmute(self) } }
 
     #[inline(always)]
@@ -412,6 +437,37 @@ impl core::fmt::Debug for I32x4 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         self.to_array().fmt(f)
+    }
+}
+
+
+impl I32x4 {
+    #[inline(always)]
+    pub fn x(self) -> i32 { self[0] }
+
+    #[inline(always)]
+    pub fn y(self) -> i32 { self[1] }
+
+    #[inline(always)]
+    pub fn z(self) -> i32 { self[2] }
+
+    #[inline(always)]
+    pub fn w(self) -> i32 { self[3] }
+}
+
+impl core::ops::Deref for I32x4 {
+    type Target = [i32; 4];
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { transmute(&self.v) }
+    }
+}
+
+impl core::ops::DerefMut for I32x4 {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { transmute(&mut self.v) }
     }
 }
 
@@ -570,6 +626,31 @@ impl core::fmt::Debug for U32x2 {
 
 impl U32x2 {
     #[inline(always)]
+    pub fn x(self) -> u32 { self[0] }
+
+    #[inline(always)]
+    pub fn y(self) -> u32 { self[1] }
+}
+
+impl core::ops::Deref for U32x2 {
+    type Target = [u32; 2];
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { transmute(&self.v) }
+    }
+}
+
+impl core::ops::DerefMut for U32x2 {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { transmute(&mut self.v) }
+    }
+}
+
+
+impl U32x2 {
+    #[inline(always)]
     pub fn as_i32(self) -> I32x2 { unsafe { transmute(self) } }
 }
 
@@ -713,6 +794,37 @@ impl core::fmt::Debug for U32x4 {
 
 impl U32x4 {
     #[inline(always)]
+    pub fn x(self) -> u32 { self[0] }
+
+    #[inline(always)]
+    pub fn y(self) -> u32 { self[1] }
+
+    #[inline(always)]
+    pub fn z(self) -> u32 { self[2] }
+
+    #[inline(always)]
+    pub fn w(self) -> u32 { self[3] }
+}
+
+impl core::ops::Deref for U32x4 {
+    type Target = [u32; 4];
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { transmute(&self.v) }
+    }
+}
+
+impl core::ops::DerefMut for U32x4 {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { transmute(&mut self.v) }
+    }
+}
+
+
+impl U32x4 {
+    #[inline(always)]
     pub fn as_i32(self) -> I32x4 { unsafe { transmute(self) } }
 }
 
@@ -850,6 +962,31 @@ impl core::fmt::Debug for F32x2 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         self.to_array().fmt(f)
+    }
+}
+
+
+impl F32x2 {
+    #[inline(always)]
+    pub fn x(self) -> f32 { self[0] }
+
+    #[inline(always)]
+    pub fn y(self) -> f32 { self[1] }
+}
+
+impl core::ops::Deref for F32x2 {
+    type Target = [f32; 2];
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { transmute(&self.v) }
+    }
+}
+
+impl core::ops::DerefMut for F32x2 {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { transmute(&mut self.v) }
     }
 }
 
@@ -1031,6 +1168,37 @@ impl core::fmt::Debug for F32x4 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         self.to_array().fmt(f)
+    }
+}
+
+
+impl F32x4 {
+    #[inline(always)]
+    pub fn x(self) -> f32 { self[0] }
+
+    #[inline(always)]
+    pub fn y(self) -> f32 { self[1] }
+
+    #[inline(always)]
+    pub fn z(self) -> f32 { self[2] }
+
+    #[inline(always)]
+    pub fn w(self) -> f32 { self[3] }
+}
+
+impl core::ops::Deref for F32x4 {
+    type Target = [f32; 4];
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { transmute(&self.v) }
+    }
+}
+
+impl core::ops::DerefMut for F32x4 {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { transmute(&mut self.v) }
     }
 }
 

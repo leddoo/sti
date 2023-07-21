@@ -192,6 +192,56 @@ impl core::fmt::Debug for {name} {{
 
 
 
+def elements(
+    name, ty, n,
+):
+    assert n >= 2
+
+    xyzw = ""
+    if n == 2 or n == 4:
+        zw = ""
+        if n == 4:
+            zw = f"""
+
+    #[inline(always)]
+    pub fn z(self) -> {ty} {{ self[2] }}
+
+    #[inline(always)]
+    pub fn w(self) -> {ty} {{ self[3] }}\
+"""
+
+        xyzw = f"""\
+impl {name} {{
+    #[inline(always)]
+    pub fn x(self) -> {ty} {{ self[0] }}
+
+    #[inline(always)]
+    pub fn y(self) -> {ty} {{ self[1] }}\
+{zw}
+}}"""
+
+    return f"""\
+{xyzw}
+
+impl core::ops::Deref for {name} {{
+    type Target = [{ty}; {n}];
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {{
+        unsafe {{ transmute(&self.v) }}
+    }}
+}}
+
+impl core::ops::DerefMut for {name} {{
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {{
+        unsafe {{ transmute(&mut self.v) }}
+    }}
+}}
+"""
+
+
+
 def arithmetic(
     name,
     vadd, vsub,
@@ -356,6 +406,8 @@ def i32(
     return f"""\
 {basics(n, name, rep, impl, "i32")}
 
+{elements(name, "i32", n)}
+
 impl {name} {{
     #[inline(always)]
     pub fn as_u32(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
@@ -397,6 +449,8 @@ def u32(
     return f"""\
 {basics(n, name, rep, impl, "u32")}
 
+{elements(name, "u32", n)}
+
 impl {name} {{
     #[inline(always)]
     pub fn as_i32(self) -> I32x{n} {{ unsafe {{ transmute(self) }} }}
@@ -433,6 +487,8 @@ def f32(
 
     return f"""\
 {basics(n, name, rep, impl, "f32")}
+
+{elements(name, "f32", n)}
 
 impl {name} {{
     /// behavior for values outside the `i32` range is platform dependent
