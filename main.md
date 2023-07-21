@@ -1,7 +1,6 @@
 
 - todo:
     - simd:
-        - floor/ceil fast.
         - lerp.
         - scalar mul/div.
         - hadd.

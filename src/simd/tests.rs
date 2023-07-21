@@ -118,6 +118,14 @@ mod tests {
 
         assert_eq!(f(1.0, 2.0).x(), 1.0);
         assert_eq!(f(1.0, 2.0).y(), 2.0);
+
+        assert_eq!(f(3.5, -3.5).floor().to_array(), [3.0, -4.0]);
+        assert_eq!(f(3.5, -3.5).ceil().to_array(),  [4.0, -3.0]);
+        assert_eq!(f(3.5, -3.5).round().to_array(), [4.0, -4.0]);
+        assert_eq!(f(3.7, -3.7).round().to_array(), [4.0, -4.0]);
+        assert_eq!(f(3.2, -3.2).round().to_array(), [3.0, -3.0]);
+        assert_eq!(f(3.5, -3.5).trunc().to_array(), [3.0, -3.0]);
+        assert_eq!(f(3.7, -3.7).trunc().to_array(), [3.0, -3.0]);
     }
 
     #[test]

@@ -515,6 +515,7 @@ def f32(
     vmin, vmax,
     vhmin, vhmax,
     vcvt_i32,
+    vfloor, vceil, vround, vtrunc,
     align = None,
     load  = None,
     store = None,
@@ -547,6 +548,30 @@ impl {name} {{
 
     #[inline(always)]
     pub const fn from_bits(v: U32x{n}) -> Self {{ unsafe {{ transmute(v) }} }}
+
+    #[inline(always)]
+    pub fn floor(self) -> Self {{ unsafe {{
+        let r = {vfloor}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}}}
+
+    #[inline(always)]
+    pub fn ceil(self) -> Self {{ unsafe {{
+        let r = {vceil}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}}}
+
+    #[inline(always)]
+    pub fn round(self) -> Self {{ unsafe {{
+        let r = {vround}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}}}
+
+    #[inline(always)]
+    pub fn trunc(self) -> Self {{ unsafe {{
+        let r = {vtrunc}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}}}
 }}
 
 
@@ -664,6 +689,8 @@ use core::mem::transmute;\n\n"""
         vneg = "vneg_f32",
         vmin = "vmin_f32", vmax = "vmax_f32",
         vhmin = "vminv_f32", vhmax = "vmaxv_f32",
+        vfloor = "vrndm_f32", vceil = "vrndp_f32",
+        vround = "vrndn_f32", vtrunc = "vrnd_f32",
         vcvt_i32 = "vcvtm_s32_f32",
     )
     r += f32(
@@ -677,6 +704,8 @@ use core::mem::transmute;\n\n"""
         vneg = "vnegq_f32",
         vmin = "vminq_f32", vmax = "vmaxq_f32",
         vhmin = "vminvq_f32", vhmax = "vmaxvq_f32",
+        vfloor = "vrndmq_f32", vceil = "vrndpq_f32",
+        vround = "vrndnq_f32", vtrunc = "vrndq_f32",
         vcvt_i32 = "vcvtmq_s32_f32",
     )
 

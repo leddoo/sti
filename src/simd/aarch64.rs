@@ -1128,6 +1128,30 @@ impl F32x2 {
 
     #[inline(always)]
     pub const fn from_bits(v: U32x2) -> Self { unsafe { transmute(v) } }
+
+    #[inline(always)]
+    pub fn floor(self) -> Self { unsafe {
+        let r = vrndm_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn ceil(self) -> Self { unsafe {
+        let r = vrndp_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn round(self) -> Self { unsafe {
+        let r = vrndn_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn trunc(self) -> Self { unsafe {
+        let r = vrnd_f32(self.v);
+        Self { v: r }
+    }}
 }
 
 
@@ -1362,6 +1386,30 @@ impl F32x4 {
 
     #[inline(always)]
     pub const fn from_bits(v: U32x4) -> Self { unsafe { transmute(v) } }
+
+    #[inline(always)]
+    pub fn floor(self) -> Self { unsafe {
+        let r = vrndmq_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn ceil(self) -> Self { unsafe {
+        let r = vrndpq_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn round(self) -> Self { unsafe {
+        let r = vrndnq_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn trunc(self) -> Self { unsafe {
+        let r = vrndq_f32(self.v);
+        Self { v: r }
+    }}
 }
 
 
