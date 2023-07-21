@@ -1,9 +1,6 @@
 
 - todo:
     - simd:
-        - hadd.
-        - dot product.
-        - length/-squared
         - more platforms:
             - `x86_64`.
             - `wasm`.

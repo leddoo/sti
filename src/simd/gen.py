@@ -553,8 +553,9 @@ def f32(
     vneg,
     vmin, vmax,
     vhmin, vhmax,
-    vcvt_i32,
     vfloor, vceil, vround, vtrunc,
+    vcvt_i32,
+    vhadd,
     align = None,
     load  = None,
     store = None,
@@ -620,6 +621,26 @@ impl {name} {{
     #[inline(always)]
     pub fn lerpv(self, other: Self, ts: Self) -> Self {{
         (Self::ONE - ts)*self + ts*other
+    }}
+
+    #[inline(always)]
+    pub fn hadd(self) -> f32 {{ unsafe {{
+        {vhadd}({load("self")})
+    }}}}
+
+    #[inline(always)]
+    pub fn dot(self, other: Self) -> f32 {{
+        (self*other).hadd()
+    }}
+
+    #[inline(always)]
+    pub fn length_sq(self) -> f32 {{
+        self.dot(self)
+    }}
+
+    #[inline(always)]
+    pub fn length(self) -> f32 {{
+        self.length_sq().sqrt()
     }}
 }}
 
@@ -767,6 +788,7 @@ use core::mem::transmute;\n\n"""
         vfloor = "vrndm_f32", vceil = "vrndp_f32",
         vround = "vrndn_f32", vtrunc = "vrnd_f32",
         vcvt_i32 = "vcvtm_s32_f32",
+        vhadd = "vaddv_f32",
     )
     r += f32(
         n = 4,
@@ -782,6 +804,7 @@ use core::mem::transmute;\n\n"""
         vfloor = "vrndmq_f32", vceil = "vrndpq_f32",
         vround = "vrndnq_f32", vtrunc = "vrndq_f32",
         vcvt_i32 = "vcvtmq_s32_f32",
+        vhadd = "vaddvq_f32",
     )
 
     return r

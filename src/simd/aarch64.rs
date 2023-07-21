@@ -1297,6 +1297,26 @@ impl F32x2 {
     pub fn lerpv(self, other: Self, ts: Self) -> Self {
         (Self::ONE - ts)*self + ts*other
     }
+
+    #[inline(always)]
+    pub fn hadd(self) -> f32 { unsafe {
+        vaddv_f32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn dot(self, other: Self) -> f32 {
+        (self*other).hadd()
+    }
+
+    #[inline(always)]
+    pub fn length_sq(self) -> f32 {
+        self.dot(self)
+    }
+
+    #[inline(always)]
+    pub fn length(self) -> f32 {
+        self.length_sq().sqrt()
+    }
 }
 
 
@@ -1609,6 +1629,26 @@ impl F32x4 {
     #[inline(always)]
     pub fn lerpv(self, other: Self, ts: Self) -> Self {
         (Self::ONE - ts)*self + ts*other
+    }
+
+    #[inline(always)]
+    pub fn hadd(self) -> f32 { unsafe {
+        vaddvq_f32(self.v)
+    }}
+
+    #[inline(always)]
+    pub fn dot(self, other: Self) -> f32 {
+        (self*other).hadd()
+    }
+
+    #[inline(always)]
+    pub fn length_sq(self) -> f32 {
+        self.dot(self)
+    }
+
+    #[inline(always)]
+    pub fn length(self) -> f32 {
+        self.length_sq().sqrt()
     }
 }
 
