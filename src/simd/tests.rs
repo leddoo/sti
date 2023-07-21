@@ -99,6 +99,9 @@ mod tests {
         assert_eq!((f(4.0, 5.0).gt(f(3.0, 4.0))).to_array(), [true,  true]);
 
         assert_eq!(f(4.5, -2.5).to_i32_unck().to_array(), [4, -3]);
+
+        assert_eq!((f(4.0, 5.0).min(f(3.0, 6.0))).to_array(), [3.0, 5.0]);
+        assert_eq!((f(2.0, 5.0).min(f(3.0, 4.0))).to_array(), [2.0, 4.0]);
     }
 
     #[test]
@@ -106,6 +109,9 @@ mod tests {
         let i = I32x2::new;
 
         assert_eq!(i(4, -2).to_f32().to_array(), [4.0, -2.0]);
+
+        assert_eq!((i(4, 5).min(i(3, 6))).to_array(), [3, 5]);
+        assert_eq!((i(2, 5).min(i(3, 4))).to_array(), [2, 4]);
     }
 }
 

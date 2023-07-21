@@ -298,6 +298,43 @@ impl {name} {{
 """
 
 
+def ord_stuff(
+    name,
+    vmin, vmax,
+    load, store
+):
+    return f"""\
+impl {name} {{
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self {{ unsafe {{
+        let r = {vmin}({load("self")}, {load("other")});
+        Self {{ v: {store("r")} }}
+    }}}}
+
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self {{ unsafe {{
+        let r = {vmax}({load("self")}, {load("other")});
+        Self {{ v: {store("r")} }}
+    }}}}
+
+    #[inline(always)]
+    pub fn at_least(self, other: Self) -> Self {{
+        self.max(other)
+    }}
+
+    #[inline(always)]
+    pub fn at_most(self, other: Self) -> Self {{
+        self.min(other)
+    }}
+
+    #[inline(always)]
+    pub fn clamp(self, low: Self, high: Self) -> Self {{
+        self.at_least(low).at_most(high)
+    }}
+}}
+"""
+
+
 
 def i32(
     n,
@@ -305,6 +342,7 @@ def i32(
     vadd, vsub,
     veq, vne, vle, vlt, vge, vgt,
     vneg,
+    vmin, vmax,
     vcvt_f32,
     align = None,
     load  = None,
@@ -332,6 +370,8 @@ impl {name} {{
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}
 
+{ord_stuff(name, vmin, vmax, load, store)}
+
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
 """
@@ -344,6 +384,7 @@ def u32(
     vadd, vsub,
     veq, vne, vle, vlt, vge, vgt,
     vneg,
+    vmin, vmax,
     align = None,
     load  = None,
     store = None,
@@ -364,6 +405,8 @@ impl {name} {{
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}
 
+{ord_stuff(name, vmin, vmax, load, store)}
+
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
 """
@@ -377,6 +420,7 @@ def f32(
     vadd, vsub, vmul, vdiv,
     veq, vne, vle, vlt, vge, vgt,
     vneg,
+    vmin, vmax,
     vcvt_i32,
     align = None,
     load  = None,
@@ -412,6 +456,8 @@ impl {name} {{
 
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}\
+
+{ord_stuff(name, vmin, vmax, load, store)}
 
 impl core::ops::Mul for {name} {{
     type Output = Self;
@@ -470,6 +516,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcle_s32", vlt  = "vclt_s32",
         vge  = "vcge_s32", vgt  = "vcgt_s32",
         vneg = "vneg_s32",
+        vmin = "vmin_s32", vmax = "vmax_s32",
         vcvt_f32 = "vcvt_f32_s32",
     )
     r += i32(
@@ -480,6 +527,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcleq_s32", vlt  = "vcltq_s32",
         vge  = "vcgeq_s32", vgt  = "vcgtq_s32",
         vneg = "vnegq_s32",
+        vmin = "vminq_s32", vmax = "vmaxq_s32",
         vcvt_f32 = "vcvtq_f32_s32",
     )
 
@@ -491,6 +539,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceq_u32", vne  = None,
         vle  = "vcle_u32", vlt  = "vclt_u32",
         vge  = "vcge_u32", vgt  = "vcgt_u32",
+        vmin = "vmin_u32", vmax = "vmax_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
     )
     r += u32(
@@ -500,6 +549,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceqq_u32", vne  = None,
         vle  = "vcleq_u32", vlt  = "vcltq_u32",
         vge  = "vcgeq_u32", vgt  = "vcgtq_u32",
+        vmin = "vminq_u32", vmax = "vmaxq_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
     )
 
@@ -513,6 +563,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcle_f32", vlt  = "vclt_f32",
         vge  = "vcge_f32", vgt  = "vcgt_f32",
         vneg = "vneg_f32",
+        vmin = "vmin_f32", vmax = "vmax_f32",
         vcvt_i32 = "vcvtm_s32_f32",
     )
     r += f32(
@@ -524,6 +575,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcleq_f32", vlt  = "vcltq_f32",
         vge  = "vcgeq_f32", vgt  = "vcgtq_f32",
         vneg = "vnegq_f32",
+        vmin = "vminq_f32", vmax = "vmaxq_f32",
         vcvt_i32 = "vcvtmq_s32_f32",
     )
 

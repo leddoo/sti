@@ -311,6 +311,36 @@ impl core::ops::Neg for I32x2 {
 
 impl I32x2 {
     #[inline(always)]
+    pub fn min(self, other: Self) -> Self { unsafe {
+        let r = vmin_s32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self { unsafe {
+        let r = vmax_s32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn at_least(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    #[inline(always)]
+    pub fn at_most(self, other: Self) -> Self {
+        self.min(other)
+    }
+
+    #[inline(always)]
+    pub fn clamp(self, low: Self, high: Self) -> Self {
+        self.at_least(low).at_most(high)
+    }
+}
+
+
+impl I32x2 {
+    #[inline(always)]
     pub fn eq(self, other: Self) -> B32x2 { unsafe {
         let r = vceq_s32(self.v, other.v);
         B32x2 { v: r }
@@ -433,6 +463,36 @@ impl core::ops::Neg for I32x4 {
 
 impl I32x4 {
     #[inline(always)]
+    pub fn min(self, other: Self) -> Self { unsafe {
+        let r = vminq_s32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self { unsafe {
+        let r = vmaxq_s32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn at_least(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    #[inline(always)]
+    pub fn at_most(self, other: Self) -> Self {
+        self.min(other)
+    }
+
+    #[inline(always)]
+    pub fn clamp(self, low: Self, high: Self) -> Self {
+        self.at_least(low).at_most(high)
+    }
+}
+
+
+impl I32x4 {
+    #[inline(always)]
     pub fn eq(self, other: Self) -> B32x4 { unsafe {
         let r = vceqq_s32(self.v, other.v);
         B32x4 { v: r }
@@ -546,6 +606,36 @@ impl core::ops::Neg for U32x2 {
 
 impl U32x2 {
     #[inline(always)]
+    pub fn min(self, other: Self) -> Self { unsafe {
+        let r = vmin_u32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self { unsafe {
+        let r = vmax_u32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn at_least(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    #[inline(always)]
+    pub fn at_most(self, other: Self) -> Self {
+        self.min(other)
+    }
+
+    #[inline(always)]
+    pub fn clamp(self, low: Self, high: Self) -> Self {
+        self.at_least(low).at_most(high)
+    }
+}
+
+
+impl U32x2 {
+    #[inline(always)]
     pub fn eq(self, other: Self) -> B32x2 { unsafe {
         let r = vceq_u32(self.v, other.v);
         B32x2 { v: r }
@@ -653,6 +743,36 @@ impl core::ops::Neg for U32x4 {
     #[inline(always)]
     fn neg(self) -> Self::Output {
         (-self.as_i32()).as_u32()
+    }
+}
+
+
+impl U32x4 {
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self { unsafe {
+        let r = vminq_u32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self { unsafe {
+        let r = vmaxq_u32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn at_least(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    #[inline(always)]
+    pub fn at_most(self, other: Self) -> Self {
+        self.min(other)
+    }
+
+    #[inline(always)]
+    pub fn clamp(self, low: Self, high: Self) -> Self {
+        self.at_least(low).at_most(high)
     }
 }
 
@@ -786,6 +906,36 @@ impl core::ops::Neg for F32x2 {
     }
     }
 }
+
+impl F32x2 {
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self { unsafe {
+        let r = vmin_f32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self { unsafe {
+        let r = vmax_f32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn at_least(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    #[inline(always)]
+    pub fn at_most(self, other: Self) -> Self {
+        self.min(other)
+    }
+
+    #[inline(always)]
+    pub fn clamp(self, low: Self, high: Self) -> Self {
+        self.at_least(low).at_most(high)
+    }
+}
+
 
 impl core::ops::Mul for F32x2 {
     type Output = Self;
@@ -937,6 +1087,36 @@ impl core::ops::Neg for F32x4 {
     }
     }
 }
+
+impl F32x4 {
+    #[inline(always)]
+    pub fn min(self, other: Self) -> Self { unsafe {
+        let r = vminq_f32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn max(self, other: Self) -> Self { unsafe {
+        let r = vmaxq_f32(self.v, other.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn at_least(self, other: Self) -> Self {
+        self.max(other)
+    }
+
+    #[inline(always)]
+    pub fn at_most(self, other: Self) -> Self {
+        self.min(other)
+    }
+
+    #[inline(always)]
+    pub fn clamp(self, low: Self, high: Self) -> Self {
+        self.at_least(low).at_most(high)
+    }
+}
+
 
 impl core::ops::Mul for F32x4 {
     type Output = Self;

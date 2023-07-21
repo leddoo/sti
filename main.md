@@ -1,7 +1,6 @@
 
 - todo:
     - simd:
-        - `min`, `max`, `clamp`, `at_least`, `at_most`.
         - more platforms:
             - `x86_64`.
             - `wasm`.
