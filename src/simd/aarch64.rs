@@ -1383,6 +1383,24 @@ impl core::ops::Mul for F32x2 {
     }}
 }
 
+impl core::ops::Mul<f32> for F32x2 {
+    type Output = F32x2;
+
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self::Output {
+        self * F32x2::splat(rhs)
+    }
+}
+
+impl core::ops::Mul<F32x2> for f32 {
+    type Output = F32x2;
+
+    #[inline(always)]
+    fn mul(self, rhs: F32x2) -> Self::Output {
+        F32x2::splat(self) * rhs
+    }
+}
+
 impl core::ops::Div for F32x2 {
     type Output = Self;
 
@@ -1393,6 +1411,14 @@ impl core::ops::Div for F32x2 {
     }}
 }
 
+impl core::ops::Div<f32> for F32x2 {
+    type Output = F32x2;
+
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self::Output {
+        self / F32x2::splat(rhs)
+    }
+}
 
 impl F32x2 {
     #[inline(always)]
@@ -1670,6 +1696,24 @@ impl core::ops::Mul for F32x4 {
     }}
 }
 
+impl core::ops::Mul<f32> for F32x4 {
+    type Output = F32x4;
+
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self::Output {
+        self * F32x4::splat(rhs)
+    }
+}
+
+impl core::ops::Mul<F32x4> for f32 {
+    type Output = F32x4;
+
+    #[inline(always)]
+    fn mul(self, rhs: F32x4) -> Self::Output {
+        F32x4::splat(self) * rhs
+    }
+}
+
 impl core::ops::Div for F32x4 {
     type Output = Self;
 
@@ -1680,6 +1724,14 @@ impl core::ops::Div for F32x4 {
     }}
 }
 
+impl core::ops::Div<f32> for F32x4 {
+    type Output = F32x4;
+
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self::Output {
+        self / F32x4::splat(rhs)
+    }
+}
 
 impl F32x4 {
     #[inline(always)]

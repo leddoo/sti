@@ -66,6 +66,10 @@ mod tests {
         assert_eq!((f(5.0, 2.0) * f(3.0, 4.0)).to_array(), [15.0, 8.0]);
         assert_eq!((f(6.0, 2.0) / f(3.0, 4.0)).to_array(), [2.0, 0.5]);
 
+        assert_eq!((0.5 * f(6.0, 2.0)).to_array(), [3.0, 1.0]);
+        assert_eq!((f(6.0, 2.0) * 0.5).to_array(), [3.0, 1.0]);
+        assert_eq!((f(6.0, 2.0) / 2.0).to_array(), [3.0, 1.0]);
+
         assert_eq!((f(1.0, 2.0).eq(f(3.0, 4.0))).to_array(), [false, false]);
         assert_eq!((f(1.0, 2.0).eq(f(3.0, 2.0))).to_array(), [false, true]);
         assert_eq!((f(1.0, 2.0).eq(f(1.0, 4.0))).to_array(), [true,  false]);

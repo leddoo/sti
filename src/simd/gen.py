@@ -638,6 +638,24 @@ impl core::ops::Mul for {name} {{
     }}}}
 }}
 
+impl core::ops::Mul<f32> for {name} {{
+    type Output = {name};
+
+    #[inline(always)]
+    fn mul(self, rhs: f32) -> Self::Output {{
+        self * {name}::splat(rhs)
+    }}
+}}
+
+impl core::ops::Mul<{name}> for f32 {{
+    type Output = {name};
+
+    #[inline(always)]
+    fn mul(self, rhs: {name}) -> Self::Output {{
+        {name}::splat(self) * rhs
+    }}
+}}
+
 impl core::ops::Div for {name} {{
     type Output = Self;
 
@@ -648,6 +666,14 @@ impl core::ops::Div for {name} {{
     }}}}
 }}
 
+impl core::ops::Div<f32> for {name} {{
+    type Output = {name};
+
+    #[inline(always)]
+    fn div(self, rhs: f32) -> Self::Output {{
+        self / {name}::splat(rhs)
+    }}
+}}
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 

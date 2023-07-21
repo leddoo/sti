@@ -1,7 +1,6 @@
 
 - todo:
     - simd:
-        - scalar mul/div.
         - hadd.
         - dot product.
         - length/-squared
