@@ -72,6 +72,26 @@ impl {name} {{
 }}
 
 
+impl Into<B32x{n}> for bool {{
+    #[inline(always)]
+    fn into(self) -> B32x{n} {{
+        B32x{n}::splat(self)
+    }}
+}}
+
+impl Into<B32x{n}> for [bool; {n}] {{
+    #[inline(always)]
+    fn into(self) -> B32x{n} {{
+        B32x{n}::from_array(self)
+    }}
+}}
+
+impl Default for B32x{n} {{
+    #[inline(always)]
+    fn default() -> Self {{ Self::NONE }}
+}}
+
+
 impl core::fmt::Debug for B32x{n} {{
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {{
@@ -197,6 +217,25 @@ impl {name} {{
     pub const fn to_array(self) -> [{ty}; {n}] {{
         unsafe {{ transmute(self.v) }}
     }}
+}}
+
+impl Into<{name}> for {ty} {{
+    #[inline(always)]
+    fn into(self) -> {name} {{
+        {name}::splat(self)
+    }}
+}}
+
+impl Into<{name}> for [{ty}; {n}] {{
+    #[inline(always)]
+    fn into(self) -> {name} {{
+        {name}::from_array(self)
+    }}
+}}
+
+impl Default for {name} {{
+    #[inline(always)]
+    fn default() -> Self {{ Self::ZERO }}
 }}
 
 
@@ -572,6 +611,16 @@ impl {name} {{
         let r = {vtrunc}({load("self")});
         Self {{ v: {store("r")} }}
     }}}}
+
+    #[inline(always)]
+    pub fn lerp(self, other: Self, t: f32) -> Self {{
+        self.lerpv(other, t.into())
+    }}
+
+    #[inline(always)]
+    pub fn lerpv(self, other: Self, ts: Self) -> Self {{
+        (Self::ONE - ts)*self + ts*other
+    }}
 }}
 
 

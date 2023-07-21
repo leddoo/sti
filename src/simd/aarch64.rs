@@ -41,6 +41,26 @@ impl B32x2 {
 }
 
 
+impl Into<B32x2> for bool {
+    #[inline(always)]
+    fn into(self) -> B32x2 {
+        B32x2::splat(self)
+    }
+}
+
+impl Into<B32x2> for [bool; 2] {
+    #[inline(always)]
+    fn into(self) -> B32x2 {
+        B32x2::from_array(self)
+    }
+}
+
+impl Default for B32x2 {
+    #[inline(always)]
+    fn default() -> Self { Self::NONE }
+}
+
+
 impl core::fmt::Debug for B32x2 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -168,6 +188,26 @@ impl B32x4 {
 }
 
 
+impl Into<B32x4> for bool {
+    #[inline(always)]
+    fn into(self) -> B32x4 {
+        B32x4::splat(self)
+    }
+}
+
+impl Into<B32x4> for [bool; 4] {
+    #[inline(always)]
+    fn into(self) -> B32x4 {
+        B32x4::from_array(self)
+    }
+}
+
+impl Default for B32x4 {
+    #[inline(always)]
+    fn default() -> Self { Self::NONE }
+}
+
+
 impl core::fmt::Debug for B32x4 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -284,6 +324,25 @@ impl I32x2 {
     pub const fn to_array(self) -> [i32; 2] {
         unsafe { transmute(self.v) }
     }
+}
+
+impl Into<I32x2> for i32 {
+    #[inline(always)]
+    fn into(self) -> I32x2 {
+        I32x2::splat(self)
+    }
+}
+
+impl Into<I32x2> for [i32; 2] {
+    #[inline(always)]
+    fn into(self) -> I32x2 {
+        I32x2::from_array(self)
+    }
+}
+
+impl Default for I32x2 {
+    #[inline(always)]
+    fn default() -> Self { Self::ZERO }
 }
 
 
@@ -483,6 +542,25 @@ impl I32x4 {
     pub const fn to_array(self) -> [i32; 4] {
         unsafe { transmute(self.v) }
     }
+}
+
+impl Into<I32x4> for i32 {
+    #[inline(always)]
+    fn into(self) -> I32x4 {
+        I32x4::splat(self)
+    }
+}
+
+impl Into<I32x4> for [i32; 4] {
+    #[inline(always)]
+    fn into(self) -> I32x4 {
+        I32x4::from_array(self)
+    }
+}
+
+impl Default for I32x4 {
+    #[inline(always)]
+    fn default() -> Self { Self::ZERO }
 }
 
 
@@ -690,6 +768,25 @@ impl U32x2 {
     }
 }
 
+impl Into<U32x2> for u32 {
+    #[inline(always)]
+    fn into(self) -> U32x2 {
+        U32x2::splat(self)
+    }
+}
+
+impl Into<U32x2> for [u32; 2] {
+    #[inline(always)]
+    fn into(self) -> U32x2 {
+        U32x2::from_array(self)
+    }
+}
+
+impl Default for U32x2 {
+    #[inline(always)]
+    fn default() -> Self { Self::ZERO }
+}
+
 
 impl core::fmt::Debug for U32x2 {
     #[inline]
@@ -878,6 +975,25 @@ impl U32x4 {
     pub const fn to_array(self) -> [u32; 4] {
         unsafe { transmute(self.v) }
     }
+}
+
+impl Into<U32x4> for u32 {
+    #[inline(always)]
+    fn into(self) -> U32x4 {
+        U32x4::splat(self)
+    }
+}
+
+impl Into<U32x4> for [u32; 4] {
+    #[inline(always)]
+    fn into(self) -> U32x4 {
+        U32x4::from_array(self)
+    }
+}
+
+impl Default for U32x4 {
+    #[inline(always)]
+    fn default() -> Self { Self::ZERO }
 }
 
 
@@ -1076,6 +1192,25 @@ impl F32x2 {
     }
 }
 
+impl Into<F32x2> for f32 {
+    #[inline(always)]
+    fn into(self) -> F32x2 {
+        F32x2::splat(self)
+    }
+}
+
+impl Into<F32x2> for [f32; 2] {
+    #[inline(always)]
+    fn into(self) -> F32x2 {
+        F32x2::from_array(self)
+    }
+}
+
+impl Default for F32x2 {
+    #[inline(always)]
+    fn default() -> Self { Self::ZERO }
+}
+
 
 impl core::fmt::Debug for F32x2 {
     #[inline]
@@ -1152,6 +1287,16 @@ impl F32x2 {
         let r = vrnd_f32(self.v);
         Self { v: r }
     }}
+
+    #[inline(always)]
+    pub fn lerp(self, other: Self, t: f32) -> Self {
+        self.lerpv(other, t.into())
+    }
+
+    #[inline(always)]
+    pub fn lerpv(self, other: Self, ts: Self) -> Self {
+        (Self::ONE - ts)*self + ts*other
+    }
 }
 
 
@@ -1328,6 +1473,25 @@ impl F32x4 {
     }
 }
 
+impl Into<F32x4> for f32 {
+    #[inline(always)]
+    fn into(self) -> F32x4 {
+        F32x4::splat(self)
+    }
+}
+
+impl Into<F32x4> for [f32; 4] {
+    #[inline(always)]
+    fn into(self) -> F32x4 {
+        F32x4::from_array(self)
+    }
+}
+
+impl Default for F32x4 {
+    #[inline(always)]
+    fn default() -> Self { Self::ZERO }
+}
+
 
 impl core::fmt::Debug for F32x4 {
     #[inline]
@@ -1410,6 +1574,16 @@ impl F32x4 {
         let r = vrndq_f32(self.v);
         Self { v: r }
     }}
+
+    #[inline(always)]
+    pub fn lerp(self, other: Self, t: f32) -> Self {
+        self.lerpv(other, t.into())
+    }
+
+    #[inline(always)]
+    pub fn lerpv(self, other: Self, ts: Self) -> Self {
+        (Self::ONE - ts)*self + ts*other
+    }
 }
 
 

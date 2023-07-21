@@ -126,6 +126,9 @@ mod tests {
         assert_eq!(f(3.2, -3.2).round().to_array(), [3.0, -3.0]);
         assert_eq!(f(3.5, -3.5).trunc().to_array(), [3.0, -3.0]);
         assert_eq!(f(3.7, -3.7).trunc().to_array(), [3.0, -3.0]);
+
+        assert_eq!(f(1.0, 2.0).lerp(f(2.0, 3.0), 0.25).to_array(), [1.25, 2.25]);
+        assert_eq!(f(1.0, 2.0).lerpv(f(2.0, 3.0), [0.25, 0.75].into()).to_array(), [1.25, 2.75]);
     }
 
     #[test]
