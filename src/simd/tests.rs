@@ -7,6 +7,9 @@ mod tests {
         let b = B32x2::new;
         let f = F32x2::new;
 
+        assert_eq!(B32x2::splat(false).to_array(), [false, false]);
+        assert_eq!(B32x2::splat(true).to_array(),  [true,  true]);
+
         assert_eq!(b(false, false).to_array(), [false, false]);
         assert_eq!(b(false, true).to_array(),  [false, true]);
         assert_eq!(b(true,  false).to_array(), [true,  false]);
@@ -42,6 +45,9 @@ mod tests {
     #[test]
     fn f32x2() {
         let f = F32x2::new;
+
+        assert_eq!(F32x2::splat(0.0).to_array(), [0.0, 0.0]);
+        assert_eq!(F32x2::splat(1.0).to_array(), [1.0, 1.0]);
 
         assert_eq!(f(1.0, 2.0).to_array(), [1.0, 2.0]);
 

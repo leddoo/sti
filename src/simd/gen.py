@@ -5,7 +5,6 @@ def joined(n, joiner, f):
 def b32(
     n,
     impl, rep,
-    vneg_i32,
     vand, vor, vnot,
     align = None,
     load  = None,
@@ -39,13 +38,18 @@ impl {name} {{
     }}
 
     #[inline(always)]
+    pub fn splat(v: bool) -> Self {{
+        Self::from_array([v; {n}])
+    }}
+
+    #[inline(always)]
     pub fn from_array(vs: [bool; {n}]) -> Self {{
         Self::new({vs_vars})
     }}
 
     #[inline(always)]
     pub fn to_array_u32_01(self) -> [u32; {n}] {{
-        unsafe {{ transmute({vneg_i32}(transmute(self.v))) }}
+        (-self.as_u32()).to_array()
     }}
 
     #[inline(always)]
@@ -155,6 +159,11 @@ impl {name} {{
     }}
 
     #[inline(always)]
+    pub fn splat(v: {ty}) -> Self {{
+        Self::from_array([v; {n}])
+    }}
+
+    #[inline(always)]
     pub fn from_array(vs: [{ty}; {n}]) -> Self {{
         unsafe {{ transmute(vs) }}
     }}
@@ -179,8 +188,18 @@ impl core::fmt::Debug for {name} {{
 def arithmetic(
     name,
     vadd, vsub,
+    vneg,
     load, store,
 ):
+    if type(vneg) is tuple:
+        neg_impl = vneg[0]
+    else:
+        neg_impl = f"""\
+    unsafe {{
+        let r = {vneg}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}"""
+
     return f"""\
 impl core::ops::Add for {name} {{
     type Output = Self;
@@ -200,6 +219,15 @@ impl core::ops::Sub for {name} {{
         let r = {vsub}({load("self")}, {load("rhs")});
         Self {{ v: {store("r")} }}
     }}}}
+}}
+
+impl core::ops::Neg for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {{
+        {neg_impl}
+    }}
 }}
 """
 
@@ -269,6 +297,7 @@ def i32(
     impl, rep,
     vadd, vsub,
     veq, vne, vle, vlt, vge, vgt,
+    vneg,
     align = None,
     load  = None,
     store = None,
@@ -287,7 +316,7 @@ impl {name} {{
 }}
 
 
-{arithmetic(name, vadd, vsub, load, store)}
+{arithmetic(name, vadd, vsub, vneg, load, store)}
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
@@ -300,6 +329,7 @@ def u32(
     impl, rep,
     vadd, vsub,
     veq, vne, vle, vlt, vge, vgt,
+    vneg,
     align = None,
     load  = None,
     store = None,
@@ -318,7 +348,7 @@ impl {name} {{
 }}
 
 
-{arithmetic(name, vadd, vsub, load, store)}
+{arithmetic(name, vadd, vsub, vneg, load, store)}
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
@@ -332,6 +362,7 @@ def f32(
     impl, rep,
     vadd, vsub, vmul, vdiv,
     veq, vne, vle, vlt, vge, vgt,
+    vneg,
     align = None,
     load  = None,
     store = None,
@@ -353,7 +384,7 @@ impl {name} {{
 }}
 
 
-{arithmetic(name, vadd, vsub, load, store)}\
+{arithmetic(name, vadd, vsub, vneg, load, store)}\
 
 impl core::ops::Mul for {name} {{
     type Output = Self;
@@ -393,13 +424,11 @@ use core::mem::transmute;\n\n"""
     r += b32(
         n = 2,
         impl = "uint32x2_t", rep = "align(8)",
-        vneg_i32 = "vneg_s32",
         vand = "vand_u32", vor = "vorr_u32", vnot = "vmvn_u32",
     )
     r += b32(
         n = 4,
         impl = "uint32x4_t", rep = "align(16)",
-        vneg_i32 = "vnegq_s32",
         vand = "vandq_u32", vor = "vorrq_u32", vnot = "vmvnq_u32",
     )
 
@@ -411,6 +440,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceq_s32", vne  = None,
         vle  = "vcle_s32", vlt  = "vclt_s32",
         vge  = "vcge_s32", vgt  = "vcgt_s32",
+        vneg = "vneg_s32",
     )
     r += i32(
         n = 4,
@@ -419,6 +449,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceqq_s32", vne  = None,
         vle  = "vcleq_s32", vlt  = "vcltq_s32",
         vge  = "vcgeq_s32", vgt  = "vcgtq_s32",
+        vneg = "vnegq_s32",
     )
 
     # u32
@@ -429,6 +460,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceq_u32", vne  = None,
         vle  = "vcle_u32", vlt  = "vclt_u32",
         vge  = "vcge_u32", vgt  = "vcgt_u32",
+        vneg = ("(-self.as_i32()).as_u32()",),
     )
     r += u32(
         n = 4,
@@ -437,6 +469,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceqq_u32", vne  = None,
         vle  = "vcleq_u32", vlt  = "vcltq_u32",
         vge  = "vcgeq_u32", vgt  = "vcgtq_u32",
+        vneg = ("(-self.as_i32()).as_u32()",),
     )
 
     # f32
@@ -448,6 +481,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceq_f32", vne  = None,
         vle  = "vcle_f32", vlt  = "vclt_f32",
         vge  = "vcge_f32", vgt  = "vcgt_f32",
+        vneg = "vneg_f32",
     )
     r += f32(
         n = 4,
@@ -457,6 +491,7 @@ use core::mem::transmute;\n\n"""
         veq  = "vceqq_f32", vne  = None,
         vle  = "vcleq_f32", vlt  = "vcltq_f32",
         vge  = "vcgeq_f32", vgt  = "vcgtq_f32",
+        vneg = "vnegq_f32",
     )
 
     return r

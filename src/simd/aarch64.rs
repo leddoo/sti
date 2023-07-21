@@ -16,13 +16,18 @@ impl B32x2 {
     }
 
     #[inline(always)]
+    pub fn splat(v: bool) -> Self {
+        Self::from_array([v; 2])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [bool; 2]) -> Self {
         Self::new(vs[0], vs[1])
     }
 
     #[inline(always)]
     pub fn to_array_u32_01(self) -> [u32; 2] {
-        unsafe { transmute(vneg_s32(transmute(self.v))) }
+        (-self.as_u32()).to_array()
     }
 
     #[inline(always)]
@@ -127,13 +132,18 @@ impl B32x4 {
     }
 
     #[inline(always)]
+    pub fn splat(v: bool) -> Self {
+        Self::from_array([v; 4])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [bool; 4]) -> Self {
         Self::new(vs[0], vs[1], vs[2], vs[3])
     }
 
     #[inline(always)]
     pub fn to_array_u32_01(self) -> [u32; 4] {
-        unsafe { transmute(vnegq_s32(transmute(self.v))) }
+        (-self.as_u32()).to_array()
     }
 
     #[inline(always)]
@@ -234,6 +244,11 @@ impl I32x2 {
     }
 
     #[inline(always)]
+    pub fn splat(v: i32) -> Self {
+        Self::from_array([v; 2])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [i32; 2]) -> Self {
         unsafe { transmute(vs) }
     }
@@ -277,6 +292,18 @@ impl core::ops::Sub for I32x2 {
         let r = vsub_s32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::Neg for I32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+            unsafe {
+        let r = vneg_s32(self.v);
+        Self { v: r }
+    }
+    }
 }
 
 
@@ -333,6 +360,11 @@ impl I32x4 {
     }
 
     #[inline(always)]
+    pub fn splat(v: i32) -> Self {
+        Self::from_array([v; 4])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [i32; 4]) -> Self {
         unsafe { transmute(vs) }
     }
@@ -376,6 +408,18 @@ impl core::ops::Sub for I32x4 {
         let r = vsubq_s32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::Neg for I32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+            unsafe {
+        let r = vnegq_s32(self.v);
+        Self { v: r }
+    }
+    }
 }
 
 
@@ -432,6 +476,11 @@ impl U32x2 {
     }
 
     #[inline(always)]
+    pub fn splat(v: u32) -> Self {
+        Self::from_array([v; 2])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [u32; 2]) -> Self {
         unsafe { transmute(vs) }
     }
@@ -475,6 +524,15 @@ impl core::ops::Sub for U32x2 {
         let r = vsub_u32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::Neg for U32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        (-self.as_i32()).as_u32()
+    }
 }
 
 
@@ -531,6 +589,11 @@ impl U32x4 {
     }
 
     #[inline(always)]
+    pub fn splat(v: u32) -> Self {
+        Self::from_array([v; 4])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [u32; 4]) -> Self {
         unsafe { transmute(vs) }
     }
@@ -574,6 +637,15 @@ impl core::ops::Sub for U32x4 {
         let r = vsubq_u32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::Neg for U32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        (-self.as_i32()).as_u32()
+    }
 }
 
 
@@ -630,6 +702,11 @@ impl F32x2 {
     }
 
     #[inline(always)]
+    pub fn splat(v: f32) -> Self {
+        Self::from_array([v; 2])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [f32; 2]) -> Self {
         unsafe { transmute(vs) }
     }
@@ -676,6 +753,18 @@ impl core::ops::Sub for F32x2 {
         let r = vsub_f32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::Neg for F32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+            unsafe {
+        let r = vneg_f32(self.v);
+        Self { v: r }
+    }
+    }
 }
 
 impl core::ops::Mul for F32x2 {
@@ -752,6 +841,11 @@ impl F32x4 {
     }
 
     #[inline(always)]
+    pub fn splat(v: f32) -> Self {
+        Self::from_array([v; 4])
+    }
+
+    #[inline(always)]
     pub fn from_array(vs: [f32; 4]) -> Self {
         unsafe { transmute(vs) }
     }
@@ -798,6 +892,18 @@ impl core::ops::Sub for F32x4 {
         let r = vsubq_f32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::Neg for F32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+            unsafe {
+        let r = vnegq_f32(self.v);
+        Self { v: r }
+    }
+    }
 }
 
 impl core::ops::Mul for F32x4 {

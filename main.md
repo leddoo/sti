@@ -1,8 +1,6 @@
 
 - todo:
     - simd:
-        - negation.
-        - use casts for bool `to_array_u32_01` impl.
         - f32/int conversion.
         - `min`, `max`, `clamp`, `at_least`, `at_most`.
         - more platforms:
