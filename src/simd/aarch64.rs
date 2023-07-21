@@ -267,6 +267,12 @@ impl core::fmt::Debug for I32x2 {
 impl I32x2 {
     #[inline(always)]
     pub fn as_u32(self) -> U32x2 { unsafe { transmute(self) } }
+
+    #[inline(always)]
+    pub fn to_f32(self) -> F32x2 { unsafe {
+        let r = vcvt_f32_s32(self.v);
+        F32x2 { v: r }
+    }}
 }
 
 
@@ -383,6 +389,12 @@ impl core::fmt::Debug for I32x4 {
 impl I32x4 {
     #[inline(always)]
     pub fn as_u32(self) -> U32x4 { unsafe { transmute(self) } }
+
+    #[inline(always)]
+    pub fn to_f32(self) -> F32x4 { unsafe {
+        let r = vcvtq_f32_s32(self.v);
+        F32x4 { v: r }
+    }}
 }
 
 
@@ -723,6 +735,18 @@ impl core::fmt::Debug for F32x2 {
 
 
 impl F32x2 {
+    /// behavior for values outside the `i32` range is platform dependent
+    /// and considered a bug (there is no guarantee that the program won't crash).
+    /// technically, this function should be unsafe, but that would make it rather
+    /// annoying to use.
+    #[inline(always)]
+    pub fn to_i32_unck(self) -> I32x2 { unsafe {
+        let r = vcvtm_s32_f32(self.v);
+        I32x2 { v: r }
+    }}
+}
+
+impl F32x2 {
     #[inline(always)]
     pub fn to_bits(self) -> U32x2 { unsafe { transmute(self) } }
 
@@ -860,6 +884,18 @@ impl core::fmt::Debug for F32x4 {
     }
 }
 
+
+impl F32x4 {
+    /// behavior for values outside the `i32` range is platform dependent
+    /// and considered a bug (there is no guarantee that the program won't crash).
+    /// technically, this function should be unsafe, but that would make it rather
+    /// annoying to use.
+    #[inline(always)]
+    pub fn to_i32_unck(self) -> I32x4 { unsafe {
+        let r = vcvtmq_s32_f32(self.v);
+        I32x4 { v: r }
+    }}
+}
 
 impl F32x4 {
     #[inline(always)]

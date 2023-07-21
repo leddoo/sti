@@ -305,6 +305,7 @@ def i32(
     vadd, vsub,
     veq, vne, vle, vlt, vge, vgt,
     vneg,
+    vcvt_f32,
     align = None,
     load  = None,
     store = None,
@@ -320,6 +321,12 @@ def i32(
 impl {name} {{
     #[inline(always)]
     pub fn as_u32(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
+
+    #[inline(always)]
+    pub fn to_f32(self) -> F32x{n} {{ unsafe {{
+        let r = {vcvt_f32}({load("self")});
+        F32x{n} {{ v: {store("r")} }}
+    }}}}
 }}
 
 
@@ -370,6 +377,7 @@ def f32(
     vadd, vsub, vmul, vdiv,
     veq, vne, vle, vlt, vge, vgt,
     vneg,
+    vcvt_i32,
     align = None,
     load  = None,
     store = None,
@@ -381,6 +389,18 @@ def f32(
 
     return f"""\
 {basics(n, name, rep, impl, "f32")}
+
+impl {name} {{
+    /// behavior for values outside the `i32` range is platform dependent
+    /// and considered a bug (there is no guarantee that the program won't crash).
+    /// technically, this function should be unsafe, but that would make it rather
+    /// annoying to use.
+    #[inline(always)]
+    pub fn to_i32_unck(self) -> I32x{n} {{ unsafe {{
+        let r = {vcvt_i32}({load("self")});
+        I32x{n} {{ v: {store("r")} }}
+    }}}}
+}}
 
 impl {name} {{
     #[inline(always)]
@@ -450,6 +470,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcle_s32", vlt  = "vclt_s32",
         vge  = "vcge_s32", vgt  = "vcgt_s32",
         vneg = "vneg_s32",
+        vcvt_f32 = "vcvt_f32_s32",
     )
     r += i32(
         n = 4,
@@ -459,6 +480,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcleq_s32", vlt  = "vcltq_s32",
         vge  = "vcgeq_s32", vgt  = "vcgtq_s32",
         vneg = "vnegq_s32",
+        vcvt_f32 = "vcvtq_f32_s32",
     )
 
     # u32
@@ -491,6 +513,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcle_f32", vlt  = "vclt_f32",
         vge  = "vcge_f32", vgt  = "vcgt_f32",
         vneg = "vneg_f32",
+        vcvt_i32 = "vcvtm_s32_f32",
     )
     r += f32(
         n = 4,
@@ -501,6 +524,7 @@ use core::mem::transmute;\n\n"""
         vle  = "vcleq_f32", vlt  = "vcltq_f32",
         vge  = "vcgeq_f32", vgt  = "vcgtq_f32",
         vneg = "vnegq_f32",
+        vcvt_i32 = "vcvtmq_s32_f32",
     )
 
     return r

@@ -97,6 +97,15 @@ mod tests {
         assert_eq!((f(4.0, 2.0).gt(f(3.0, 4.0))).to_array(), [true,  false]);
         assert_eq!((f(3.0, 4.0).gt(f(3.0, 4.0))).to_array(), [false, false]);
         assert_eq!((f(4.0, 5.0).gt(f(3.0, 4.0))).to_array(), [true,  true]);
+
+        assert_eq!(f(4.5, -2.5).to_i32_unck().to_array(), [4, -3]);
+    }
+
+    #[test]
+    fn i32x2() {
+        let i = I32x2::new;
+
+        assert_eq!(i(4, -2).to_f32().to_array(), [4.0, -2.0]);
     }
 }
 
