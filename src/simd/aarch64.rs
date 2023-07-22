@@ -148,6 +148,21 @@ impl core::ops::BitOr for B32x2 {
 }
 
 
+impl B32x2 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().zip(other.as_u32());
+        (Self::from_u32_unck(a), Self::from_u32_unck(b))
+    }
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().unzip(other.as_u32());
+        (Self::from_u32_unck(a), Self::from_u32_unck(b))
+    }
+}
+
+
 #[derive(Clone, Copy)]
 #[repr(align(16))]
 pub struct B32x4 {
@@ -293,6 +308,21 @@ impl core::ops::BitOr for B32x4 {
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
         Self::from_u32_unck(self.as_u32() | rhs.as_u32())
+    }
+}
+
+
+impl B32x4 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().zip(other.as_u32());
+        (Self::from_u32_unck(a), Self::from_u32_unck(b))
+    }
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().unzip(other.as_u32());
+        (Self::from_u32_unck(a), Self::from_u32_unck(b))
     }
 }
 
@@ -507,13 +537,12 @@ impl PartialEq for I32x2 {
 }
 
 
-
 impl core::ops::Not for I32x2 {
     type Output = Self;
 
     #[inline(always)]
     fn not(self) -> Self::Output {
-        (!self.as_u32()).as_i32()
+        U32x2::as_i32(!self.as_u32())
     }
 }
 
@@ -522,7 +551,7 @@ impl core::ops::BitAnd for I32x2 {
 
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
-        (self.as_u32() & rhs.as_u32()).as_i32()
+        U32x2::as_i32(self.as_u32() & rhs.as_u32())
     }
 }
 
@@ -531,9 +560,25 @@ impl core::ops::BitOr for I32x2 {
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
-        (self.as_u32() | rhs.as_u32()).as_i32()
+        U32x2::as_i32(self.as_u32() | rhs.as_u32())
     }
 }
+
+
+impl I32x2 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().zip(other.as_u32());
+        (U32x2::as_i32(a), U32x2::as_i32(b))
+    }
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().unzip(other.as_u32());
+        (U32x2::as_i32(a), U32x2::as_i32(b))
+    }
+}
+
 
 #[derive(Clone, Copy)]
 #[repr(align(16))]
@@ -751,13 +796,12 @@ impl PartialEq for I32x4 {
 }
 
 
-
 impl core::ops::Not for I32x4 {
     type Output = Self;
 
     #[inline(always)]
     fn not(self) -> Self::Output {
-        (!self.as_u32()).as_i32()
+        U32x4::as_i32(!self.as_u32())
     }
 }
 
@@ -766,7 +810,7 @@ impl core::ops::BitAnd for I32x4 {
 
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
-        (self.as_u32() & rhs.as_u32()).as_i32()
+        U32x4::as_i32(self.as_u32() & rhs.as_u32())
     }
 }
 
@@ -775,9 +819,25 @@ impl core::ops::BitOr for I32x4 {
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
-        (self.as_u32() | rhs.as_u32()).as_i32()
+        U32x4::as_i32(self.as_u32() | rhs.as_u32())
     }
 }
+
+
+impl I32x4 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().zip(other.as_u32());
+        (U32x4::as_i32(a), U32x4::as_i32(b))
+    }
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_u32().unzip(other.as_u32());
+        (U32x4::as_i32(a), U32x4::as_i32(b))
+    }
+}
+
 
 #[derive(Clone, Copy)]
 #[repr(align(8))]
@@ -1008,6 +1068,22 @@ impl core::ops::BitOr for U32x2 {
     fn bitor(self, rhs: Self) -> Self::Output { unsafe {
         let r = vorr_u32(self.v, rhs.v);
         Self { v: r }
+    }}
+}
+
+impl U32x2 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) { unsafe {
+        let a = vzip1_u32(self.v, other.v);
+        let b = vzip2_u32(self.v, other.v);
+        (Self { v: a }, Self { v: b })
+    }}
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) { unsafe {
+        let a = vuzp1_u32(self.v, other.v);
+        let b = vuzp2_u32(self.v, other.v);
+        (Self { v: a }, Self { v: b })
     }}
 }
 
@@ -1246,6 +1322,22 @@ impl core::ops::BitOr for U32x4 {
     fn bitor(self, rhs: Self) -> Self::Output { unsafe {
         let r = vorrq_u32(self.v, rhs.v);
         Self { v: r }
+    }}
+}
+
+impl U32x4 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) { unsafe {
+        let a = vzip1q_u32(self.v, other.v);
+        let b = vzip2q_u32(self.v, other.v);
+        (Self { v: a }, Self { v: b })
+    }}
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) { unsafe {
+        let a = vuzp1q_u32(self.v, other.v);
+        let b = vuzp2q_u32(self.v, other.v);
+        (Self { v: a }, Self { v: b })
     }}
 }
 
@@ -1577,6 +1669,49 @@ impl F32x2 {
 impl PartialEq for F32x2 {
     fn eq(&self, other: &Self) -> bool {
         F32x2::eq(*self, *other).all()
+    }
+}
+
+
+impl core::ops::Not for F32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        Self::from_bits(!self.as_bits())
+    }
+}
+
+impl core::ops::BitAnd for F32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self::from_bits(self.as_bits() & rhs.as_bits())
+    }
+}
+
+impl core::ops::BitOr for F32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self::from_bits(self.as_bits() | rhs.as_bits())
+    }
+}
+
+
+impl F32x2 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_bits().zip(other.as_bits());
+        (Self::from_bits(a), Self::from_bits(b))
+    }
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_bits().unzip(other.as_bits());
+        (Self::from_bits(a), Self::from_bits(b))
     }
 }
 
@@ -1915,6 +2050,49 @@ impl F32x4 {
 impl PartialEq for F32x4 {
     fn eq(&self, other: &Self) -> bool {
         F32x4::eq(*self, *other).all()
+    }
+}
+
+
+impl core::ops::Not for F32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        Self::from_bits(!self.as_bits())
+    }
+}
+
+impl core::ops::BitAnd for F32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self::from_bits(self.as_bits() & rhs.as_bits())
+    }
+}
+
+impl core::ops::BitOr for F32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self::from_bits(self.as_bits() | rhs.as_bits())
+    }
+}
+
+
+impl F32x4 {
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_bits().zip(other.as_bits());
+        (Self::from_bits(a), Self::from_bits(b))
+    }
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {
+        let (a, b) = self.as_bits().unzip(other.as_bits());
+        (Self::from_bits(a), Self::from_bits(b))
     }
 }
 

@@ -150,33 +150,7 @@ impl B32x{n} {{
 }}
 
 
-impl core::ops::Not for {name} {{
-    type Output = Self;
-
-    #[inline(always)]
-    fn not(self) -> Self::Output {{
-        Self::from_u32_unck(!self.as_u32())
-    }}
-}}
-
-impl core::ops::BitAnd for {name} {{
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output {{
-        Self::from_u32_unck(self.as_u32() & rhs.as_u32())
-    }}
-}}
-
-impl core::ops::BitOr for {name} {{
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output {{
-        Self::from_u32_unck(self.as_u32() | rhs.as_u32())
-    }}
-}}
-
+{u32ops(name, "as_u32", "Self::from_u32_unck")}
 
 """
 
@@ -235,6 +209,53 @@ impl core::fmt::Debug for {name} {{
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {{
         self.as_array().fmt(f)
+    }}
+}}
+"""
+
+
+
+def u32ops(name, load, store, bitops=True):
+    return f"""\
+impl core::ops::Not for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {{
+        {store}(!self.{load}())
+    }}
+}}
+
+impl core::ops::BitAnd for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {{
+        {store}(self.{load}() & rhs.{load}())
+    }}
+}}
+
+impl core::ops::BitOr for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {{
+        {store}(self.{load}() | rhs.{load}())
+    }}
+}}
+
+
+impl {name} {{
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {{
+        let (a, b) = self.{load}().zip(other.{load}());
+        ({store}(a), {store}(b))
+    }}
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {{
+        let (a, b) = self.{load}().unzip(other.{load}());
+        ({store}(a), {store}(b))
     }}
 }}
 """
@@ -494,33 +515,7 @@ impl {name} {{
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
-
-impl core::ops::Not for {name} {{
-    type Output = Self;
-
-    #[inline(always)]
-    fn not(self) -> Self::Output {{
-        (!self.as_u32()).as_i32()
-    }}
-}}
-
-impl core::ops::BitAnd for {name} {{
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output {{
-        (self.as_u32() & rhs.as_u32()).as_i32()
-    }}
-}}
-
-impl core::ops::BitOr for {name} {{
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output {{
-        (self.as_u32() | rhs.as_u32()).as_i32()
-    }}
-}}
+{u32ops(name, "as_u32", f"U32x{n}::as_i32")}
 
 """
 
@@ -535,6 +530,7 @@ def u32(
     vmin, vmax,
     vhmin, vhmax,
     vnot, vand, vor,
+    arch,
     align = None,
     load  = None,
     store = None,
@@ -543,6 +539,28 @@ def u32(
 
     load  = load  or (lambda this: f"{this}.v")
     store = store or (lambda v: v)
+
+    if arch == "aarch64":
+        assert n == 2 or n == 4
+        q = "q" if n == 4 else ""
+
+        shuffles = f"""
+    #[inline(always)]
+    pub fn zip(self, other: Self) -> (Self, Self) {{ unsafe {{
+        let a = vzip1{q}_u32(self.v, other.v);
+        let b = vzip2{q}_u32(self.v, other.v);
+        (Self {{ v: a }}, Self {{ v: b }})
+    }}}}
+
+    #[inline(always)]
+    pub fn unzip(self, other: Self) -> (Self, Self) {{ unsafe {{
+        let a = vuzp1{q}_u32(self.v, other.v);
+        let b = vuzp2{q}_u32(self.v, other.v);
+        (Self {{ v: a }}, Self {{ v: b }})
+    }}}}
+"""
+    else:
+        assert False
 
     return f"""\
 {basics(n, name, rep, impl, "u32", "0", "1", "u32::MIN", "u32::MAX")}
@@ -591,6 +609,8 @@ impl core::ops::BitOr for {name} {{
         Self {{ v: {store("r")} }}
     }}}}
 }}
+
+impl {name} {{{shuffles}}}
 
 """
 
@@ -764,6 +784,8 @@ impl core::ops::Div<f32> for {name} {{
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
+{u32ops(name, "as_bits", "Self::from_bits", bitops=False)}
+
 """
 
 
@@ -825,6 +847,7 @@ use core::mem::transmute;\n\n"""
         vhmin = "vminv_u32", vhmax = "vmaxv_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
         vand = "vand_u32", vor = "vorr_u32", vnot = "vmvn_u32",
+        arch = "aarch64",
     )
     r += u32(
         n = 4,
@@ -837,6 +860,7 @@ use core::mem::transmute;\n\n"""
         vhmin = "vminvq_u32", vhmax = "vmaxvq_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
         vand = "vandq_u32", vor = "vorrq_u32", vnot = "vmvnq_u32",
+        arch = "aarch64",
     )
 
     # f32
