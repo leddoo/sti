@@ -5,7 +5,6 @@ def joined(n, joiner, f):
 def b32(
     n,
     impl, rep,
-    vand, vor, vnot,
     vselect = None,
     align = None,
     load  = None,
@@ -61,7 +60,7 @@ impl {name} {{
 
     #[inline(always)]
     pub fn to_array_u32_01(self) -> [u32; {n}] {{
-        (-self.as_u32()).to_array()
+        (-self.as_u32()).as_array()
     }}
 
     #[inline(always)]
@@ -105,7 +104,12 @@ impl {name} {{
     pub fn as_u32(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
 
     #[inline(always)]
-    pub fn as_i32(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
+    pub fn as_i32(self) -> I32x{n} {{ unsafe {{ transmute(self) }} }}
+
+    /// this isn't technically unsafe, but may lead to unexpected results,
+    /// if `v`'s values are not `0` or `-1`.
+    #[inline(always)]
+    pub fn from_u32_unck(v: U32x{n}) -> Self {{ unsafe {{ transmute(v) }} }}
 }}
 
 
@@ -146,39 +150,35 @@ impl B32x{n} {{
 }}
 
 
-impl core::ops::Not for B32x{n} {{
+impl core::ops::Not for {name} {{
     type Output = Self;
 
     #[inline(always)]
-    fn not(self) -> Self::Output {{ unsafe {{
-        let r = {vnot}({load("self")});
-        Self {{ v: {store("r")} }}
-    }}}}
+    fn not(self) -> Self::Output {{
+        Self::from_u32_unck(!self.as_u32())
+    }}
 }}
 
-impl core::ops::BitAnd for B32x{n} {{
+impl core::ops::BitAnd for {name} {{
     type Output = Self;
 
     #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output {{ unsafe {{
-        let r = {vand}({load("self")}, {load("rhs")});
-        Self {{ v: {store("r")} }}
-    }}}}
+    fn bitand(self, rhs: Self) -> Self::Output {{
+        Self::from_u32_unck(self.as_u32() & rhs.as_u32())
+    }}
 }}
 
-impl core::ops::BitOr for B32x{n} {{
+impl core::ops::BitOr for {name} {{
     type Output = Self;
 
     #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output {{ unsafe {{
-        let r = {vor}({load("self")}, {load("rhs")});
-        Self {{ v: {store("r")} }}
-    }}}}
+    fn bitor(self, rhs: Self) -> Self::Output {{
+        Self::from_u32_unck(self.as_u32() | rhs.as_u32())
+    }}
 }}
 
 
 """
-
 
 
 def basics(n, name, rep, impl, ty, kzero, kone, kmin, kmax):
@@ -199,24 +199,16 @@ impl {name} {{
     pub const MAX:  {name} = {name}::splat({kmax});
 
     #[inline(always)]
-    pub const fn new({v_decls}) -> Self {{
-        Self::from_array([{v_vars}])
-    }}
+    pub const fn new({v_decls}) -> Self {{ Self::from_array([{v_vars}]) }}
 
     #[inline(always)]
-    pub const fn splat(v: {ty}) -> Self {{
-        Self::from_array([v; {n}])
-    }}
+    pub const fn splat(v: {ty}) -> Self {{ Self::from_array([v; {n}]) }}
 
     #[inline(always)]
-    pub const fn from_array(vs: [{ty}; {n}]) -> Self {{
-        unsafe {{ transmute(vs) }}
-    }}
+    pub const fn from_array(vs: [{ty}; {n}]) -> Self {{ unsafe {{ transmute(vs) }} }}
 
     #[inline(always)]
-    pub const fn to_array(self) -> [{ty}; {n}] {{
-        unsafe {{ transmute(self.v) }}
-    }}
+    pub const fn as_array(self) -> [{ty}; {n}] {{ unsafe {{ transmute(self.v) }} }}
 }}
 
 impl Into<{name}> for {ty} {{
@@ -242,7 +234,7 @@ impl Default for {name} {{
 impl core::fmt::Debug for {name} {{
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {{
-        self.to_array().fmt(f)
+        self.as_array().fmt(f)
     }}
 }}
 """
@@ -502,6 +494,34 @@ impl {name} {{
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
+
+impl core::ops::Not for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {{
+        (!self.as_u32()).as_i32()
+    }}
+}}
+
+impl core::ops::BitAnd for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {{
+        (self.as_u32() & rhs.as_u32()).as_i32()
+    }}
+}}
+
+impl core::ops::BitOr for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {{
+        (self.as_u32() | rhs.as_u32()).as_i32()
+    }}
+}}
+
 """
 
 
@@ -514,6 +534,7 @@ def u32(
     vneg,
     vmin, vmax,
     vhmin, vhmax,
+    vnot, vand, vor,
     align = None,
     load  = None,
     store = None,
@@ -540,6 +561,37 @@ impl {name} {{
 
 {comparisons(n, name, veq, vne, vle, vlt, vge, vgt, load, store)}
 
+
+impl core::ops::Not for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {{ unsafe {{
+        let r = {vnot}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}}}
+}}
+
+impl core::ops::BitAnd for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {{ unsafe {{
+        let r = {vand}({load("self")}, {load("rhs")});
+        Self {{ v: {store("r")} }}
+    }}}}
+}}
+
+impl core::ops::BitOr for {name} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {{ unsafe {{
+        let r = {vor}({load("self")}, {load("rhs")});
+        Self {{ v: {store("r")} }}
+    }}}}
+}}
+
 """
 
 
@@ -555,6 +607,7 @@ def f32(
     vhmin, vhmax,
     vfloor, vceil, vround, vtrunc,
     vcvt_i32,
+    vabs,
     vhadd,
     align = None,
     load  = None,
@@ -584,7 +637,7 @@ impl {name} {{
 
 impl {name} {{
     #[inline(always)]
-    pub const fn to_bits(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
+    pub const fn as_bits(self) -> U32x{n} {{ unsafe {{ transmute(self) }} }}
 
     #[inline(always)]
     pub const fn from_bits(v: U32x{n}) -> Self {{ unsafe {{ transmute(v) }} }}
@@ -612,6 +665,19 @@ impl {name} {{
         let r = {vtrunc}({load("self")});
         Self {{ v: {store("r")} }}
     }}}}
+
+    #[inline(always)]
+    pub fn abs(self) -> Self {{ unsafe {{
+        let r = {vabs}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}}}
+
+    #[inline(always)]
+    pub fn with_sign_of(self, src: Self) -> Self {{
+        let mask = U32x{n}::splat(0x7fff_ffff);
+        Self::from_bits(self.as_bits() & mask | src.as_bits() & !mask)
+    }}
+
 
     #[inline(always)]
     pub fn lerp(self, other: Self, t: f32) -> Self {{
@@ -713,13 +779,11 @@ use core::mem::transmute;\n\n"""
     r += b32(
         n = 2,
         impl = "uint32x2_t", rep = "align(8)",
-        vand = "vand_u32", vor = "vorr_u32", vnot = "vmvn_u32",
         vselect = "vbsl_u32(this, on_true, on_false)",
     )
     r += b32(
         n = 4,
         impl = "uint32x4_t", rep = "align(16)",
-        vand = "vandq_u32", vor = "vorrq_u32", vnot = "vmvnq_u32",
         vselect = "vbslq_u32(this, on_true, on_false)",
     )
 
@@ -760,6 +824,7 @@ use core::mem::transmute;\n\n"""
         vmin = "vmin_u32", vmax = "vmax_u32",
         vhmin = "vminv_u32", vhmax = "vmaxv_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
+        vand = "vand_u32", vor = "vorr_u32", vnot = "vmvn_u32",
     )
     r += u32(
         n = 4,
@@ -771,6 +836,7 @@ use core::mem::transmute;\n\n"""
         vmin = "vminq_u32", vmax = "vmaxq_u32",
         vhmin = "vminvq_u32", vhmax = "vmaxvq_u32",
         vneg = ("(-self.as_i32()).as_u32()",),
+        vand = "vandq_u32", vor = "vorrq_u32", vnot = "vmvnq_u32",
     )
 
     # f32
@@ -788,6 +854,7 @@ use core::mem::transmute;\n\n"""
         vfloor = "vrndm_f32", vceil = "vrndp_f32",
         vround = "vrndn_f32", vtrunc = "vrnd_f32",
         vcvt_i32 = "vcvtm_s32_f32",
+        vabs = "vabs_f32",
         vhadd = "vaddv_f32",
     )
     r += f32(
@@ -804,6 +871,7 @@ use core::mem::transmute;\n\n"""
         vfloor = "vrndmq_f32", vceil = "vrndpq_f32",
         vround = "vrndnq_f32", vtrunc = "vrndq_f32",
         vcvt_i32 = "vcvtmq_s32_f32",
+        vabs = "vabsq_f32",
         vhadd = "vaddvq_f32",
     )
 

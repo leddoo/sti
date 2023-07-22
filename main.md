@@ -1,6 +1,8 @@
 
 - todo:
     - simd:
+        - de-/interleave.
+        - float module (fast floor, ceil, etc, sqrt).
         - more platforms:
             - `x86_64`.
             - `wasm`.

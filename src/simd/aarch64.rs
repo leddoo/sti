@@ -30,7 +30,7 @@ impl B32x2 {
 
     #[inline(always)]
     pub fn to_array_u32_01(self) -> [u32; 2] {
-        (-self.as_u32()).to_array()
+        (-self.as_u32()).as_array()
     }
 
     #[inline(always)]
@@ -74,7 +74,12 @@ impl B32x2 {
     pub fn as_u32(self) -> U32x2 { unsafe { transmute(self) } }
 
     #[inline(always)]
-    pub fn as_i32(self) -> U32x2 { unsafe { transmute(self) } }
+    pub fn as_i32(self) -> I32x2 { unsafe { transmute(self) } }
+
+    /// this isn't technically unsafe, but may lead to unexpected results,
+    /// if `v`'s values are not `0` or `-1`.
+    #[inline(always)]
+    pub fn from_u32_unck(v: U32x2) -> Self { unsafe { transmute(v) } }
 }
 
 
@@ -119,30 +124,27 @@ impl core::ops::Not for B32x2 {
     type Output = Self;
 
     #[inline(always)]
-    fn not(self) -> Self::Output { unsafe {
-        let r = vmvn_u32(self.v);
-        Self { v: r }
-    }}
+    fn not(self) -> Self::Output {
+        Self::from_u32_unck(!self.as_u32())
+    }
 }
 
 impl core::ops::BitAnd for B32x2 {
     type Output = Self;
 
     #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output { unsafe {
-        let r = vand_u32(self.v, rhs.v);
-        Self { v: r }
-    }}
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self::from_u32_unck(self.as_u32() & rhs.as_u32())
+    }
 }
 
 impl core::ops::BitOr for B32x2 {
     type Output = Self;
 
     #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output { unsafe {
-        let r = vorr_u32(self.v, rhs.v);
-        Self { v: r }
-    }}
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self::from_u32_unck(self.as_u32() | rhs.as_u32())
+    }
 }
 
 
@@ -177,7 +179,7 @@ impl B32x4 {
 
     #[inline(always)]
     pub fn to_array_u32_01(self) -> [u32; 4] {
-        (-self.as_u32()).to_array()
+        (-self.as_u32()).as_array()
     }
 
     #[inline(always)]
@@ -221,7 +223,12 @@ impl B32x4 {
     pub fn as_u32(self) -> U32x4 { unsafe { transmute(self) } }
 
     #[inline(always)]
-    pub fn as_i32(self) -> U32x4 { unsafe { transmute(self) } }
+    pub fn as_i32(self) -> I32x4 { unsafe { transmute(self) } }
+
+    /// this isn't technically unsafe, but may lead to unexpected results,
+    /// if `v`'s values are not `0` or `-1`.
+    #[inline(always)]
+    pub fn from_u32_unck(v: U32x4) -> Self { unsafe { transmute(v) } }
 }
 
 
@@ -266,30 +273,27 @@ impl core::ops::Not for B32x4 {
     type Output = Self;
 
     #[inline(always)]
-    fn not(self) -> Self::Output { unsafe {
-        let r = vmvnq_u32(self.v);
-        Self { v: r }
-    }}
+    fn not(self) -> Self::Output {
+        Self::from_u32_unck(!self.as_u32())
+    }
 }
 
 impl core::ops::BitAnd for B32x4 {
     type Output = Self;
 
     #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output { unsafe {
-        let r = vandq_u32(self.v, rhs.v);
-        Self { v: r }
-    }}
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self::from_u32_unck(self.as_u32() & rhs.as_u32())
+    }
 }
 
 impl core::ops::BitOr for B32x4 {
     type Output = Self;
 
     #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output { unsafe {
-        let r = vorrq_u32(self.v, rhs.v);
-        Self { v: r }
-    }}
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self::from_u32_unck(self.as_u32() | rhs.as_u32())
+    }
 }
 
 
@@ -306,24 +310,16 @@ impl I32x2 {
     pub const MAX:  I32x2 = I32x2::splat(i32::MAX);
 
     #[inline(always)]
-    pub const fn new(v0: i32, v1: i32) -> Self {
-        Self::from_array([v0, v1])
-    }
+    pub const fn new(v0: i32, v1: i32) -> Self { Self::from_array([v0, v1]) }
 
     #[inline(always)]
-    pub const fn splat(v: i32) -> Self {
-        Self::from_array([v; 2])
-    }
+    pub const fn splat(v: i32) -> Self { Self::from_array([v; 2]) }
 
     #[inline(always)]
-    pub const fn from_array(vs: [i32; 2]) -> Self {
-        unsafe { transmute(vs) }
-    }
+    pub const fn from_array(vs: [i32; 2]) -> Self { unsafe { transmute(vs) } }
 
     #[inline(always)]
-    pub const fn to_array(self) -> [i32; 2] {
-        unsafe { transmute(self.v) }
-    }
+    pub const fn as_array(self) -> [i32; 2] { unsafe { transmute(self.v) } }
 }
 
 impl Into<I32x2> for i32 {
@@ -349,7 +345,7 @@ impl Default for I32x2 {
 impl core::fmt::Debug for I32x2 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        self.to_array().fmt(f)
+        self.as_array().fmt(f)
     }
 }
 
@@ -511,6 +507,34 @@ impl PartialEq for I32x2 {
 }
 
 
+
+impl core::ops::Not for I32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        (!self.as_u32()).as_i32()
+    }
+}
+
+impl core::ops::BitAnd for I32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        (self.as_u32() & rhs.as_u32()).as_i32()
+    }
+}
+
+impl core::ops::BitOr for I32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        (self.as_u32() | rhs.as_u32()).as_i32()
+    }
+}
+
 #[derive(Clone, Copy)]
 #[repr(align(16))]
 pub struct I32x4 {
@@ -524,24 +548,16 @@ impl I32x4 {
     pub const MAX:  I32x4 = I32x4::splat(i32::MAX);
 
     #[inline(always)]
-    pub const fn new(v0: i32, v1: i32, v2: i32, v3: i32) -> Self {
-        Self::from_array([v0, v1, v2, v3])
-    }
+    pub const fn new(v0: i32, v1: i32, v2: i32, v3: i32) -> Self { Self::from_array([v0, v1, v2, v3]) }
 
     #[inline(always)]
-    pub const fn splat(v: i32) -> Self {
-        Self::from_array([v; 4])
-    }
+    pub const fn splat(v: i32) -> Self { Self::from_array([v; 4]) }
 
     #[inline(always)]
-    pub const fn from_array(vs: [i32; 4]) -> Self {
-        unsafe { transmute(vs) }
-    }
+    pub const fn from_array(vs: [i32; 4]) -> Self { unsafe { transmute(vs) } }
 
     #[inline(always)]
-    pub const fn to_array(self) -> [i32; 4] {
-        unsafe { transmute(self.v) }
-    }
+    pub const fn as_array(self) -> [i32; 4] { unsafe { transmute(self.v) } }
 }
 
 impl Into<I32x4> for i32 {
@@ -567,7 +583,7 @@ impl Default for I32x4 {
 impl core::fmt::Debug for I32x4 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        self.to_array().fmt(f)
+        self.as_array().fmt(f)
     }
 }
 
@@ -735,6 +751,34 @@ impl PartialEq for I32x4 {
 }
 
 
+
+impl core::ops::Not for I32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        (!self.as_u32()).as_i32()
+    }
+}
+
+impl core::ops::BitAnd for I32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        (self.as_u32() & rhs.as_u32()).as_i32()
+    }
+}
+
+impl core::ops::BitOr for I32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        (self.as_u32() | rhs.as_u32()).as_i32()
+    }
+}
+
 #[derive(Clone, Copy)]
 #[repr(align(8))]
 pub struct U32x2 {
@@ -748,24 +792,16 @@ impl U32x2 {
     pub const MAX:  U32x2 = U32x2::splat(u32::MAX);
 
     #[inline(always)]
-    pub const fn new(v0: u32, v1: u32) -> Self {
-        Self::from_array([v0, v1])
-    }
+    pub const fn new(v0: u32, v1: u32) -> Self { Self::from_array([v0, v1]) }
 
     #[inline(always)]
-    pub const fn splat(v: u32) -> Self {
-        Self::from_array([v; 2])
-    }
+    pub const fn splat(v: u32) -> Self { Self::from_array([v; 2]) }
 
     #[inline(always)]
-    pub const fn from_array(vs: [u32; 2]) -> Self {
-        unsafe { transmute(vs) }
-    }
+    pub const fn from_array(vs: [u32; 2]) -> Self { unsafe { transmute(vs) } }
 
     #[inline(always)]
-    pub const fn to_array(self) -> [u32; 2] {
-        unsafe { transmute(self.v) }
-    }
+    pub const fn as_array(self) -> [u32; 2] { unsafe { transmute(self.v) } }
 }
 
 impl Into<U32x2> for u32 {
@@ -791,7 +827,7 @@ impl Default for U32x2 {
 impl core::fmt::Debug for U32x2 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        self.to_array().fmt(f)
+        self.as_array().fmt(f)
     }
 }
 
@@ -944,6 +980,37 @@ impl PartialEq for U32x2 {
 }
 
 
+
+impl core::ops::Not for U32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output { unsafe {
+        let r = vmvn_u32(self.v);
+        Self { v: r }
+    }}
+}
+
+impl core::ops::BitAnd for U32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output { unsafe {
+        let r = vand_u32(self.v, rhs.v);
+        Self { v: r }
+    }}
+}
+
+impl core::ops::BitOr for U32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output { unsafe {
+        let r = vorr_u32(self.v, rhs.v);
+        Self { v: r }
+    }}
+}
+
 #[derive(Clone, Copy)]
 #[repr(align(16))]
 pub struct U32x4 {
@@ -957,24 +1024,16 @@ impl U32x4 {
     pub const MAX:  U32x4 = U32x4::splat(u32::MAX);
 
     #[inline(always)]
-    pub const fn new(v0: u32, v1: u32, v2: u32, v3: u32) -> Self {
-        Self::from_array([v0, v1, v2, v3])
-    }
+    pub const fn new(v0: u32, v1: u32, v2: u32, v3: u32) -> Self { Self::from_array([v0, v1, v2, v3]) }
 
     #[inline(always)]
-    pub const fn splat(v: u32) -> Self {
-        Self::from_array([v; 4])
-    }
+    pub const fn splat(v: u32) -> Self { Self::from_array([v; 4]) }
 
     #[inline(always)]
-    pub const fn from_array(vs: [u32; 4]) -> Self {
-        unsafe { transmute(vs) }
-    }
+    pub const fn from_array(vs: [u32; 4]) -> Self { unsafe { transmute(vs) } }
 
     #[inline(always)]
-    pub const fn to_array(self) -> [u32; 4] {
-        unsafe { transmute(self.v) }
-    }
+    pub const fn as_array(self) -> [u32; 4] { unsafe { transmute(self.v) } }
 }
 
 impl Into<U32x4> for u32 {
@@ -1000,7 +1059,7 @@ impl Default for U32x4 {
 impl core::fmt::Debug for U32x4 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        self.to_array().fmt(f)
+        self.as_array().fmt(f)
     }
 }
 
@@ -1159,6 +1218,37 @@ impl PartialEq for U32x4 {
 }
 
 
+
+impl core::ops::Not for U32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output { unsafe {
+        let r = vmvnq_u32(self.v);
+        Self { v: r }
+    }}
+}
+
+impl core::ops::BitAnd for U32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output { unsafe {
+        let r = vandq_u32(self.v, rhs.v);
+        Self { v: r }
+    }}
+}
+
+impl core::ops::BitOr for U32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output { unsafe {
+        let r = vorrq_u32(self.v, rhs.v);
+        Self { v: r }
+    }}
+}
+
 #[derive(Clone, Copy)]
 #[repr(align(8))]
 pub struct F32x2 {
@@ -1172,24 +1262,16 @@ impl F32x2 {
     pub const MAX:  F32x2 = F32x2::splat(f32::MAX);
 
     #[inline(always)]
-    pub const fn new(v0: f32, v1: f32) -> Self {
-        Self::from_array([v0, v1])
-    }
+    pub const fn new(v0: f32, v1: f32) -> Self { Self::from_array([v0, v1]) }
 
     #[inline(always)]
-    pub const fn splat(v: f32) -> Self {
-        Self::from_array([v; 2])
-    }
+    pub const fn splat(v: f32) -> Self { Self::from_array([v; 2]) }
 
     #[inline(always)]
-    pub const fn from_array(vs: [f32; 2]) -> Self {
-        unsafe { transmute(vs) }
-    }
+    pub const fn from_array(vs: [f32; 2]) -> Self { unsafe { transmute(vs) } }
 
     #[inline(always)]
-    pub const fn to_array(self) -> [f32; 2] {
-        unsafe { transmute(self.v) }
-    }
+    pub const fn as_array(self) -> [f32; 2] { unsafe { transmute(self.v) } }
 }
 
 impl Into<F32x2> for f32 {
@@ -1215,7 +1297,7 @@ impl Default for F32x2 {
 impl core::fmt::Debug for F32x2 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        self.to_array().fmt(f)
+        self.as_array().fmt(f)
     }
 }
 
@@ -1259,7 +1341,7 @@ impl F32x2 {
 
 impl F32x2 {
     #[inline(always)]
-    pub const fn to_bits(self) -> U32x2 { unsafe { transmute(self) } }
+    pub const fn as_bits(self) -> U32x2 { unsafe { transmute(self) } }
 
     #[inline(always)]
     pub const fn from_bits(v: U32x2) -> Self { unsafe { transmute(v) } }
@@ -1287,6 +1369,19 @@ impl F32x2 {
         let r = vrnd_f32(self.v);
         Self { v: r }
     }}
+
+    #[inline(always)]
+    pub fn abs(self) -> Self { unsafe {
+        let r = vabs_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn with_sign_of(self, src: Self) -> Self {
+        let mask = U32x2::splat(0x7fff_ffff);
+        Self::from_bits(self.as_bits() & mask | src.as_bits() & !mask)
+    }
+
 
     #[inline(always)]
     pub fn lerp(self, other: Self, t: f32) -> Self {
@@ -1499,24 +1594,16 @@ impl F32x4 {
     pub const MAX:  F32x4 = F32x4::splat(f32::MAX);
 
     #[inline(always)]
-    pub const fn new(v0: f32, v1: f32, v2: f32, v3: f32) -> Self {
-        Self::from_array([v0, v1, v2, v3])
-    }
+    pub const fn new(v0: f32, v1: f32, v2: f32, v3: f32) -> Self { Self::from_array([v0, v1, v2, v3]) }
 
     #[inline(always)]
-    pub const fn splat(v: f32) -> Self {
-        Self::from_array([v; 4])
-    }
+    pub const fn splat(v: f32) -> Self { Self::from_array([v; 4]) }
 
     #[inline(always)]
-    pub const fn from_array(vs: [f32; 4]) -> Self {
-        unsafe { transmute(vs) }
-    }
+    pub const fn from_array(vs: [f32; 4]) -> Self { unsafe { transmute(vs) } }
 
     #[inline(always)]
-    pub const fn to_array(self) -> [f32; 4] {
-        unsafe { transmute(self.v) }
-    }
+    pub const fn as_array(self) -> [f32; 4] { unsafe { transmute(self.v) } }
 }
 
 impl Into<F32x4> for f32 {
@@ -1542,7 +1629,7 @@ impl Default for F32x4 {
 impl core::fmt::Debug for F32x4 {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        self.to_array().fmt(f)
+        self.as_array().fmt(f)
     }
 }
 
@@ -1592,7 +1679,7 @@ impl F32x4 {
 
 impl F32x4 {
     #[inline(always)]
-    pub const fn to_bits(self) -> U32x4 { unsafe { transmute(self) } }
+    pub const fn as_bits(self) -> U32x4 { unsafe { transmute(self) } }
 
     #[inline(always)]
     pub const fn from_bits(v: U32x4) -> Self { unsafe { transmute(v) } }
@@ -1620,6 +1707,19 @@ impl F32x4 {
         let r = vrndq_f32(self.v);
         Self { v: r }
     }}
+
+    #[inline(always)]
+    pub fn abs(self) -> Self { unsafe {
+        let r = vabsq_f32(self.v);
+        Self { v: r }
+    }}
+
+    #[inline(always)]
+    pub fn with_sign_of(self, src: Self) -> Self {
+        let mask = U32x4::splat(0x7fff_ffff);
+        Self::from_bits(self.as_bits() & mask | src.as_bits() & !mask)
+    }
+
 
     #[inline(always)]
     pub fn lerp(self, other: Self, t: f32) -> Self {
