@@ -628,6 +628,7 @@ def f32(
     vfloor, vceil, vround, vtrunc,
     vcvt_i32,
     vabs,
+    vsqrt,
     vhadd,
     align = None,
     load  = None,
@@ -698,6 +699,12 @@ impl {name} {{
         Self::from_bits(self.as_bits() & mask | src.as_bits() & !mask)
     }}
 
+    #[inline(always)]
+    pub fn sqrt(self) -> Self {{ unsafe {{
+        let r = {vsqrt}({load("self")});
+        Self {{ v: {store("r")} }}
+    }}}}
+
 
     #[inline(always)]
     pub fn lerp(self, other: Self, t: f32) -> Self {{
@@ -726,7 +733,7 @@ impl {name} {{
 
     #[inline(always)]
     pub fn length(self) -> f32 {{
-        self.length_sq().sqrt()
+        self.length_sq().fsqrt()
     }}
 }}
 
@@ -791,11 +798,10 @@ impl core::ops::Div<f32> for {name} {{
 
 
 def aarch64():
-    r = ""
-
-    r += """\
+    r = """\
 use core::arch::aarch64::*;
-use core::mem::transmute;\n\n"""
+use core::mem::transmute;
+use crate::float::F32Ext;\n\n"""
 
     # b32
     r += b32(
@@ -879,6 +885,7 @@ use core::mem::transmute;\n\n"""
         vround = "vrndn_f32", vtrunc = "vrnd_f32",
         vcvt_i32 = "vcvtm_s32_f32",
         vabs = "vabs_f32",
+        vsqrt = "vsqrt_f32",
         vhadd = "vaddv_f32",
     )
     r += f32(
@@ -896,6 +903,7 @@ use core::mem::transmute;\n\n"""
         vround = "vrndnq_f32", vtrunc = "vrndq_f32",
         vcvt_i32 = "vcvtmq_s32_f32",
         vabs = "vabsq_f32",
+        vsqrt = "vsqrtq_f32",
         vhadd = "vaddvq_f32",
     )
 

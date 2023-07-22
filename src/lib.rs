@@ -1,5 +1,7 @@
 pub mod num;
+
 pub mod simd;
+pub mod float;
 
 pub mod alloc;
 pub mod growing_arena;

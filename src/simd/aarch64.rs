@@ -1,5 +1,6 @@
 use core::arch::aarch64::*;
 use core::mem::transmute;
+use crate::float::F32Ext;
 
 #[derive(Clone, Copy)]
 #[repr(align(8))]
@@ -1474,6 +1475,12 @@ impl F32x2 {
         Self::from_bits(self.as_bits() & mask | src.as_bits() & !mask)
     }
 
+    #[inline(always)]
+    pub fn sqrt(self) -> Self { unsafe {
+        let r = vsqrt_f32(self.v);
+        Self { v: r }
+    }}
+
 
     #[inline(always)]
     pub fn lerp(self, other: Self, t: f32) -> Self {
@@ -1502,7 +1509,7 @@ impl F32x2 {
 
     #[inline(always)]
     pub fn length(self) -> f32 {
-        self.length_sq().sqrt()
+        self.length_sq().fsqrt()
     }
 }
 
@@ -1855,6 +1862,12 @@ impl F32x4 {
         Self::from_bits(self.as_bits() & mask | src.as_bits() & !mask)
     }
 
+    #[inline(always)]
+    pub fn sqrt(self) -> Self { unsafe {
+        let r = vsqrtq_f32(self.v);
+        Self { v: r }
+    }}
+
 
     #[inline(always)]
     pub fn lerp(self, other: Self, t: f32) -> Self {
@@ -1883,7 +1896,7 @@ impl F32x4 {
 
     #[inline(always)]
     pub fn length(self) -> f32 {
-        self.length_sq().sqrt()
+        self.length_sq().fsqrt()
     }
 }
 
