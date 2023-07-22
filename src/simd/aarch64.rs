@@ -139,12 +139,26 @@ impl core::ops::BitAnd for B32x2 {
     }
 }
 
+impl core::ops::BitAndAssign for B32x2 {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
 impl core::ops::BitOr for B32x2 {
     type Output = Self;
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
         Self::from_u32_unck(self.as_u32() | rhs.as_u32())
+    }
+}
+
+impl core::ops::BitOrAssign for B32x2 {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 
@@ -303,12 +317,26 @@ impl core::ops::BitAnd for B32x4 {
     }
 }
 
+impl core::ops::BitAndAssign for B32x4 {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
 impl core::ops::BitOr for B32x4 {
     type Output = Self;
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
         Self::from_u32_unck(self.as_u32() | rhs.as_u32())
+    }
+}
+
+impl core::ops::BitOrAssign for B32x4 {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 
@@ -428,6 +456,13 @@ impl core::ops::Add for I32x2 {
     }}
 }
 
+impl core::ops::AddAssign for I32x2 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl core::ops::Sub for I32x2 {
     type Output = Self;
 
@@ -438,15 +473,22 @@ impl core::ops::Sub for I32x2 {
     }}
 }
 
+impl core::ops::SubAssign for I32x2 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
 impl core::ops::Neg for I32x2 {
     type Output = Self;
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-            unsafe {
-        let r = vneg_s32(self.v);
-        Self { v: r }
-    }
+        unsafe {
+            let r = vneg_s32(self.v);
+            Self { v: r }
+        }
     }
 }
 
@@ -556,12 +598,26 @@ impl core::ops::BitAnd for I32x2 {
     }
 }
 
+impl core::ops::BitAndAssign for I32x2 {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
 impl core::ops::BitOr for I32x2 {
     type Output = Self;
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
         U32x2::as_i32(self.as_u32() | rhs.as_u32())
+    }
+}
+
+impl core::ops::BitOrAssign for I32x2 {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 
@@ -687,6 +743,13 @@ impl core::ops::Add for I32x4 {
     }}
 }
 
+impl core::ops::AddAssign for I32x4 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl core::ops::Sub for I32x4 {
     type Output = Self;
 
@@ -697,15 +760,22 @@ impl core::ops::Sub for I32x4 {
     }}
 }
 
+impl core::ops::SubAssign for I32x4 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
 impl core::ops::Neg for I32x4 {
     type Output = Self;
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-            unsafe {
-        let r = vnegq_s32(self.v);
-        Self { v: r }
-    }
+        unsafe {
+            let r = vnegq_s32(self.v);
+            Self { v: r }
+        }
     }
 }
 
@@ -815,12 +885,26 @@ impl core::ops::BitAnd for I32x4 {
     }
 }
 
+impl core::ops::BitAndAssign for I32x4 {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
 impl core::ops::BitOr for I32x4 {
     type Output = Self;
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
         U32x4::as_i32(self.as_u32() | rhs.as_u32())
+    }
+}
+
+impl core::ops::BitOrAssign for I32x4 {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
     }
 }
 
@@ -934,6 +1018,13 @@ impl core::ops::Add for U32x2 {
     }}
 }
 
+impl core::ops::AddAssign for U32x2 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl core::ops::Sub for U32x2 {
     type Output = Self;
 
@@ -942,6 +1033,13 @@ impl core::ops::Sub for U32x2 {
         let r = vsub_u32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::SubAssign for U32x2 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
 }
 
 impl core::ops::Neg for U32x2 {
@@ -1062,6 +1160,13 @@ impl core::ops::BitAnd for U32x2 {
     }}
 }
 
+impl core::ops::BitAndAssign for U32x2 {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
 impl core::ops::BitOr for U32x2 {
     type Output = Self;
 
@@ -1071,6 +1176,14 @@ impl core::ops::BitOr for U32x2 {
         Self { v: r }
     }}
 }
+
+impl core::ops::BitOrAssign for U32x2 {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
 
 impl U32x2 {
     #[inline(always)]
@@ -1188,6 +1301,13 @@ impl core::ops::Add for U32x4 {
     }}
 }
 
+impl core::ops::AddAssign for U32x4 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl core::ops::Sub for U32x4 {
     type Output = Self;
 
@@ -1196,6 +1316,13 @@ impl core::ops::Sub for U32x4 {
         let r = vsubq_u32(self.v, rhs.v);
         Self { v: r }
     }}
+}
+
+impl core::ops::SubAssign for U32x4 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
 }
 
 impl core::ops::Neg for U32x4 {
@@ -1316,6 +1443,13 @@ impl core::ops::BitAnd for U32x4 {
     }}
 }
 
+impl core::ops::BitAndAssign for U32x4 {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
 impl core::ops::BitOr for U32x4 {
     type Output = Self;
 
@@ -1325,6 +1459,14 @@ impl core::ops::BitOr for U32x4 {
         Self { v: r }
     }}
 }
+
+impl core::ops::BitOrAssign for U32x4 {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
 
 impl U32x4 {
     #[inline(always)]
@@ -1524,6 +1666,13 @@ impl core::ops::Add for F32x2 {
     }}
 }
 
+impl core::ops::AddAssign for F32x2 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl core::ops::Sub for F32x2 {
     type Output = Self;
 
@@ -1534,15 +1683,22 @@ impl core::ops::Sub for F32x2 {
     }}
 }
 
+impl core::ops::SubAssign for F32x2 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
 impl core::ops::Neg for F32x2 {
     type Output = Self;
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-            unsafe {
-        let r = vneg_f32(self.v);
-        Self { v: r }
-    }
+        unsafe {
+            let r = vneg_f32(self.v);
+            Self { v: r }
+        }
     }
 }
 
@@ -1597,12 +1753,26 @@ impl core::ops::Mul for F32x2 {
     }}
 }
 
+impl core::ops::MulAssign for F32x2 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
 impl core::ops::Mul<f32> for F32x2 {
     type Output = F32x2;
 
     #[inline(always)]
     fn mul(self, rhs: f32) -> Self::Output {
         self * F32x2::splat(rhs)
+    }
+}
+
+impl core::ops::MulAssign<f32> for F32x2 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
     }
 }
 
@@ -1625,12 +1795,26 @@ impl core::ops::Div for F32x2 {
     }}
 }
 
+impl core::ops::DivAssign for F32x2 {
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: Self) {
+        *self = *self / rhs;
+    }
+}
+
 impl core::ops::Div<f32> for F32x2 {
     type Output = F32x2;
 
     #[inline(always)]
     fn div(self, rhs: f32) -> Self::Output {
         self / F32x2::splat(rhs)
+    }
+}
+
+impl core::ops::DivAssign<f32> for F32x2 {
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: f32) {
+        *self = *self / rhs;
     }
 }
 
@@ -1680,32 +1864,6 @@ impl PartialEq for F32x2 {
 }
 
 
-impl core::ops::Not for F32x2 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn not(self) -> Self::Output {
-        Self::from_bits(!self.as_bits())
-    }
-}
-
-impl core::ops::BitAnd for F32x2 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output {
-        Self::from_bits(self.as_bits() & rhs.as_bits())
-    }
-}
-
-impl core::ops::BitOr for F32x2 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Self::from_bits(self.as_bits() | rhs.as_bits())
-    }
-}
 
 
 impl F32x2 {
@@ -1911,6 +2069,13 @@ impl core::ops::Add for F32x4 {
     }}
 }
 
+impl core::ops::AddAssign for F32x4 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 impl core::ops::Sub for F32x4 {
     type Output = Self;
 
@@ -1921,15 +2086,22 @@ impl core::ops::Sub for F32x4 {
     }}
 }
 
+impl core::ops::SubAssign for F32x4 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
 impl core::ops::Neg for F32x4 {
     type Output = Self;
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-            unsafe {
-        let r = vnegq_f32(self.v);
-        Self { v: r }
-    }
+        unsafe {
+            let r = vnegq_f32(self.v);
+            Self { v: r }
+        }
     }
 }
 
@@ -1984,12 +2156,26 @@ impl core::ops::Mul for F32x4 {
     }}
 }
 
+impl core::ops::MulAssign for F32x4 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
 impl core::ops::Mul<f32> for F32x4 {
     type Output = F32x4;
 
     #[inline(always)]
     fn mul(self, rhs: f32) -> Self::Output {
         self * F32x4::splat(rhs)
+    }
+}
+
+impl core::ops::MulAssign<f32> for F32x4 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
     }
 }
 
@@ -2012,12 +2198,26 @@ impl core::ops::Div for F32x4 {
     }}
 }
 
+impl core::ops::DivAssign for F32x4 {
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: Self) {
+        *self = *self / rhs;
+    }
+}
+
 impl core::ops::Div<f32> for F32x4 {
     type Output = F32x4;
 
     #[inline(always)]
     fn div(self, rhs: f32) -> Self::Output {
         self / F32x4::splat(rhs)
+    }
+}
+
+impl core::ops::DivAssign<f32> for F32x4 {
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: f32) {
+        *self = *self / rhs;
     }
 }
 
@@ -2067,32 +2267,6 @@ impl PartialEq for F32x4 {
 }
 
 
-impl core::ops::Not for F32x4 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn not(self) -> Self::Output {
-        Self::from_bits(!self.as_bits())
-    }
-}
-
-impl core::ops::BitAnd for F32x4 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitand(self, rhs: Self) -> Self::Output {
-        Self::from_bits(self.as_bits() & rhs.as_bits())
-    }
-}
-
-impl core::ops::BitOr for F32x4 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Self::from_bits(self.as_bits() | rhs.as_bits())
-    }
-}
 
 
 impl F32x4 {

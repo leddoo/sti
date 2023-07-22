@@ -216,7 +216,8 @@ impl core::fmt::Debug for {name} {{
 
 
 def u32ops(name, load, store, bitops=True):
-    return f"""\
+    if bitops:
+        bitops = f"""\
 impl core::ops::Not for {name} {{
     type Output = Self;
 
@@ -235,6 +236,13 @@ impl core::ops::BitAnd for {name} {{
     }}
 }}
 
+impl core::ops::BitAndAssign for {name} {{
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {{
+        *self = *self & rhs;
+    }}
+}}
+
 impl core::ops::BitOr for {name} {{
     type Output = Self;
 
@@ -244,6 +252,17 @@ impl core::ops::BitOr for {name} {{
     }}
 }}
 
+impl core::ops::BitOrAssign for {name} {{
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {{
+        *self = *self | rhs;
+    }}
+}}
+"""
+    else: bitops = ""
+
+    return f"""\
+{bitops}
 
 impl {name} {{
     #[inline(always)]
@@ -322,10 +341,10 @@ def arithmetic(
         neg_impl = vneg[0]
     else:
         neg_impl = f"""\
-    unsafe {{
-        let r = {vneg}({load("self")});
-        Self {{ v: {store("r")} }}
-    }}"""
+unsafe {{
+            let r = {vneg}({load("self")});
+            Self {{ v: {store("r")} }}
+        }}"""
 
     return f"""\
 impl core::ops::Add for {name} {{
@@ -338,6 +357,13 @@ impl core::ops::Add for {name} {{
     }}}}
 }}
 
+impl core::ops::AddAssign for {name} {{
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {{
+        *self = *self + rhs;
+    }}
+}}
+
 impl core::ops::Sub for {name} {{
     type Output = Self;
 
@@ -346,6 +372,13 @@ impl core::ops::Sub for {name} {{
         let r = {vsub}({load("self")}, {load("rhs")});
         Self {{ v: {store("r")} }}
     }}}}
+}}
+
+impl core::ops::SubAssign for {name} {{
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {{
+        *self = *self - rhs;
+    }}
 }}
 
 impl core::ops::Neg for {name} {{
@@ -600,6 +633,13 @@ impl core::ops::BitAnd for {name} {{
     }}}}
 }}
 
+impl core::ops::BitAndAssign for {name} {{
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Self) {{
+        *self = *self & rhs;
+    }}
+}}
+
 impl core::ops::BitOr for {name} {{
     type Output = Self;
 
@@ -609,6 +649,14 @@ impl core::ops::BitOr for {name} {{
         Self {{ v: {store("r")} }}
     }}}}
 }}
+
+impl core::ops::BitOrAssign for {name} {{
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Self) {{
+        *self = *self | rhs;
+    }}
+}}
+
 
 impl {name} {{{shuffles}}}
 
@@ -752,12 +800,26 @@ impl core::ops::Mul for {name} {{
     }}}}
 }}
 
+impl core::ops::MulAssign for {name} {{
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: Self) {{
+        *self = *self * rhs;
+    }}
+}}
+
 impl core::ops::Mul<f32> for {name} {{
     type Output = {name};
 
     #[inline(always)]
     fn mul(self, rhs: f32) -> Self::Output {{
         self * {name}::splat(rhs)
+    }}
+}}
+
+impl core::ops::MulAssign<f32> for {name} {{
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: f32) {{
+        *self = *self * rhs;
     }}
 }}
 
@@ -780,12 +842,26 @@ impl core::ops::Div for {name} {{
     }}}}
 }}
 
+impl core::ops::DivAssign for {name} {{
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: Self) {{
+        *self = *self / rhs;
+    }}
+}}
+
 impl core::ops::Div<f32> for {name} {{
     type Output = {name};
 
     #[inline(always)]
     fn div(self, rhs: f32) -> Self::Output {{
         self / {name}::splat(rhs)
+    }}
+}}
+
+impl core::ops::DivAssign<f32> for {name} {{
+    #[inline(always)]
+    fn div_assign(&mut self, rhs: f32) {{
+        *self = *self / rhs;
     }}
 }}
 
