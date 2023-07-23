@@ -86,27 +86,27 @@ impl B32x2 {
 
 impl B32x2 {
     #[inline(always)]
-    pub fn select_u32(self, on_false: U32x2, on_true: U32x2) -> U32x2 { unsafe {
+    pub fn select_u32(self, on_true: U32x2, on_false: U32x2) -> U32x2 { unsafe {
         let this     = self.v;
-        let on_false = on_false.v;
         let on_true  = on_true.v;
+        let on_false = on_false.v;
         let r = vbsl_u32(this, on_true, on_false);
         U32x2 { v: r }
     }}
 
     #[inline(always)]
-    pub fn select_b32(self, on_false: B32x2, on_true: B32x2) -> B32x2 {
-        unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
+    pub fn select_b32(self, on_true: B32x2, on_false: B32x2) -> B32x2 {
+        unsafe { transmute(self.select_u32(transmute(on_true), transmute(on_false))) }
     }
 
     #[inline(always)]
-    pub fn select_i32(self, on_false: I32x2, on_true: I32x2) -> I32x2 {
-        unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
+    pub fn select_i32(self, on_true: I32x2, on_false: I32x2) -> I32x2 {
+        unsafe { transmute(self.select_u32(transmute(on_true), transmute(on_false))) }
     }
 
     #[inline(always)]
-    pub fn select_f32(self, on_false: F32x2, on_true: F32x2) -> F32x2 {
-        unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
+    pub fn select_f32(self, on_true: F32x2, on_false: F32x2) -> F32x2 {
+        unsafe { transmute(self.select_u32(transmute(on_true), transmute(on_false))) }
     }
 
     #[inline(always)]
@@ -264,27 +264,27 @@ impl B32x4 {
 
 impl B32x4 {
     #[inline(always)]
-    pub fn select_u32(self, on_false: U32x4, on_true: U32x4) -> U32x4 { unsafe {
+    pub fn select_u32(self, on_true: U32x4, on_false: U32x4) -> U32x4 { unsafe {
         let this     = self.v;
-        let on_false = on_false.v;
         let on_true  = on_true.v;
+        let on_false = on_false.v;
         let r = vbslq_u32(this, on_true, on_false);
         U32x4 { v: r }
     }}
 
     #[inline(always)]
-    pub fn select_b32(self, on_false: B32x4, on_true: B32x4) -> B32x4 {
-        unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
+    pub fn select_b32(self, on_true: B32x4, on_false: B32x4) -> B32x4 {
+        unsafe { transmute(self.select_u32(transmute(on_true), transmute(on_false))) }
     }
 
     #[inline(always)]
-    pub fn select_i32(self, on_false: I32x4, on_true: I32x4) -> I32x4 {
-        unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
+    pub fn select_i32(self, on_true: I32x4, on_false: I32x4) -> I32x4 {
+        unsafe { transmute(self.select_u32(transmute(on_true), transmute(on_false))) }
     }
 
     #[inline(always)]
-    pub fn select_f32(self, on_false: F32x4, on_true: F32x4) -> F32x4 {
-        unsafe { transmute(self.select_u32(transmute(on_false), transmute(on_true))) }
+    pub fn select_f32(self, on_true: F32x4, on_false: F32x4) -> F32x4 {
+        unsafe { transmute(self.select_u32(transmute(on_true), transmute(on_false))) }
     }
 
     #[inline(always)]

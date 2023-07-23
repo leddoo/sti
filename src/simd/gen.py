@@ -115,27 +115,27 @@ impl {name} {{
 
 impl B32x{n} {{
     #[inline(always)]
-    pub fn select_u32(self, on_false: U32x{n}, on_true: U32x{n}) -> U32x{n} {{ unsafe {{
+    pub fn select_u32(self, on_true: U32x{n}, on_false: U32x{n}) -> U32x{n} {{ unsafe {{
         let this     = {load("self")};
-        let on_false = {load("on_false")};
         let on_true  = {load("on_true")};
+        let on_false = {load("on_false")};
         let r = {select_impl};
         U32x{n} {{ v: {store("r")} }}
     }}}}
 
     #[inline(always)]
-    pub fn select_b32(self, on_false: B32x{n}, on_true: B32x{n}) -> B32x{n} {{
-        unsafe {{ transmute(self.select_u32(transmute(on_false), transmute(on_true))) }}
+    pub fn select_b32(self, on_true: B32x{n}, on_false: B32x{n}) -> B32x{n} {{
+        unsafe {{ transmute(self.select_u32(transmute(on_true), transmute(on_false))) }}
     }}
 
     #[inline(always)]
-    pub fn select_i32(self, on_false: I32x{n}, on_true: I32x{n}) -> I32x{n} {{
-        unsafe {{ transmute(self.select_u32(transmute(on_false), transmute(on_true))) }}
+    pub fn select_i32(self, on_true: I32x{n}, on_false: I32x{n}) -> I32x{n} {{
+        unsafe {{ transmute(self.select_u32(transmute(on_true), transmute(on_false))) }}
     }}
 
     #[inline(always)]
-    pub fn select_f32(self, on_false: F32x{n}, on_true: F32x{n}) -> F32x{n} {{
-        unsafe {{ transmute(self.select_u32(transmute(on_false), transmute(on_true))) }}
+    pub fn select_f32(self, on_true: F32x{n}, on_false: F32x{n}) -> F32x{n} {{
+        unsafe {{ transmute(self.select_u32(transmute(on_true), transmute(on_false))) }}
     }}
 
     #[inline(always)]
