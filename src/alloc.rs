@@ -1,5 +1,7 @@
 use core::ptr::NonNull;
-use core::alloc::Layout;
+use crate::num::ceil_to_multiple_pow2;
+
+pub use core::alloc::Layout;
 
 
 pub trait Alloc {
@@ -163,6 +165,15 @@ pub fn dangling(layout: Layout) -> NonNull<u8> {
     // this is kinda sketchy.
     // taken from the unstable impl of `Layout::dangling`
     unsafe { NonNull::new_unchecked(core::mem::transmute(layout.align())) }
+}
+
+#[inline(always)]
+pub fn cat_layouts(a: Layout, b: Layout) -> Option<Layout> {
+    let b_begin = ceil_to_multiple_pow2(a.size(), b.align());
+
+    let new_size = b_begin.checked_add(b.size())?;
+    let new_align = a.align().max(b.align());
+    Layout::from_size_align(new_size, new_align).ok()
 }
 
 
