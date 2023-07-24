@@ -168,12 +168,48 @@ pub fn dangling(layout: Layout) -> NonNull<u8> {
 }
 
 #[inline(always)]
-pub fn cat_layouts(a: Layout, b: Layout) -> Option<Layout> {
+pub fn cat_join(a: Layout, b: Layout) -> Option<Layout> {
     let b_begin = ceil_to_multiple_pow2(a.size(), b.align());
 
     let new_size = b_begin.checked_add(b.size())?;
     let new_align = a.align().max(b.align());
     Layout::from_size_align(new_size, new_align).ok()
+}
+
+#[inline(always)]
+pub unsafe fn cat_next<T, U>(base: *const T, base_size: usize) -> *const U {
+    unsafe { cat_next_ex(base, base_size, core::mem::align_of::<U>()) }
+}
+
+#[inline(always)]
+pub unsafe fn cat_next_ex<T, U>(base: *const T, base_size: usize, next_align: usize) -> *const U {
+    let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
+    #[cfg(miri)] {
+        // miri doesn't like int->ptr casts.
+        let delta = result - base as usize;
+        return (base as *const u8).add(delta) as *const U;
+    }
+    #[cfg(not(miri))] {
+        return result as *const U;
+    }
+}
+
+#[inline(always)]
+pub unsafe fn cat_next_mut<T, U>(base: *mut T, base_size: usize) -> *mut U {
+    unsafe { cat_next_mut_ex(base, base_size, core::mem::align_of::<U>()) }
+}
+
+#[inline(always)]
+pub unsafe fn cat_next_mut_ex<T, U>(base: *mut T, base_size: usize, next_align: usize) -> *mut U {
+    let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
+    #[cfg(miri)] {
+        // miri doesn't like int->ptr casts.
+        let delta = result - base as usize;
+        return (base as *mut u8).add(delta) as *mut U;
+    }
+    #[cfg(not(miri))] {
+        return result as *mut U;
+    }
 }
 
 
