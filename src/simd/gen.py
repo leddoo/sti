@@ -293,19 +293,19 @@ def elements(
             zw = f"""
 
     #[inline(always)]
-    pub fn z(self) -> {ty} {{ self[2] }}
+    pub const fn z(self) -> {ty} {{ self.as_array()[2] }}
 
     #[inline(always)]
-    pub fn w(self) -> {ty} {{ self[3] }}\
+    pub const fn w(self) -> {ty} {{ self.as_array()[3] }}\
 """
 
         xyzw = f"""\
 impl {name} {{
     #[inline(always)]
-    pub fn x(self) -> {ty} {{ self[0] }}
+    pub const fn x(self) -> {ty} {{ self.as_array()[0] }}
 
     #[inline(always)]
-    pub fn y(self) -> {ty} {{ self[1] }}\
+    pub const fn y(self) -> {ty} {{ self.as_array()[1] }}\
 {zw}
 }}"""
 
@@ -632,7 +632,7 @@ impl core::ops::Shl<u32> for U32x{n} {{
 
     #[inline(always)]
     fn shl(self, rhs: u32) -> Self {{ unsafe {{
-        debug_assert!(rhs >= 0 && rhs < 32);
+        debug_assert!(rhs < 32);
         Self {{ v: vshl{q}_u32(self.v, vdup{q}_n_s32(rhs as i32)) }}
     }}}}
 }}
@@ -642,7 +642,7 @@ impl core::ops::Shr<u32> for U32x{n} {{
 
     #[inline(always)]
     fn shr(self, rhs: u32) -> Self {{ unsafe {{
-        debug_assert!(rhs >= 0 && rhs < 32);
+        debug_assert!(rhs < 32);
         Self {{ v: vshl{q}_u32(self.v, vdup{q}_n_s32(-(rhs as i32))) }}
     }}}}
 }}

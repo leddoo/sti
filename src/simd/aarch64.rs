@@ -411,10 +411,10 @@ impl core::fmt::Debug for I32x2 {
 
 impl I32x2 {
     #[inline(always)]
-    pub fn x(self) -> i32 { self[0] }
+    pub const fn x(self) -> i32 { self.as_array()[0] }
 
     #[inline(always)]
-    pub fn y(self) -> i32 { self[1] }
+    pub const fn y(self) -> i32 { self.as_array()[1] }
 }
 
 impl core::ops::Deref for I32x2 {
@@ -713,16 +713,16 @@ impl core::fmt::Debug for I32x4 {
 
 impl I32x4 {
     #[inline(always)]
-    pub fn x(self) -> i32 { self[0] }
+    pub const fn x(self) -> i32 { self.as_array()[0] }
 
     #[inline(always)]
-    pub fn y(self) -> i32 { self[1] }
+    pub const fn y(self) -> i32 { self.as_array()[1] }
 
     #[inline(always)]
-    pub fn z(self) -> i32 { self[2] }
+    pub const fn z(self) -> i32 { self.as_array()[2] }
 
     #[inline(always)]
-    pub fn w(self) -> i32 { self[3] }
+    pub const fn w(self) -> i32 { self.as_array()[3] }
 }
 
 impl core::ops::Deref for I32x4 {
@@ -1021,10 +1021,10 @@ impl core::fmt::Debug for U32x2 {
 
 impl U32x2 {
     #[inline(always)]
-    pub fn x(self) -> u32 { self[0] }
+    pub const fn x(self) -> u32 { self.as_array()[0] }
 
     #[inline(always)]
-    pub fn y(self) -> u32 { self[1] }
+    pub const fn y(self) -> u32 { self.as_array()[1] }
 }
 
 impl core::ops::Deref for U32x2 {
@@ -1099,7 +1099,7 @@ impl core::ops::Shl<u32> for U32x2 {
 
     #[inline(always)]
     fn shl(self, rhs: u32) -> Self { unsafe {
-        debug_assert!(rhs >= 0 && rhs < 32);
+        debug_assert!(rhs < 32);
         Self { v: vshl_u32(self.v, vdup_n_s32(rhs as i32)) }
     }}
 }
@@ -1109,7 +1109,7 @@ impl core::ops::Shr<u32> for U32x2 {
 
     #[inline(always)]
     fn shr(self, rhs: u32) -> Self { unsafe {
-        debug_assert!(rhs >= 0 && rhs < 32);
+        debug_assert!(rhs < 32);
         Self { v: vshl_u32(self.v, vdup_n_s32(-(rhs as i32))) }
     }}
 }
@@ -1319,16 +1319,16 @@ impl core::fmt::Debug for U32x4 {
 
 impl U32x4 {
     #[inline(always)]
-    pub fn x(self) -> u32 { self[0] }
+    pub const fn x(self) -> u32 { self.as_array()[0] }
 
     #[inline(always)]
-    pub fn y(self) -> u32 { self[1] }
+    pub const fn y(self) -> u32 { self.as_array()[1] }
 
     #[inline(always)]
-    pub fn z(self) -> u32 { self[2] }
+    pub const fn z(self) -> u32 { self.as_array()[2] }
 
     #[inline(always)]
-    pub fn w(self) -> u32 { self[3] }
+    pub const fn w(self) -> u32 { self.as_array()[3] }
 }
 
 impl core::ops::Deref for U32x4 {
@@ -1403,7 +1403,7 @@ impl core::ops::Shl<u32> for U32x4 {
 
     #[inline(always)]
     fn shl(self, rhs: u32) -> Self { unsafe {
-        debug_assert!(rhs >= 0 && rhs < 32);
+        debug_assert!(rhs < 32);
         Self { v: vshlq_u32(self.v, vdupq_n_s32(rhs as i32)) }
     }}
 }
@@ -1413,7 +1413,7 @@ impl core::ops::Shr<u32> for U32x4 {
 
     #[inline(always)]
     fn shr(self, rhs: u32) -> Self { unsafe {
-        debug_assert!(rhs >= 0 && rhs < 32);
+        debug_assert!(rhs < 32);
         Self { v: vshlq_u32(self.v, vdupq_n_s32(-(rhs as i32))) }
     }}
 }
@@ -1623,10 +1623,10 @@ impl core::fmt::Debug for F32x2 {
 
 impl F32x2 {
     #[inline(always)]
-    pub fn x(self) -> f32 { self[0] }
+    pub const fn x(self) -> f32 { self.as_array()[0] }
 
     #[inline(always)]
-    pub fn y(self) -> f32 { self[1] }
+    pub const fn y(self) -> f32 { self.as_array()[1] }
 }
 
 impl core::ops::Deref for F32x2 {
@@ -2020,16 +2020,16 @@ impl core::fmt::Debug for F32x4 {
 
 impl F32x4 {
     #[inline(always)]
-    pub fn x(self) -> f32 { self[0] }
+    pub const fn x(self) -> f32 { self.as_array()[0] }
 
     #[inline(always)]
-    pub fn y(self) -> f32 { self[1] }
+    pub const fn y(self) -> f32 { self.as_array()[1] }
 
     #[inline(always)]
-    pub fn z(self) -> f32 { self[2] }
+    pub const fn z(self) -> f32 { self.as_array()[2] }
 
     #[inline(always)]
-    pub fn w(self) -> f32 { self[3] }
+    pub const fn w(self) -> f32 { self.as_array()[3] }
 }
 
 impl core::ops::Deref for F32x4 {
