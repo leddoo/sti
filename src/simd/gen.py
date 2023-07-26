@@ -17,7 +17,9 @@ def b32(
 
     v_decls = joined(n, ", ", lambda i: f"v{i}: bool")
     v_vars  = joined(n, ", ", lambda i: f"v{i}")
-    vs_vars   = joined(n, ", ", lambda i: f"vs[{i}]")
+    vs_vars = joined(n, ", ", lambda i: f"vs[{i}]")
+
+    vvvvvv = joined(n, ", ", lambda i: "v")
 
     neg_vars = joined(n, "\n        ", lambda i: f"let v{i} = -(v{i} as i32);")
 
@@ -50,7 +52,7 @@ impl {name} {{
 
     #[inline(always)]
     pub const fn splat(v: bool) -> Self {{
-        Self::from_array([v; {n}])
+        Self::from_array([{vvvvvv}])
     }}
 
     #[inline(always)]
@@ -158,6 +160,7 @@ impl B32x{n} {{
 def basics(n, name, rep, impl, ty, kzero, kone, kmin, kmax):
     v_decls = joined(n, ", ", lambda i: f"v{i}: {ty}")
     v_vars  = joined(n, ", ", lambda i: f"v{i}")
+    vvvvvv  = joined(n, ", ", lambda i: "v")
 
     return f"""\
 #[derive(Clone, Copy)]
@@ -176,7 +179,7 @@ impl {name} {{
     pub const fn new({v_decls}) -> Self {{ Self::from_array([{v_vars}]) }}
 
     #[inline(always)]
-    pub const fn splat(v: {ty}) -> Self {{ Self::from_array([v; {n}]) }}
+    pub const fn splat(v: {ty}) -> Self {{ Self::from_array([{vvvvvv}]) }}
 
     #[inline(always)]
     pub const fn from_array(vs: [{ty}; {n}]) -> Self {{ unsafe {{ transmute(vs) }} }}
