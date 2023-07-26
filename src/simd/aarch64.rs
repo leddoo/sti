@@ -493,6 +493,27 @@ impl core::ops::Neg for I32x2 {
 }
 
 
+impl core::ops::Shl<i32> for I32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shl(self, rhs: i32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshl_s32(self.v, vdup_n_s32(rhs)) }
+    }}
+}
+
+impl core::ops::Shr<i32> for I32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shr(self, rhs: i32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshl_s32(self.v, vdup_n_s32(-rhs)) }
+    }}
+}
+
+
 impl I32x2 {
     #[inline(always)]
     pub fn min(self, other: Self) -> Self { unsafe {
@@ -780,6 +801,27 @@ impl core::ops::Neg for I32x4 {
 }
 
 
+impl core::ops::Shl<i32> for I32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shl(self, rhs: i32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshlq_s32(self.v, vdupq_n_s32(rhs)) }
+    }}
+}
+
+impl core::ops::Shr<i32> for I32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shr(self, rhs: i32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshlq_s32(self.v, vdupq_n_s32(-rhs)) }
+    }}
+}
+
+
 impl I32x4 {
     #[inline(always)]
     pub fn min(self, other: Self) -> Self { unsafe {
@@ -1049,6 +1091,27 @@ impl core::ops::Neg for U32x2 {
     fn neg(self) -> Self::Output {
         (-self.as_i32()).as_u32()
     }
+}
+
+
+impl core::ops::Shl<u32> for U32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shl(self, rhs: u32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshl_u32(self.v, vdup_n_s32(rhs as i32)) }
+    }}
+}
+
+impl core::ops::Shr<u32> for U32x2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shr(self, rhs: u32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshl_u32(self.v, vdup_n_s32(-(rhs as i32))) }
+    }}
 }
 
 
@@ -1332,6 +1395,27 @@ impl core::ops::Neg for U32x4 {
     fn neg(self) -> Self::Output {
         (-self.as_i32()).as_u32()
     }
+}
+
+
+impl core::ops::Shl<u32> for U32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shl(self, rhs: u32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshlq_u32(self.v, vdupq_n_s32(rhs as i32)) }
+    }}
+}
+
+impl core::ops::Shr<u32> for U32x4 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn shr(self, rhs: u32) -> Self { unsafe {
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self { v: vshlq_u32(self.v, vdupq_n_s32(-(rhs as i32))) }
+    }}
 }
 
 

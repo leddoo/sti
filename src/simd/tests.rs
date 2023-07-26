@@ -160,6 +160,19 @@ mod tests {
 
         assert_eq!(i(2, 5).hmin(), 2);
         assert_eq!(i(2, 5).hmax(), 5);
+
+        assert_eq!((i(0xff01f0ffu32 as i32, 0x00ff1208) >> 17).as_array(),
+            [0xffffff80u32 as i32, 0x0000007f]);
+        assert_eq!((i(0xff01f0ffu32 as i32, 0x00ff1208) << 17).as_array(),
+            [0xe1fe0000u32 as i32, 0x24100000]);
+    }
+
+    #[test]
+    fn u32x2() {
+        let u = U32x2::new;
+
+        assert_eq!((u(0xff01f0ff, 0x00ff1208) >> 17).as_array(), [0x00007f80, 0x0000007f]);
+        assert_eq!((u(0xff01f0ff, 0x00ff1208) << 17).as_array(), [0xe1fe0000, 0x24100000]);
     }
 }
 

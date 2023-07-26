@@ -516,6 +516,7 @@ def i32(
     vmin, vmax,
     vhmin, vhmax,
     vcvt_f32,
+    arch,
     align = None,
     load  = None,
     store = None,
@@ -524,6 +525,36 @@ def i32(
 
     load  = load  or (lambda this: f"{this}.v")
     store = store or (lambda v: v)
+
+    if arch == "aarch64":
+        assert n == 2 or n == 4
+        q = "q" if n == 4 else ""
+
+        shifts = f"""\
+impl core::ops::Shl<i32> for I32x{n} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn shl(self, rhs: i32) -> Self {{ unsafe {{
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self {{ v: vshl{q}_s32(self.v, vdup{q}_n_s32(rhs)) }}
+    }}}}
+}}
+
+impl core::ops::Shr<i32> for I32x{n} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn shr(self, rhs: i32) -> Self {{ unsafe {{
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self {{ v: vshl{q}_s32(self.v, vdup{q}_n_s32(-rhs)) }}
+    }}}}
+}}
+"""
+
+    else:
+        assert False
+
 
     return f"""\
 {basics(n, name, rep, impl, "i32", "0", "1", "i32::MIN", "i32::MAX")}
@@ -543,6 +574,8 @@ impl {name} {{
 
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}
+
+{shifts}
 
 {ord_stuff(name, "i32", vmin, vmax, vhmin, vhmax, load, store)}
 
@@ -592,6 +625,29 @@ def u32(
         (Self {{ v: a }}, Self {{ v: b }})
     }}}}
 """
+
+        shifts = f"""\
+impl core::ops::Shl<u32> for U32x{n} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn shl(self, rhs: u32) -> Self {{ unsafe {{
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self {{ v: vshl{q}_u32(self.v, vdup{q}_n_s32(rhs as i32)) }}
+    }}}}
+}}
+
+impl core::ops::Shr<u32> for U32x{n} {{
+    type Output = Self;
+
+    #[inline(always)]
+    fn shr(self, rhs: u32) -> Self {{ unsafe {{
+        debug_assert!(rhs >= 0 && rhs < 32);
+        Self {{ v: vshl{q}_u32(self.v, vdup{q}_n_s32(-(rhs as i32))) }}
+    }}}}
+}}
+"""
+
     else:
         assert False
 
@@ -607,6 +663,8 @@ impl {name} {{
 
 
 {arithmetic(name, vadd, vsub, vneg, load, store)}
+
+{shifts}
 
 {ord_stuff(name, "u32", vmin, vmax, vhmin, vhmax, load, store)}
 
@@ -903,6 +961,7 @@ use crate::float::F32Ext;\n\n"""
         vmin = "vmin_s32", vmax = "vmax_s32",
         vhmin = "vminv_s32", vhmax = "vmaxv_s32",
         vcvt_f32 = "vcvt_f32_s32",
+        arch = "aarch64",
     )
     r += i32(
         n = 4,
@@ -915,6 +974,7 @@ use crate::float::F32Ext;\n\n"""
         vmin = "vminq_s32", vmax = "vmaxq_s32",
         vhmin = "vminvq_s32", vhmax = "vmaxvq_s32",
         vcvt_f32 = "vcvtq_f32_s32",
+        arch = "aarch64",
     )
 
     # u32
