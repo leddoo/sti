@@ -17,6 +17,11 @@ impl<K: Key, V> KSlice<K, V> {
     }
 
     #[inline(always)]
+    pub fn new_mut_unck<'a>(slice: &'a mut [V]) -> &'a mut Self {
+        unsafe { &mut *(slice as *mut [V] as *mut Self) }
+    }
+
+    #[inline(always)]
     pub fn inner(&self) -> &[V] {
         &self.inner
     }
@@ -35,7 +40,36 @@ impl<K: Key, V> KSlice<K, V> {
             phantom: PhantomData,
         }
     }
+
+
+    #[inline(always)]
+    pub fn get(&self, index: K) -> Option<&V> {
+        self.inner.get(index.usize())
+    }
+
+    #[inline(always)]
+    pub fn get_mut(&mut self, index: K) -> Option<&mut V> {
+        self.inner.get_mut(index.usize())
+    }
 }
+
+
+impl<K: Key, V> core::ops::Index<K> for KSlice<K, V> {
+    type Output = V;
+
+    #[inline(always)]
+    fn index(&self, index: K) -> &Self::Output {
+        &self.inner[index.usize()]
+    }
+}
+
+impl<K: Key, V> core::ops::IndexMut<K> for KSlice<K, V> {
+    #[inline(always)]
+    fn index_mut(&mut self, index: K) -> &mut Self::Output {
+        &mut self.inner[index.usize()]
+    }
+}
+
 
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]

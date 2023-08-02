@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use super::{Key, KRange, KSlice, KIter};
+use super::{Key, KRange, KSlice};
 
 use crate::alloc::{Alloc, GlobalAlloc};
 use crate::vec::Vec;
@@ -100,36 +100,25 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     }
 
     #[inline(always)]
-    pub fn iter(&self) -> KIter<K, V> {
-        self.as_slice().iter()
-    }
-
-
-    #[inline(always)]
-    pub fn get(&self, index: K) -> Option<&V> {
-        self.inner.get(index.usize())
-    }
-
-    #[inline(always)]
-    pub fn get_mut(&mut self, index: K) -> Option<&mut V> {
-        self.inner.get_mut(index.usize())
+    pub fn as_slice_mut(&mut self) -> &mut KSlice<K, V> {
+        KSlice::new_mut_unck(&mut self.inner)
     }
 }
 
 
-impl<K: Key, V, A: Alloc> core::ops::Index<K> for KVec<K, V, A> {
-    type Output = V;
+impl<K: Key, V, A: Alloc> core::ops::Deref for KVec<K, V, A> {
+    type Target = KSlice<K, V>;
 
     #[inline(always)]
-    fn index(&self, index: K) -> &Self::Output {
-        &self.inner[index.usize()]
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
     }
 }
 
-impl<K: Key, V, A: Alloc> core::ops::IndexMut<K> for KVec<K, V, A> {
+impl<K: Key, V, A: Alloc> core::ops::DerefMut for KVec<K, V, A> {
     #[inline(always)]
-    fn index_mut(&mut self, index: K) -> &mut Self::Output {
-        &mut self.inner[index.usize()]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_slice_mut()
     }
 }
 
