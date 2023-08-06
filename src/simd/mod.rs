@@ -86,6 +86,72 @@ pub trait SimdLanes<const N: usize> {
     fn i32_and(lhs: [i32; N], rhs: [i32; N]) -> [i32; N];
     fn i32_or(lhs: [i32; N], rhs: [i32; N]) -> [i32; N];
     fn i32_not(v: [i32; N]) -> [i32; N];
+
+
+    fn u32_splat(v: u32) -> [u32; N];
+
+    fn u32_as_i32(v: [u32; N]) -> [i32; N];
+
+    fn u32_min(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
+    fn u32_max(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
+
+    fn u32_eq(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
+    fn u32_ne(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
+    fn u32_le(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
+    fn u32_lt(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
+    fn u32_ge(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
+    fn u32_gt(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
+
+    fn u32_zip(lhs: [u32; N], rhs: [u32; N]) -> ([u32; N], [u32; N]);
+    fn u32_unzip(lhs: [u32; N], rhs: [u32; N]) -> ([u32; N], [u32; N]);
+
+    fn u32_add(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
+    fn u32_sub(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
+
+    fn u32_shl(v: [u32; N], shift: u32) -> [u32; N];
+    fn u32_shr(v: [u32; N], shift: u32) -> [u32; N];
+
+    fn u32_and(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
+    fn u32_or(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
+    fn u32_not(v: [u32; N]) -> [u32; N];
+
+
+    fn f32_splat(v: f32) -> [f32; N];
+
+    fn f32_as_bits(v: [f32; N]) -> [u32; N];
+    fn f32_from_bits(v: [u32; N]) -> [f32; N];
+
+    fn f32_to_i32_unck(v: [f32; N]) -> [i32; N];
+    fn f32_to_i32(v: [f32; N]) -> [i32; N];
+
+    fn f32_floor(v: [f32; N]) -> [f32; N];
+    fn f32_ceil(v: [f32; N]) -> [f32; N];
+    fn f32_round(v: [f32; N]) -> [f32; N];
+    fn f32_trunc(v: [f32; N]) -> [f32; N];
+    fn f32_abs(v: [f32; N]) -> [f32; N];
+    fn f32_sqrt(v: [f32; N]) -> [f32; N];
+    fn f32_with_sign_of(v: [f32; N], sign: [f32; N]) -> [f32; N];
+
+    fn f32_hadd(v: [f32; N]) -> f32;
+
+    fn f32_min(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];
+    fn f32_max(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];
+
+    fn f32_eq(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
+    fn f32_ne(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
+    fn f32_le(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
+    fn f32_lt(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
+    fn f32_ge(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
+    fn f32_gt(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
+
+    fn f32_zip(lhs: [f32; N], rhs: [f32; N]) -> ([f32; N], [f32; N]);
+    fn f32_unzip(lhs: [f32; N], rhs: [f32; N]) -> ([f32; N], [f32; N]);
+
+    fn f32_neg(v: [f32; N]) -> [f32; N];
+    fn f32_add(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];
+    fn f32_sub(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];
+    fn f32_mul(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];
+    fn f32_div(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];
 }
 
 #[repr(align(8))]
@@ -99,5 +165,7 @@ pub struct Align16;
 
 mod scalar;
 
+
+mod tests;
 
 

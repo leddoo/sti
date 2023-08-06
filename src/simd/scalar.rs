@@ -162,6 +162,194 @@ impl SimdLanes<2> for () {
     fn i32_not(v: [i32; 2]) -> [i32; 2] {
         todo!()
     }
+
+    fn u32_splat(v: u32) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_as_i32(v: [u32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn u32_min(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_max(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_eq(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn u32_ne(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn u32_le(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn u32_lt(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn u32_ge(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn u32_gt(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn u32_zip(lhs: [u32; 2], rhs: [u32; 2]) -> ([u32; 2], [u32; 2]) {
+        todo!()
+    }
+
+    fn u32_unzip(lhs: [u32; 2], rhs: [u32; 2]) -> ([u32; 2], [u32; 2]) {
+        todo!()
+    }
+
+    fn u32_add(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_sub(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_shl(v: [u32; 2], shift: u32) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_shr(v: [u32; 2], shift: u32) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_and(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_or(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn u32_not(v: [u32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn f32_splat(v: f32) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_to_i32_unck(v: [f32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn f32_to_i32(v: [f32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn f32_as_bits(v: [f32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn f32_from_bits(v: [u32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_floor(v: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_ceil(v: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_round(v: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_trunc(v: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_abs(v: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_sqrt(v: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_with_sign_of(v: [f32; 2], sign: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_hadd(v: [f32; 2]) -> f32 {
+        todo!()
+    }
+
+    fn f32_min(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_max(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_eq(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn f32_ne(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn f32_le(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn f32_lt(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn f32_ge(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn f32_gt(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn f32_zip(lhs: [f32; 2], rhs: [f32; 2]) -> ([f32; 2], [f32; 2]) {
+        todo!()
+    }
+
+    fn f32_unzip(lhs: [f32; 2], rhs: [f32; 2]) -> ([f32; 2], [f32; 2]) {
+        todo!()
+    }
+
+    fn f32_neg(v: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_add(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_sub(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_mul(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn f32_div(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
+        todo!()
+    }
 }
 
 impl SimdLanes<4> for () {
@@ -315,6 +503,194 @@ impl SimdLanes<4> for () {
     }
 
     fn i32_not(v: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn u32_splat(v: u32) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_as_i32(v: [u32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn u32_min(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_max(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_eq(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn u32_ne(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn u32_le(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn u32_lt(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn u32_ge(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn u32_gt(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn u32_zip(lhs: [u32; 4], rhs: [u32; 4]) -> ([u32; 4], [u32; 4]) {
+        todo!()
+    }
+
+    fn u32_unzip(lhs: [u32; 4], rhs: [u32; 4]) -> ([u32; 4], [u32; 4]) {
+        todo!()
+    }
+
+    fn u32_add(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_sub(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_shl(v: [u32; 4], shift: u32) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_shr(v: [u32; 4], shift: u32) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_and(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_or(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn u32_not(v: [u32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn f32_splat(v: f32) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_to_i32_unck(v: [f32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn f32_to_i32(v: [f32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn f32_as_bits(v: [f32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn f32_from_bits(v: [u32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_floor(v: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_ceil(v: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_round(v: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_trunc(v: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_abs(v: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_sqrt(v: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_with_sign_of(v: [f32; 4], sign: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_hadd(v: [f32; 4]) -> f32 {
+        todo!()
+    }
+
+    fn f32_min(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_max(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_eq(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn f32_ne(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn f32_le(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn f32_lt(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn f32_ge(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn f32_gt(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn f32_zip(lhs: [f32; 4], rhs: [f32; 4]) -> ([f32; 4], [f32; 4]) {
+        todo!()
+    }
+
+    fn f32_unzip(lhs: [f32; 4], rhs: [f32; 4]) -> ([f32; 4], [f32; 4]) {
+        todo!()
+    }
+
+    fn f32_neg(v: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_add(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_sub(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_mul(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn f32_div(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
         todo!()
     }
 }

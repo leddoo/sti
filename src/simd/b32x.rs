@@ -14,9 +14,25 @@ impl B32 {
     pub fn new(v: bool) -> B32 {
         B32((-(v as i32)) as u32)
     }
+
+    #[inline(always)]
+    pub fn to_bool(self) -> bool {
+        self.0 != 0
+    }
 }
 
-impl SimdElement for B32 {}
+impl core::fmt::Debug for B32 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        self.to_bool().fmt(f)
+    }
+}
+
+impl Into<bool> for B32 {
+    #[inline(always)]
+    fn into(self) -> bool {
+        self.to_bool()
+    }
+}
 
 impl Into<B32> for bool {
     #[inline(always)]
@@ -25,6 +41,8 @@ impl Into<B32> for bool {
     }
 }
 
+
+impl SimdElement for B32 {}
 
 
 pub type B32x<const N: usize> = Simd<B32, N>;
@@ -51,6 +69,11 @@ impl<const N: usize> B32x<N> where (): SimdLanes<N> {
     pub fn splat_b(v: bool) -> Self {
         let v = <() as SimdLanes<N>>::b32_splat(v.into());
         Self { align: Self::ALIGN, v }
+    }
+
+    #[inline(always)]
+    pub fn to_array_b(self) -> [bool; N] {
+        self.v.map(B32::to_bool)
     }
 
 

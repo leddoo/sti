@@ -1,11 +1,8 @@
 
 - todo:
     - new simd module:
-        - finish `SimdLanes` trait.
-        - B32x, I32x, U32x, F32x interfaces using `SimdLanes`.
-        - port tests.
-        - impl aarch64.
         - impl scalar.
+        - impl aarch64.
     - `Vec::extend`.
     - `Vec` drop tests & fix truncate.
     - thread local temp arena (dynamic stack enforcement).

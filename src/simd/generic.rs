@@ -20,19 +20,31 @@ impl<T: SimdElement, const N: usize> Simd<T, N> where (): SimdLanes<N> {
     }
 
     #[inline(always)]
-    pub fn to_array(self) -> [T; N] {
+    pub fn as_array(self) -> [T; N] {
         self.v
     }
+}
+
+impl<T: SimdElement> Simd<T, 2> {
+    #[inline(always)]
+    pub const fn x(self) -> T { self.v[0] }
 
     #[inline(always)]
-    pub const fn as_array(&self) -> &[T; N] {
-        &self.v
-    }
+    pub const fn y(self) -> T { self.v[1] }
+}
+
+impl<T: SimdElement> Simd<T, 4> {
+    #[inline(always)]
+    pub const fn x(self) -> T { self.v[0] }
 
     #[inline(always)]
-    pub fn as_array_mut(&mut self) -> &mut [T; N] {
-        &mut self.v
-    }
+    pub const fn y(self) -> T { self.v[1] }
+
+    #[inline(always)]
+    pub const fn z(self) -> T { self.v[2] }
+
+    #[inline(always)]
+    pub const fn w(self) -> T { self.v[3] }
 }
 
 impl<T: SimdElement, const N: usize> Into<Simd<T, N>> for [T; N] where (): SimdLanes<N> {
