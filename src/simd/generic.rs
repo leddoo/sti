@@ -35,6 +35,12 @@ impl<T: SimdElement, const N: usize> Simd<T, N> where (): SimdLanes<N> {
     }
 }
 
+impl<T: SimdElement, const N: usize> Into<Simd<T, N>> for [T; N] where (): SimdLanes<N> {
+    #[inline(always)]
+    fn into(self) -> Simd<T, N> {
+        Simd::from_array(self)
+    }
+}
 
 impl<T: SimdElement, const N: usize> core::ops::Deref for Simd<T, N> where (): SimdLanes<N> {
     type Target = [T; N];

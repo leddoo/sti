@@ -15,7 +15,7 @@ impl SimdLanes<2> for () {
         todo!()
     }
 
-    fn b32_as_i32(v: [super::b32x::B32; 2]) -> [u32; 2] {
+    fn b32_as_i32(v: [super::b32x::B32; 2]) -> [i32; 2] {
         todo!()
     }
 
@@ -78,6 +78,90 @@ impl SimdLanes<2> for () {
     fn b32_not(v: [super::b32x::B32; 2]) -> [super::b32x::B32; 2] {
         todo!()
     }
+
+    fn i32_splat(v: i32) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_as_u32(v: [i32; 2]) -> [u32; 2] {
+        todo!()
+    }
+
+    fn i32_to_f32(v: [i32; 2]) -> [f32; 2] {
+        todo!()
+    }
+
+    fn i32_min(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_max(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_zip(lhs: [i32; 2], rhs: [i32; 2]) -> ([i32; 2], [i32; 2]) {
+        todo!()
+    }
+
+    fn i32_unzip(lhs: [i32; 2], rhs: [i32; 2]) -> ([i32; 2], [i32; 2]) {
+        todo!()
+    }
+
+    fn i32_eq(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn i32_ne(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn i32_le(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn i32_lt(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn i32_ge(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn i32_gt(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
+        todo!()
+    }
+
+    fn i32_add(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_sub(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_neg(v: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_shl(v: [i32; 2], shift: i32) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_shr(v: [i32; 2], shift: i32) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_and(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_or(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
+
+    fn i32_not(v: [i32; 2]) -> [i32; 2] {
+        todo!()
+    }
 }
 
 impl SimdLanes<4> for () {
@@ -95,7 +179,7 @@ impl SimdLanes<4> for () {
         todo!()
     }
 
-    fn b32_as_i32(v: [super::b32x::B32; 4]) -> [u32; 4] {
+    fn b32_as_i32(v: [super::b32x::B32; 4]) -> [i32; 4] {
         todo!()
     }
 
@@ -147,6 +231,90 @@ impl SimdLanes<4> for () {
     }
 
     fn b32_not(v: [super::b32x::B32; 4]) -> [super::b32x::B32; 4] {
+        todo!()
+    }
+
+    fn i32_splat(v: i32) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_as_u32(v: [i32; 4]) -> [u32; 4] {
+        todo!()
+    }
+
+    fn i32_to_f32(v: [i32; 4]) -> [f32; 4] {
+        todo!()
+    }
+
+    fn i32_min(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_max(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_zip(lhs: [i32; 4], rhs: [i32; 4]) -> ([i32; 4], [i32; 4]) {
+        todo!()
+    }
+
+    fn i32_unzip(lhs: [i32; 4], rhs: [i32; 4]) -> ([i32; 4], [i32; 4]) {
+        todo!()
+    }
+
+    fn i32_eq(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn i32_ne(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn i32_le(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn i32_lt(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn i32_ge(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn i32_gt(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
+        todo!()
+    }
+
+    fn i32_add(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_sub(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_neg(v: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_shl(v: [i32; 4], shift: i32) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_shr(v: [i32; 4], shift: i32) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_and(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_or(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
+        todo!()
+    }
+
+    fn i32_not(v: [i32; 4]) -> [i32; 4] {
         todo!()
     }
 }
