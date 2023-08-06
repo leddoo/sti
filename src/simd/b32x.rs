@@ -16,6 +16,11 @@ impl B32 {
     }
 
     #[inline(always)]
+    pub fn as_u32(self) -> u32 {
+        self.0
+    }
+
+    #[inline(always)]
     pub fn to_bool(self) -> bool {
         self.0 != 0
     }
@@ -38,6 +43,33 @@ impl Into<B32> for bool {
     #[inline(always)]
     fn into(self) -> B32 {
         B32::new(self)
+    }
+}
+
+impl core::ops::BitAnd for B32 {
+    type Output = B32;
+
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        B32(self.0 & rhs.0)
+    }
+}
+
+impl core::ops::BitOr for B32 {
+    type Output = B32;
+
+    #[inline(always)]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        B32(self.0 | rhs.0)
+    }
+}
+
+impl core::ops::Not for B32 {
+    type Output = B32;
+
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        B32(!self.0)
     }
 }
 
@@ -92,7 +124,8 @@ impl<const N: usize> B32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn select_b32(self, on_true: B32x<N>, on_false: B32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::b32_select_b32(self.v, on_true.v, on_false.v);
+        let r = self.select_u32(on_true.as_u32(), on_false.as_u32());
+        let v = <() as SimdLanes<N>>::b32_from_u32_unck(r.v);
         B32x { align: B32x::ALIGN, v }
     }
 
@@ -104,14 +137,12 @@ impl<const N: usize> B32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn select_i32(self, on_true: I32x<N>, on_false: I32x<N>) -> I32x<N> {
-        let v = <() as SimdLanes<N>>::b32_select_i32(self.v, on_true.v, on_false.v);
-        I32x { align: I32x::ALIGN, v }
+        self.select_u32(on_true.as_u32(), on_false.as_u32()).as_i32()
     }
 
     #[inline(always)]
     pub fn select_f32(self, on_true: F32x<N>, on_false: F32x<N>) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::b32_select_f32(self.v, on_true.v, on_false.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x::from_bits(self.select_u32(on_true.as_bits(), on_false.as_bits()))
     }
 
 

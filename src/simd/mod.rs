@@ -39,12 +39,10 @@ pub trait SimdLanes<const N: usize> {
     fn b32_splat(v: B32) -> [B32; N];
 
     fn b32_as_u32(v: [B32; N]) -> [u32; N];
+    fn b32_from_u32_unck(v: [u32; N]) -> [B32; N];
     fn b32_as_i32(v: [B32; N]) -> [i32; N];
 
-    fn b32_select_b32(mask: [B32; N], on_true: [B32; N], on_false: [B32; N]) -> [B32; N];
-    fn b32_select_i32(mask: [B32; N], on_true: [i32; N], on_false: [i32; N]) -> [i32; N];
     fn b32_select_u32(mask: [B32; N], on_true: [u32; N], on_false: [u32; N]) -> [u32; N];
-    fn b32_select_f32(mask: [B32; N], on_true: [f32; N], on_false: [f32; N]) -> [f32; N];
 
     fn b32_none(v: [B32; N]) -> bool;
     fn b32_any(v: [B32; N]) -> bool;
