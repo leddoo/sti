@@ -123,26 +123,9 @@ impl<const N: usize> B32x<N> where (): SimdLanes<N> {
 
 
     #[inline(always)]
-    pub fn select_b32(self, on_true: B32x<N>, on_false: B32x<N>) -> B32x<N> {
-        let r = self.select_u32(on_true.as_u32(), on_false.as_u32());
-        let v = <() as SimdLanes<N>>::b32_from_u32_unck(r.v);
-        B32x { align: B32x::ALIGN, v }
-    }
-
-    #[inline(always)]
-    pub fn select_u32(self, on_true: U32x<N>, on_false: U32x<N>) -> U32x<N> {
-        let v = <() as SimdLanes<N>>::b32_select_u32(self.v, on_true.v, on_false.v);
-        U32x { align: U32x::ALIGN, v }
-    }
-
-    #[inline(always)]
-    pub fn select_i32(self, on_true: I32x<N>, on_false: I32x<N>) -> I32x<N> {
-        self.select_u32(on_true.as_u32(), on_false.as_u32()).as_i32()
-    }
-
-    #[inline(always)]
-    pub fn select_f32(self, on_true: F32x<N>, on_false: F32x<N>) -> F32x<N> {
-        F32x::from_bits(self.select_u32(on_true.as_bits(), on_false.as_bits()))
+    pub fn select<T: SimdBits<N>>(self, on_true: T, on_false: T) -> T {
+        let v = <() as SimdLanes<N>>::b32_select_u32(self.v, on_true.sb_to().v, on_false.sb_to().v);
+        unsafe { T::sb_from(U32x { align: U32x::ALIGN, v }) }
     }
 
 

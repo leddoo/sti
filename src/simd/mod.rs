@@ -152,6 +152,40 @@ pub trait SimdLanes<const N: usize> {
     fn f32_div(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];
 }
 
+
+pub trait SimdBits<const N: usize> where (): SimdLanes<N> {
+    fn sb_to(self) -> U32x<N>;
+    unsafe fn sb_from(v: U32x<N>) -> Self;
+}
+
+impl<const N: usize> SimdBits<N> for B32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn sb_to(self) -> U32x<N> { self.as_u32() }
+
+    #[inline(always)]
+    unsafe fn sb_from(v: U32x<N>) -> Self {
+        let v = <() as SimdLanes<N>>::b32_from_u32_unck(v.v);
+        Self { align: Self::ALIGN, v }
+    }
+}
+
+impl<const N: usize> SimdBits<N> for I32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn sb_to(self) -> U32x<N> { self.as_u32() }
+
+    #[inline(always)]
+    unsafe fn sb_from(v: U32x<N>) -> Self { v.as_i32() }
+}
+
+impl<const N: usize> SimdBits<N> for F32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn sb_to(self) -> U32x<N> { self.as_bits() }
+
+    #[inline(always)]
+    unsafe fn sb_from(v: U32x<N>) -> Self { Self::from_bits(v) }
+}
+
+
 #[repr(align(8))]
 #[derive(Clone, Copy)]
 pub struct Align8;

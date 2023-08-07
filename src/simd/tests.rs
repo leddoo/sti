@@ -31,15 +31,15 @@ mod tests {
         assert_eq!((b([false, true])  | b([false, false])).to_array_b(), [false, true]);
         assert_eq!((b([true, false]) | b([false, false])).to_array_b(), [true, false]);
 
-        assert_eq!(b([false, false]).select_b32(b([false, true]), b([true, false])).to_array_b(), [true,  false]);
-        assert_eq!(b([false, true]).select_b32(b([false, true]), b([true, false])).to_array_b(), [true,  true]);
-        assert_eq!(b([true, false]).select_b32(b([false, true]), b([true, false])).to_array_b(), [false, false]);
-        assert_eq!(b([true, true]).select_b32(b([false, true]), b([true, false])).to_array_b(), [false, true]);
+        assert_eq!(b([false, false]).select(b([false, true]), b([true, false])).to_array_b(), [true,  false]);
+        assert_eq!(b([false, true]).select(b([false, true]), b([true, false])).to_array_b(), [true,  true]);
+        assert_eq!(b([true, false]).select(b([false, true]), b([true, false])).to_array_b(), [false, false]);
+        assert_eq!(b([true, true]).select(b([false, true]), b([true, false])).to_array_b(), [false, true]);
 
-        assert_eq!(b([false, false]).select_f32(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [3.0, 4.0]);
-        assert_eq!(b([false, true]).select_f32(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [3.0, 2.0]);
-        assert_eq!(b([true, false]).select_f32(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [1.0, 4.0]);
-        assert_eq!(b([true, true]).select_f32(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [1.0, 2.0]);
+        assert_eq!(b([false, false]).select(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [3.0, 4.0]);
+        assert_eq!(b([false, true]).select(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [3.0, 2.0]);
+        assert_eq!(b([true, false]).select(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [1.0, 4.0]);
+        assert_eq!(b([true, true]).select(f([1.0, 2.0]), f([3.0, 4.0])).as_array(), [1.0, 2.0]);
 
         assert_eq!(b([false, false]).any(), false);
         assert_eq!(b([false, true]).any(), true);
