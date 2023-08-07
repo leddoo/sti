@@ -83,16 +83,6 @@ impl SimdLanes<2> for () {
         v[0].to_bool() && v[1].to_bool()
     }
 
-    fn b32_zip(lhs: [B32; 2], rhs: [B32; 2]) -> ([B32; 2], [B32; 2]) {
-        ([lhs[0], rhs[0]],
-         [lhs[1], rhs[1]])
-    }
-
-    fn b32_unzip(lhs: [B32; 2], rhs: [B32; 2]) -> ([B32; 2], [B32; 2]) {
-        ([lhs[0], rhs[0]],
-         [lhs[1], rhs[1]])
-    }
-
     fn b32_and(lhs: [B32; 2], rhs: [B32; 2]) -> [B32; 2] {
         binop2!(lhs & rhs)
     }
@@ -150,14 +140,6 @@ impl SimdLanes<2> for () {
         binop2_b!(lhs > rhs)
     }
 
-    fn i32_zip(lhs: [i32; 2], rhs: [i32; 2]) -> ([i32; 2], [i32; 2]) {
-        todo!()
-    }
-
-    fn i32_unzip(lhs: [i32; 2], rhs: [i32; 2]) -> ([i32; 2], [i32; 2]) {
-        todo!()
-    }
-
     fn i32_add(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
         binop2!(lhs + rhs)
     }
@@ -176,18 +158,6 @@ impl SimdLanes<2> for () {
 
     fn i32_shr(v: [i32; 2], shift: i32) -> [i32; 2] {
         binop2_c!(v >> shift)
-    }
-
-    fn i32_and(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
-        binop2!(lhs & rhs)
-    }
-
-    fn i32_or(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
-        binop2!(lhs | rhs)
-    }
-
-    fn i32_not(v: [i32; 2]) -> [i32; 2] {
-        unop2!(!v)
     }
 
 
@@ -232,26 +202,16 @@ impl SimdLanes<2> for () {
     }
 
     fn u32_zip(lhs: [u32; 2], rhs: [u32; 2]) -> ([u32; 2], [u32; 2]) {
-        todo!()
+        ([lhs[0], rhs[0]],
+         [lhs[1], rhs[1]])
     }
 
     fn u32_unzip(lhs: [u32; 2], rhs: [u32; 2]) -> ([u32; 2], [u32; 2]) {
-        todo!()
-    }
-
-    fn u32_add(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
-        todo!()
-    }
-
-    fn u32_sub(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
-        todo!()
+        ([lhs[0], rhs[0]],
+         [lhs[1], rhs[1]])
     }
 
     fn u32_shl(v: [u32; 2], shift: u32) -> [u32; 2] {
-        todo!()
-    }
-
-    fn u32_shr(v: [u32; 2], shift: u32) -> [u32; 2] {
         todo!()
     }
 
@@ -352,14 +312,6 @@ impl SimdLanes<2> for () {
         todo!()
     }
 
-    fn f32_zip(lhs: [f32; 2], rhs: [f32; 2]) -> ([f32; 2], [f32; 2]) {
-        todo!()
-    }
-
-    fn f32_unzip(lhs: [f32; 2], rhs: [f32; 2]) -> ([f32; 2], [f32; 2]) {
-        todo!()
-    }
-
     fn f32_neg(v: [f32; 2]) -> [f32; 2] {
         todo!()
     }
@@ -418,16 +370,6 @@ impl SimdLanes<4> for () {
         todo!()
     }
 
-    fn b32_zip(lhs: [B32; 4], rhs: [B32; 4]) -> ([B32; 4], [B32; 4]) {
-        ([lhs[0], rhs[0], lhs[1], rhs[1]],
-         [lhs[2], rhs[2], lhs[3], rhs[3]])
-    }
-
-    fn b32_unzip(lhs: [B32; 4], rhs: [B32; 4]) -> ([B32; 4], [B32; 4]) {
-        ([lhs[0], lhs[2], rhs[0], rhs[2]],
-         [lhs[1], lhs[3], rhs[1], rhs[3]])
-    }
-
     fn b32_and(lhs: [B32; 4], rhs: [B32; 4]) -> [B32; 4] {
         todo!()
     }
@@ -484,14 +426,6 @@ impl SimdLanes<4> for () {
         todo!()
     }
 
-    fn i32_zip(lhs: [i32; 4], rhs: [i32; 4]) -> ([i32; 4], [i32; 4]) {
-        todo!()
-    }
-
-    fn i32_unzip(lhs: [i32; 4], rhs: [i32; 4]) -> ([i32; 4], [i32; 4]) {
-        todo!()
-    }
-
     fn i32_add(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
         todo!()
     }
@@ -509,18 +443,6 @@ impl SimdLanes<4> for () {
     }
 
     fn i32_shr(v: [i32; 4], shift: i32) -> [i32; 4] {
-        todo!()
-    }
-
-    fn i32_and(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
-        todo!()
-    }
-
-    fn i32_or(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
-        todo!()
-    }
-
-    fn i32_not(v: [i32; 4]) -> [i32; 4] {
         todo!()
     }
 
@@ -565,26 +487,16 @@ impl SimdLanes<4> for () {
     }
 
     fn u32_zip(lhs: [u32; 4], rhs: [u32; 4]) -> ([u32; 4], [u32; 4]) {
-        todo!()
+        ([lhs[0], rhs[0], lhs[1], rhs[1]],
+         [lhs[2], rhs[2], lhs[3], rhs[3]])
     }
 
     fn u32_unzip(lhs: [u32; 4], rhs: [u32; 4]) -> ([u32; 4], [u32; 4]) {
-        todo!()
-    }
-
-    fn u32_add(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
-        todo!()
-    }
-
-    fn u32_sub(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
-        todo!()
+        ([lhs[0], lhs[2], rhs[0], rhs[2]],
+         [lhs[1], lhs[3], rhs[1], rhs[3]])
     }
 
     fn u32_shl(v: [u32; 4], shift: u32) -> [u32; 4] {
-        todo!()
-    }
-
-    fn u32_shr(v: [u32; 4], shift: u32) -> [u32; 4] {
         todo!()
     }
 
@@ -681,14 +593,6 @@ impl SimdLanes<4> for () {
     }
 
     fn f32_gt(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
-        todo!()
-    }
-
-    fn f32_zip(lhs: [f32; 4], rhs: [f32; 4]) -> ([f32; 4], [f32; 4]) {
-        todo!()
-    }
-
-    fn f32_unzip(lhs: [f32; 4], rhs: [f32; 4]) -> ([f32; 4], [f32; 4]) {
         todo!()
     }
 

@@ -2,8 +2,6 @@
 - todo:
     - new simd module:
         - impl scalar.
-            - impl i32 bitops using u32.
-            - impl zips using u32.
         - impl aarch64.
     - `Vec::extend`.
     - `Vec` drop tests & fix truncate.

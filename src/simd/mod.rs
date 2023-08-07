@@ -48,9 +48,6 @@ pub trait SimdLanes<const N: usize> {
     fn b32_any(v: [B32; N]) -> bool;
     fn b32_all(v: [B32; N]) -> bool;
 
-    fn b32_zip(lhs: [B32; N], rhs: [B32; N]) -> ([B32; N], [B32; N]);
-    fn b32_unzip(lhs: [B32; N], rhs: [B32; N]) -> ([B32; N], [B32; N]);
-
     fn b32_and(lhs: [B32; N], rhs: [B32; N]) -> [B32; N];
     fn b32_or(lhs: [B32; N], rhs: [B32; N]) -> [B32; N];
     fn b32_not(v: [B32; N]) -> [B32; N];
@@ -71,19 +68,12 @@ pub trait SimdLanes<const N: usize> {
     fn i32_ge(lhs: [i32; N], rhs: [i32; N]) -> [B32; N];
     fn i32_gt(lhs: [i32; N], rhs: [i32; N]) -> [B32; N];
 
-    fn i32_zip(lhs: [i32; N], rhs: [i32; N]) -> ([i32; N], [i32; N]);
-    fn i32_unzip(lhs: [i32; N], rhs: [i32; N]) -> ([i32; N], [i32; N]);
-
     fn i32_add(lhs: [i32; N], rhs: [i32; N]) -> [i32; N];
     fn i32_sub(lhs: [i32; N], rhs: [i32; N]) -> [i32; N];
     fn i32_neg(v: [i32; N]) -> [i32; N];
 
     fn i32_shl(v: [i32; N], shift: i32) -> [i32; N];
     fn i32_shr(v: [i32; N], shift: i32) -> [i32; N];
-
-    fn i32_and(lhs: [i32; N], rhs: [i32; N]) -> [i32; N];
-    fn i32_or(lhs: [i32; N], rhs: [i32; N]) -> [i32; N];
-    fn i32_not(v: [i32; N]) -> [i32; N];
 
 
     fn u32_splat(v: u32) -> [u32; N];
@@ -103,11 +93,7 @@ pub trait SimdLanes<const N: usize> {
     fn u32_zip(lhs: [u32; N], rhs: [u32; N]) -> ([u32; N], [u32; N]);
     fn u32_unzip(lhs: [u32; N], rhs: [u32; N]) -> ([u32; N], [u32; N]);
 
-    fn u32_add(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
-    fn u32_sub(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
-
     fn u32_shl(v: [u32; N], shift: u32) -> [u32; N];
-    fn u32_shr(v: [u32; N], shift: u32) -> [u32; N];
 
     fn u32_and(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
     fn u32_or(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
@@ -141,9 +127,6 @@ pub trait SimdLanes<const N: usize> {
     fn f32_lt(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
     fn f32_ge(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
     fn f32_gt(lhs: [f32; N], rhs: [f32; N]) -> [B32; N];
-
-    fn f32_zip(lhs: [f32; N], rhs: [f32; N]) -> ([f32; N], [f32; N]);
-    fn f32_unzip(lhs: [f32; N], rhs: [f32; N]) -> ([f32; N], [f32; N]);
 
     fn f32_neg(v: [f32; N]) -> [f32; N];
     fn f32_add(lhs: [f32; N], rhs: [f32; N]) -> [f32; N];

@@ -100,8 +100,7 @@ impl<const N: usize> core::ops::Add for U32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn add(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::u32_add(self.v, rhs.v);
-        U32x { align: U32x::ALIGN, v }
+        (self.as_i32() + rhs.as_i32()).as_u32()
     }
 }
 
@@ -117,8 +116,7 @@ impl<const N: usize> core::ops::Sub for U32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::u32_sub(self.v, rhs.v);
-        U32x { align: U32x::ALIGN, v }
+        (self.as_i32() - rhs.as_i32()).as_u32()
     }
 }
 
@@ -152,8 +150,7 @@ impl<const N: usize> core::ops::Shr<u32> for U32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn shr(self, rhs: u32) -> Self::Output {
-        let v = <() as SimdLanes<N>>::u32_shr(self.v, rhs);
-        U32x { align: U32x::ALIGN, v }
+        (self.as_i32() << (rhs as i32)).as_u32()
     }
 }
 

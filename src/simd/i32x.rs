@@ -86,16 +86,20 @@ impl<const N: usize> I32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn zip(self, rhs: I32x<N>) -> (I32x<N>, I32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::i32_zip(self.v, rhs.v);
-        (I32x { align: I32x::ALIGN, v: v1 },
-         I32x { align: I32x::ALIGN, v: v2 })
+        let (v1, v2) = <() as SimdLanes<N>>::u32_zip(self.sb_to().v, rhs.sb_to().v);
+        unsafe {
+            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
+             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
+        }
     }
 
     #[inline(always)]
-    pub fn unzip(self, rhs: I32x<N>) -> (I32x<N>, I32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::i32_unzip(self.v, rhs.v);
-        (I32x { align: I32x::ALIGN, v: v1 },
-         I32x { align: I32x::ALIGN, v: v2 })
+    pub fn unzip(self, rhs: B32x<N>) -> (I32x<N>, I32x<N>) {
+        let (v1, v2) = <() as SimdLanes<N>>::u32_unzip(self.sb_to().v, rhs.sb_to().v);
+        unsafe {
+            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
+             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
+        }
     }
 }
 
@@ -185,8 +189,7 @@ impl<const N: usize> core::ops::BitAnd for I32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::i32_and(self.v, rhs.v);
-        I32x { align: I32x::ALIGN, v }
+        (self.as_u32() & rhs.as_u32()).as_i32()
     }
 }
 
@@ -202,8 +205,7 @@ impl<const N: usize> core::ops::BitOr for I32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::i32_or(self.v, rhs.v);
-        I32x { align: I32x::ALIGN, v }
+        (self.as_u32() | rhs.as_u32()).as_i32()
     }
 }
 
@@ -219,8 +221,7 @@ impl<const N: usize> core::ops::Not for I32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn not(self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::i32_not(self.v);
-        I32x { align: I32x::ALIGN, v }
+        (!self.as_u32()).as_i32()
     }
 }
 

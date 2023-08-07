@@ -191,16 +191,20 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn zip(self, rhs: F32x<N>) -> (F32x<N>, F32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::f32_zip(self.v, rhs.v);
-        (F32x { align: F32x::ALIGN, v: v1 },
-         F32x { align: F32x::ALIGN, v: v2 })
+        let (v1, v2) = <() as SimdLanes<N>>::u32_zip(self.sb_to().v, rhs.sb_to().v);
+        unsafe {
+            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
+             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
+        }
     }
 
     #[inline(always)]
     pub fn unzip(self, rhs: F32x<N>) -> (F32x<N>, F32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::f32_unzip(self.v, rhs.v);
-        (F32x { align: F32x::ALIGN, v: v1 },
-         F32x { align: F32x::ALIGN, v: v2 })
+        let (v1, v2) = <() as SimdLanes<N>>::u32_unzip(self.sb_to().v, rhs.sb_to().v);
+        unsafe {
+            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
+             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
+        }
     }
 }
 
