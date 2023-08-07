@@ -43,14 +43,12 @@ impl<const N: usize> U32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn eq(self, rhs: U32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::u32_eq(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        self.as_i32().eq(rhs.as_i32())
     }
 
     #[inline(always)]
     pub fn ne(self, rhs: U32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::u32_ne(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        self.as_i32().ne(rhs.as_i32())
     }
 
     #[inline(always)]
@@ -133,8 +131,7 @@ impl<const N: usize> core::ops::Shl<u32> for U32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn shl(self, rhs: u32) -> Self::Output {
-        let v = <() as SimdLanes<N>>::u32_shl(self.v, rhs);
-        U32x { align: U32x::ALIGN, v }
+        (self.as_i32() << (rhs as i32)).as_u32()
     }
 }
 
@@ -150,7 +147,8 @@ impl<const N: usize> core::ops::Shr<u32> for U32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn shr(self, rhs: u32) -> Self::Output {
-        (self.as_i32() << (rhs as i32)).as_u32()
+        let v = <() as SimdLanes<N>>::u32_shr(self.v, rhs);
+        U32x { align: U32x::ALIGN, v }
     }
 }
 

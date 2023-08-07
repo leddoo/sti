@@ -117,7 +117,10 @@ mod tests {
         assert_eq!((f([3.0, 4.0]).gt(f([3.0, 4.0]))).to_array_b(), [false, false]);
         assert_eq!((f([4.0, 5.0]).gt(f([3.0, 4.0]))).to_array_b(), [true,  true]);
 
-        assert_eq!(f([4.5, -2.5]).to_i32_unck().as_array(), [4, -3]);
+        assert_eq!(f([4.5, -2.5]).to_i32_unck().as_array(), [4, -2]);
+        assert_eq!(f([4.5, -2.5]).to_i32().as_array(),      [4, -2]);
+        assert_eq!(f([ f32::INFINITY,  8_000_000_000.0]).to_i32().as_array(), [i32::MAX, i32::MAX]);
+        assert_eq!(f([-f32::INFINITY, -8_000_000_000.0]).to_i32().as_array(), [i32::MIN, i32::MIN]);
 
         assert_eq!((f([4.0, 5.0]).min(f([3.0, 6.0]))).as_array(), [3.0, 5.0]);
         assert_eq!((f([2.0, 5.0]).min(f([3.0, 4.0]))).as_array(), [2.0, 4.0]);

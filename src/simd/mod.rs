@@ -83,8 +83,6 @@ pub trait SimdLanes<const N: usize> {
     fn u32_min(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
     fn u32_max(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
 
-    fn u32_eq(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
-    fn u32_ne(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
     fn u32_le(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
     fn u32_lt(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
     fn u32_ge(lhs: [u32; N], rhs: [u32; N]) -> [B32; N];
@@ -93,7 +91,7 @@ pub trait SimdLanes<const N: usize> {
     fn u32_zip(lhs: [u32; N], rhs: [u32; N]) -> ([u32; N], [u32; N]);
     fn u32_unzip(lhs: [u32; N], rhs: [u32; N]) -> ([u32; N], [u32; N]);
 
-    fn u32_shl(v: [u32; N], shift: u32) -> [u32; N];
+    fn u32_shr(v: [u32; N], shift: u32) -> [u32; N];
 
     fn u32_and(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];
     fn u32_or(lhs: [u32; N], rhs: [u32; N]) -> [u32; N];

@@ -35,12 +35,19 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
     }
 
 
+    /// - rounds towards zero.
+    /// - behavior for values outside the `i32` range is platform dependent
+    ///   and considered a bug (there is no guarantee that the program won't crash).
+    ///   technically, this function should be unsafe, but that would make it rather
+    ///   annoying to use.
     #[inline(always)]
     pub fn to_i32_unck(self) -> I32x<N> {
         let v = <() as SimdLanes<N>>::f32_to_i32_unck(self.v);
         I32x { align: I32x::ALIGN, v }
     }
 
+    /// - rounds towards zero.
+    /// - clamps results outside the `i32` range.
     #[inline(always)]
     pub fn to_i32(self) -> I32x<N> {
         let v = <() as SimdLanes<N>>::f32_to_i32(self.v);
