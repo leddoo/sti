@@ -87,6 +87,21 @@ pub type B32x<const N: usize> = Simd<B32, N>;
 pub type B32x2 = Simd<B32, 2>;
 pub type B32x4 = Simd<B32, 4>;
 
+
+impl B32x2 {
+    #[inline(always)]
+    pub fn new_b(v0: bool, v1: bool) -> Self {
+        Self::from_array_b([v0, v1])
+    }
+}
+
+impl B32x4 {
+    #[inline(always)]
+    pub fn new_b(v0: bool, v1: bool, v2: bool, v3: bool) -> Self {
+        Self::from_array_b([v0, v1, v2, v3])
+    }
+}
+
 impl<const N: usize> B32x<N> where (): SimdLanes<N> {
     #[allow(non_snake_case)]
     #[inline(always)]
@@ -96,12 +111,6 @@ impl<const N: usize> B32x<N> where (): SimdLanes<N> {
     #[inline(always)]
     pub fn ALL() -> B32x<N> { B32x::splat(B32::TRUE) }
 
-
-    #[inline(always)]
-    pub fn new_b(v: [bool; N]) -> Self {
-        Self::new(v.map(B32::new))
-    }
-
     #[inline(always)]
     pub fn splat(v: B32) -> Self {
         Self { p: PhantomData, v: <()>::b32_splat(v) }
@@ -110,6 +119,11 @@ impl<const N: usize> B32x<N> where (): SimdLanes<N> {
     #[inline(always)]
     pub fn splat_b(v: bool) -> Self {
         Self { p: PhantomData, v: <()>::b32_splat(v.into()) }
+    }
+
+    #[inline(always)]
+    pub fn from_array_b(v: [bool; N]) -> Self {
+        Self::from_array(v.map(B32::new))
     }
 
     #[inline(always)]
@@ -166,11 +180,21 @@ impl<const N: usize> B32x<N> where (): SimdLanes<N> {
     }
 }
 
+
 impl<const N: usize> core::fmt::Debug for B32x<N> where (): SimdLanes<N> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         (-self.as_i32()).fmt(f)
     }
 }
+
+
+impl<const N: usize> PartialEq for B32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.as_i32() == other.as_i32()
+    }
+}
+
 
 impl<const N: usize> core::ops::BitAnd for B32x<N> where (): SimdLanes<N> {
     type Output = B32x<N>;

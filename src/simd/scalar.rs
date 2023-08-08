@@ -4,9 +4,6 @@ use super::*;
 
 
 #[inline(always)]
-fn load_b32x2(repr: f64) -> [B32; 2] { unsafe { transmute(repr) } }
-
-#[inline(always)]
 fn load_i32x2(repr: f64) -> [i32; 2] { unsafe { transmute(repr) } }
 
 #[inline(always)]
@@ -120,20 +117,20 @@ impl SimdLanes<2> for () {
 
     #[inline(always)]
     fn b32_none(v: Self::Repr) -> bool {
-        let v = load_b32x2(v);
-        !v[0].to_bool() && !v[1].to_bool()
+        let v = load_u32x2(v);
+        (v[0] | v[1]) == 0
     }
 
     #[inline(always)]
     fn b32_any(v: Self::Repr) -> bool {
-        let v = load_b32x2(v);
-        v[0].to_bool() || v[1].to_bool()
+        let v = load_u32x2(v);
+        (v[0] | v[1]) != 0
     }
 
     #[inline(always)]
     fn b32_all(v: Self::Repr) -> bool {
-        let v = load_b32x2(v);
-        v[0].to_bool() && v[1].to_bool()
+        let v = load_u32x2(v);
+        (v[0] & v[1]) != 0
     }
 
     #[inline(always)]
@@ -414,9 +411,6 @@ impl SimdLanes<2> for () {
 
 
 #[inline(always)]
-fn load_b32x4(repr: Vec4) -> [B32; 4] { unsafe { transmute(repr) } }
-
-#[inline(always)]
 fn load_i32x4(repr: Vec4) -> [i32; 4] { unsafe { transmute(repr) } }
 
 #[inline(always)]
@@ -567,17 +561,17 @@ impl SimdLanes<4> for () {
 
     #[inline(always)]
     fn b32_and(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
-        binop4!(load_b32x4, lhs & rhs)
+        binop4!(load_u32x4, lhs & rhs)
     }
 
     #[inline(always)]
     fn b32_or(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
-        binop4!(load_b32x4, lhs | rhs)
+        binop4!(load_u32x4, lhs | rhs)
     }
 
     #[inline(always)]
     fn b32_not(v: Self::Repr) -> Self::Repr {
-        unop4!(load_b32x4, !v)
+        unop4!(load_u32x4, !v)
     }
 
 

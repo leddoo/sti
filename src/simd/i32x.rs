@@ -107,6 +107,20 @@ impl<const N: usize> I32x<N> where (): SimdLanes<N> {
 }
 
 
+impl<const N: usize> core::fmt::Debug for I32x<N> where (): SimdLanes<N> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
+
+impl<const N: usize> PartialEq for I32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        I32x::eq(*self, *other).all()
+    }
+}
+
 
 impl<const N: usize> core::ops::Add for I32x<N> where (): SimdLanes<N> {
     type Output = I32x<N>;

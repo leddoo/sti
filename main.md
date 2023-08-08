@@ -10,17 +10,10 @@
     - `Vec::extend`.
     - `Vec` drop tests & fix truncate.
     - thread local temp arena (dynamic stack enforcement).
-    - simd:
-        - more platforms:
-            - `x86_64`.
-            - `wasm`.
-            - `scalar`.
-        - `x8` vectors.
-            - `aarch64`: does it always have them?
-            - `x86_64`: avx if available.
-            - `x4` fallback.
 
 - backlog:
+    - simd `x8` vectors using `x4`.
+        - should get promoted to `x8` if avx is available. ig.
     - `no_std` support.
         - `thread_local`.
         - global heap allocator (mimalloc).

@@ -210,6 +210,21 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
 }
 
 
+impl<const N: usize> core::fmt::Debug for F32x<N> where (): SimdLanes<N> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
+
+impl<const N: usize> PartialEq for F32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        F32x::eq(*self, *other).all()
+    }
+}
+
+
 impl<const N: usize> core::ops::Neg for F32x<N> where (): SimdLanes<N> {
     type Output = F32x<N>;
 

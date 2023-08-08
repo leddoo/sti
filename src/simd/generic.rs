@@ -1,12 +1,21 @@
 use super::*;
 
 
-impl<T: SimdElement, const N: usize> Simd<T, N> where (): SimdLanes<N> {
+impl<T: SimdElement> Simd<T, 2> {
     #[inline(always)]
-    pub fn new(v: [T; N]) -> Self {
-        Self { p: PhantomData, v: <()>::repr_from_se(v) }
+    pub fn new(v0: T, v1: T) -> Self {
+        Self::from_array([v0, v1])
     }
+}
 
+impl<T: SimdElement> Simd<T, 4> {
+    #[inline(always)]
+    pub fn new(v0: T, v1: T, v2: T, v3: T) -> Self {
+        Self::from_array([v0, v1, v2, v3])
+    }
+}
+
+impl<T: SimdElement, const N: usize> Simd<T, N> where (): SimdLanes<N> {
     #[inline(always)]
     pub fn from_array(array: [T; N]) -> Self {
         Self { p: PhantomData, v: <()>::repr_from_se(array) }
