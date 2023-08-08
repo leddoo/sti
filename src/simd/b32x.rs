@@ -74,7 +74,13 @@ impl core::ops::Not for B32 {
 }
 
 
-impl SimdElement for B32 {}
+unsafe impl SimdElement for B32 {
+    #[inline(always)]
+    fn se_to_u32x2(v: [Self; 2]) -> [u32; 2] { unsafe { core::mem::transmute(v) } }
+
+    #[inline(always)]
+    fn se_to_u32x4(v: [Self; 4]) -> [u32; 4] { unsafe { core::mem::transmute(v) } }
+}
 
 
 pub type B32x<const N: usize> = Simd<B32, N>;
@@ -82,85 +88,81 @@ pub type B32x2 = Simd<B32, 2>;
 pub type B32x4 = Simd<B32, 4>;
 
 impl<const N: usize> B32x<N> where (): SimdLanes<N> {
-    pub const NONE: B32x<N> = Simd::csplat(B32::FALSE);
-    pub const ALL:  B32x<N> = Simd::csplat(B32::TRUE);
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn NONE() -> B32x<N> { B32x::splat(B32::FALSE) }
+
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn ALL() -> B32x<N> { B32x::splat(B32::TRUE) }
+
 
     #[inline(always)]
     pub fn new_b(v: [bool; N]) -> Self {
-        let v = v.map(B32::new);
-        Self { align: Self::ALIGN, v }
+        Self::new(v.map(B32::new))
     }
 
     #[inline(always)]
     pub fn splat(v: B32) -> Self {
-        let v = <() as SimdLanes<N>>::b32_splat(v);
-        Self { align: Self::ALIGN, v }
+        Self { p: PhantomData, v: <()>::b32_splat(v) }
     }
 
     #[inline(always)]
     pub fn splat_b(v: bool) -> Self {
-        let v = <() as SimdLanes<N>>::b32_splat(v.into());
-        Self { align: Self::ALIGN, v }
+        Self { p: PhantomData, v: <()>::b32_splat(v.into()) }
     }
 
     #[inline(always)]
     pub fn to_array_b(self) -> [bool; N] {
-        self.v.map(B32::to_bool)
+        self.map(B32::to_bool)
     }
 
 
     #[inline(always)]
     pub fn as_u32(self) -> U32x<N> {
-        let v = <() as SimdLanes<N>>::b32_as_u32(self.v);
-        U32x { align: U32x::ALIGN, v }
+        U32x { p: PhantomData, v: self.v }
     }
 
     #[inline(always)]
     pub fn as_i32(self) -> I32x<N> {
-        let v = <() as SimdLanes<N>>::b32_as_i32(self.v);
-        I32x { align: I32x::ALIGN, v }
+        I32x { p: PhantomData, v: self.v }
     }
 
 
     #[inline(always)]
-    pub fn select<T: SimdBits<N>>(self, on_true: T, on_false: T) -> T {
-        let v = <() as SimdLanes<N>>::b32_select_u32(self.v, on_true.sb_to().v, on_false.sb_to().v);
-        unsafe { T::sb_from(U32x { align: U32x::ALIGN, v }) }
+    pub fn select<T: SimdElement>(self, on_true: Simd<T, N>, on_false: Simd<T, N>) -> Simd<T, N> {
+        Simd { p: PhantomData, v: <()>::b32_select(self.v, on_true.v, on_false.v) }
     }
 
 
     #[inline(always)]
     pub fn none(self) -> bool {
-        <() as SimdLanes<N>>::b32_none(self.v)
+        <()>::b32_none(self.v)
     }
 
     #[inline(always)]
     pub fn any(self) -> bool {
-        <() as SimdLanes<N>>::b32_any(self.v)
+        <()>::b32_any(self.v)
     }
 
     #[inline(always)]
     pub fn all(self) -> bool {
-        <() as SimdLanes<N>>::b32_all(self.v)
+        <()>::b32_all(self.v)
     }
 
 
     #[inline(always)]
     pub fn zip(self, rhs: B32x<N>) -> (B32x<N>, B32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::u32_zip(self.sb_to().v, rhs.sb_to().v);
-        unsafe {
-            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
-             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
-        }
+        let (v1, v2) = <()>::repr_zip(self.v, rhs.v);
+        (B32x { p: PhantomData, v: v1 },
+         B32x { p: PhantomData, v: v2 })
     }
 
     #[inline(always)]
     pub fn unzip(self, rhs: B32x<N>) -> (B32x<N>, B32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::u32_unzip(self.sb_to().v, rhs.sb_to().v);
-        unsafe {
-            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
-             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
-        }
+        let (v1, v2) = <()>::repr_unzip(self.v, rhs.v);
+        (B32x { p: PhantomData, v: v1 },
+         B32x { p: PhantomData, v: v2 })
     }
 }
 
@@ -175,8 +177,7 @@ impl<const N: usize> core::ops::BitAnd for B32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::b32_and(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::b32_and(self.v, rhs.v) }
     }
 }
 
@@ -192,8 +193,7 @@ impl<const N: usize> core::ops::BitOr for B32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::b32_or(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::b32_or(self.v, rhs.v) }
     }
 }
 
@@ -209,8 +209,7 @@ impl<const N: usize> core::ops::Not for B32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn not(self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::b32_not(self.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::b32_not(self.v) }
     }
 }
 

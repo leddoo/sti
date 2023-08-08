@@ -2,7 +2,13 @@ use crate::float::F32Ext;
 use super::*;
 
 
-impl SimdElement for f32 {}
+unsafe impl SimdElement for f32 {
+    #[inline(always)]
+    fn se_to_u32x2(v: [Self; 2]) -> [u32; 2] { unsafe { core::mem::transmute(v) } }
+
+    #[inline(always)]
+    fn se_to_u32x4(v: [Self; 4]) -> [u32; 4] { unsafe { core::mem::transmute(v) } }
+}
 
 
 pub type F32x<const N: usize> = Simd<f32, N>;
@@ -10,28 +16,37 @@ pub type F32x2 = Simd<f32, 2>;
 pub type F32x4 = Simd<f32, 4>;
 
 impl<const N: usize> F32x<N> where (): SimdLanes<N> {
-    pub const ZERO: F32x<N> = Simd::csplat(0.0);
-    pub const ONE:  F32x<N> = Simd::csplat(1.0);
-    pub const MIN:  F32x<N> = Simd::csplat(f32::MIN);
-    pub const MAX:  F32x<N> = Simd::csplat(f32::MAX);
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn ZERO() -> F32x<N> { F32x::splat(0.0) }
+
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn ONE() -> F32x<N> { F32x::splat(1.0) }
+
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn MIN() -> F32x<N> { F32x::splat(f32::MIN) }
+
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn MAX() -> F32x<N> { F32x::splat(f32::MAX) }
+
 
     #[inline(always)]
     pub fn splat(v: f32) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_splat(v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_splat(v) }
     }
 
 
     #[inline(always)]
     pub fn as_bits(self) -> U32x<N> {
-        let v = <() as SimdLanes<N>>::f32_as_bits(self.v);
-        U32x { align: U32x::ALIGN, v }
+        U32x { p: PhantomData, v: self.v }
     }
 
     #[inline(always)]
     pub fn from_bits(bits: U32x<N>) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_from_bits(bits.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: bits.v }
     }
 
 
@@ -42,65 +57,56 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
     ///   annoying to use.
     #[inline(always)]
     pub fn to_i32_unck(self) -> I32x<N> {
-        let v = <() as SimdLanes<N>>::f32_to_i32_unck(self.v);
-        I32x { align: I32x::ALIGN, v }
+        I32x { p: PhantomData, v: <()>::f32_to_i32_unck(self.v) }
     }
 
     /// - rounds towards zero.
     /// - clamps results outside the `i32` range.
     #[inline(always)]
     pub fn to_i32(self) -> I32x<N> {
-        let v = <() as SimdLanes<N>>::f32_to_i32(self.v);
-        I32x { align: I32x::ALIGN, v }
+        I32x { p: PhantomData, v: <()>::f32_to_i32(self.v) }
     }
 
 
     #[inline(always)]
     pub fn floor(self) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_floor(self.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_floor(self.v) }
     }
 
     #[inline(always)]
     pub fn ceil(self) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_ceil(self.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_ceil(self.v) }
     }
 
     #[inline(always)]
     pub fn round(self) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_round(self.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_round(self.v) }
     }
 
     #[inline(always)]
     pub fn trunc(self) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_trunc(self.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_trunc(self.v) }
     }
 
     #[inline(always)]
     pub fn abs(self) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_abs(self.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_abs(self.v) }
     }
 
     #[inline(always)]
     pub fn sqrt(self) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_sqrt(self.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_sqrt(self.v) }
     }
 
     #[inline(always)]
     pub fn with_sign_of(self, sign: F32x<N>) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_with_sign_of(self.v, sign.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_with_sign_of(self.v, sign.v) }
     }
 
 
     #[inline(always)]
     pub fn hadd(self) -> f32 {
-        <() as SimdLanes<N>>::f32_hadd(self.v)
+        <()>::f32_hadd(self.v)
     }
 
 
@@ -133,14 +139,12 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn min(self, rhs: F32x<N>) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_min(self.v, rhs.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_min(self.v, rhs.v) }
     }
 
     #[inline(always)]
     pub fn max(self, rhs: F32x<N>) -> F32x<N> {
-        let v = <() as SimdLanes<N>>::f32_max(self.v, rhs.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_max(self.v, rhs.v) }
     }
 
     #[inline(always)]
@@ -161,57 +165,47 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn eq(self, rhs: F32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::f32_eq(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::f32_eq(self.v, rhs.v) }
     }
 
     #[inline(always)]
     pub fn ne(self, rhs: F32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::f32_ne(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::f32_ne(self.v, rhs.v) }
     }
 
     #[inline(always)]
     pub fn le(self, rhs: F32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::f32_le(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::f32_le(self.v, rhs.v) }
     }
 
     #[inline(always)]
     pub fn lt(self, rhs: F32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::f32_lt(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::f32_lt(self.v, rhs.v) }
     }
 
     #[inline(always)]
     pub fn ge(self, rhs: F32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::f32_ge(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::f32_ge(self.v, rhs.v) }
     }
 
     #[inline(always)]
     pub fn gt(self, rhs: F32x<N>) -> B32x<N> {
-        let v = <() as SimdLanes<N>>::f32_gt(self.v, rhs.v);
-        B32x { align: B32x::ALIGN, v }
+        B32x { p: PhantomData, v: <()>::f32_gt(self.v, rhs.v) }
     }
 
 
     #[inline(always)]
     pub fn zip(self, rhs: F32x<N>) -> (F32x<N>, F32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::u32_zip(self.sb_to().v, rhs.sb_to().v);
-        unsafe {
-            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
-             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
-        }
+        let (v1, v2) = <()>::repr_zip(self.v, rhs.v);
+        (F32x { p: PhantomData, v: v1 },
+         F32x { p: PhantomData, v: v2 })
     }
 
     #[inline(always)]
     pub fn unzip(self, rhs: F32x<N>) -> (F32x<N>, F32x<N>) {
-        let (v1, v2) = <() as SimdLanes<N>>::u32_unzip(self.sb_to().v, rhs.sb_to().v);
-        unsafe {
-            (Self::sb_from(U32x { align: U32x::ALIGN, v: v1 }),
-             Self::sb_from(U32x { align: U32x::ALIGN, v: v2 }))
-        }
+        let (v1, v2) = <()>::repr_unzip(self.v, rhs.v);
+        (F32x { p: PhantomData, v: v1 },
+         F32x { p: PhantomData, v: v2 })
     }
 }
 
@@ -221,8 +215,7 @@ impl<const N: usize> core::ops::Neg for F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::f32_neg(self.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_neg(self.v) }
     }
 }
 
@@ -231,8 +224,7 @@ impl<const N: usize> core::ops::Add for F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn add(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::f32_add(self.v, rhs.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_add(self.v, rhs.v) }
     }
 }
 
@@ -248,8 +240,7 @@ impl<const N: usize> core::ops::Sub for F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::f32_sub(self.v, rhs.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_sub(self.v, rhs.v) }
     }
 }
 
@@ -265,8 +256,7 @@ impl<const N: usize> core::ops::Mul for F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::f32_mul(self.v, rhs.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_mul(self.v, rhs.v) }
     }
 }
 
@@ -307,8 +297,7 @@ impl<const N: usize> core::ops::Div for F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     fn div(self, rhs: Self) -> Self::Output {
-        let v = <() as SimdLanes<N>>::f32_div(self.v, rhs.v);
-        F32x { align: F32x::ALIGN, v }
+        F32x { p: PhantomData, v: <()>::f32_div(self.v, rhs.v) }
     }
 }
 

@@ -1,8 +1,12 @@
 
 - todo:
     - new simd module:
-        - impl scalar.
         - impl aarch64.
+        - platform detection.
+        - impl x86.
+            - sse4 & error.
+        - use `core::simd` on nightly.
+        - make simd opt-in on x86 and warn if not enabled sse4.
     - `Vec::extend`.
     - `Vec` drop tests & fix truncate.
     - thread local temp arena (dynamic stack enforcement).

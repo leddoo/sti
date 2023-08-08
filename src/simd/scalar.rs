@@ -3,796 +3,840 @@ use core::mem::transmute;
 use super::*;
 
 
+#[inline(always)]
+fn load_b32x2(repr: f64) -> [B32; 2] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn load_i32x2(repr: f64) -> [i32; 2] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn load_u32x2(repr: f64) -> [u32; 2] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn load_f32x2(repr: f64) -> [f32; 2] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn store2<T: SimdElement>(v: [T; 2]) -> f64 { unsafe { transmute(T::se_to_u32x2(v)) } }
+
+
 macro_rules! meth2 {
-    ($v:ident $($meth:tt)*) => {
-        [$v[0] $($meth)*,
-         $v[1] $($meth)*]
-    }
+    ($load:ident, $v:ident $($meth:tt)*) => {{
+        let v = $load($v);
+        store2(
+            [v[0] $($meth)*,
+             v[1] $($meth)*])
+    }}
 }
 
 macro_rules! unop2 {
-    ($op:tt $v:ident) => {
-        [$op $v[0],
-         $op $v[1]]
-    }
+    ($load:ident, $op:tt $v:ident) => {{
+        let v = $load($v);
+        store2(
+            [$op v[0],
+             $op v[1]])
+    }}
 }
 
 macro_rules! binop2 {
-    ($lhs:ident $op:tt $rhs:ident) => {
-        [$lhs[0] $op $rhs[0],
-         $lhs[1] $op $rhs[1]]
-    }
+    ($load:ident, $lhs:ident $op:tt $rhs:ident) => {{
+        let lhs = $load($lhs);
+        let rhs = $load($rhs);
+        store2(
+            [lhs[0] $op rhs[0],
+             lhs[1] $op rhs[1]])
+    }}
 }
 
 macro_rules! binop2_c {
-    ($lhs:ident $op:tt $rhs:expr) => {
-        [$lhs[0] $op $rhs,
-         $lhs[1] $op $rhs]
-    }
+    ($load:ident, $lhs:ident $op:tt $rhs:expr) => {{
+        let lhs = $load($lhs);
+        store2(
+            [lhs[0] $op $rhs,
+             lhs[1] $op $rhs])
+    }}
 }
 
 macro_rules! binop2_b {
-    ($lhs:ident $op:tt $rhs:ident) => {
-        [($lhs[0] $op $rhs[0]).into(),
-         ($lhs[1] $op $rhs[1]).into()]
-    }
+    ($load:ident, $lhs:ident $op:tt $rhs:ident) => {{
+        let lhs = $load($lhs);
+        let rhs = $load($rhs);
+        store2(
+            [B32::new(lhs[0] $op rhs[0]),
+             B32::new(lhs[1] $op rhs[1])])
+    }}
 }
 
 macro_rules! binop2_m {
-    ($lhs:ident $op:ident $rhs:ident) => {
-        [$lhs[0].$op($rhs[0]),
-         $lhs[1].$op($rhs[1])]
-    }
+    ($load:ident, $lhs:ident $op:ident $rhs:ident) => {{
+        let lhs = $load($lhs);
+        let rhs = $load($rhs);
+        store2(
+            [lhs[0].$op(rhs[0]),
+             lhs[1].$op(rhs[1])])
+    }}
 }
 
+
 impl SimdLanes<2> for () {
-    type Align = Align8;
+    type Repr = f64;
 
-    const ALIGN: Self::Align = Align8;
 
     #[inline(always)]
-    fn b32_splat(v: B32) -> [B32; 2] {
-        [v, v]
+    fn repr_from_se<T: SimdElement>(v: [T; 2]) -> Self::Repr {
+        store2(v)
     }
 
     #[inline(always)]
-    fn b32_as_u32(v: [B32; 2]) -> [u32; 2] {
-        unsafe { transmute(v) }
+    fn repr_zip(lhs: Self::Repr, rhs: Self::Repr) -> (Self::Repr, Self::Repr) {
+        let lhs = load_f32x2(lhs);
+        let rhs = load_f32x2(rhs);
+        (store2([lhs[0], rhs[0]]),
+         store2([lhs[1], rhs[1]]))
     }
 
     #[inline(always)]
-    fn b32_from_u32_unck(v: [u32; 2]) -> [B32; 2] {
-        unsafe { transmute(v) }
+    fn repr_unzip(lhs: Self::Repr, rhs: Self::Repr) -> (Self::Repr, Self::Repr) {
+        let lhs = load_f32x2(lhs);
+        let rhs = load_f32x2(rhs);
+        (store2([lhs[0], rhs[0]]),
+         store2([lhs[1], rhs[1]]))
+    }
+
+
+    #[inline(always)]
+    fn b32_splat(v: B32) -> Self::Repr {
+        store2([v, v])
     }
 
     #[inline(always)]
-    fn b32_as_i32(v: [B32; 2]) -> [i32; 2] {
-        meth2!(v.as_u32() as i32)
+    fn b32_select(mask: Self::Repr, on_true: Self::Repr, on_false: Self::Repr) -> Self::Repr {
+        let m = load_u32x2(mask);
+        let t = load_u32x2(on_true);
+        let f = load_u32x2(on_false);
+        store2(
+            [(m[0] & t[0]) | (!m[0] & f[0]),
+             (m[1] & t[1]) | (!m[1] & f[1])])
     }
 
     #[inline(always)]
-    fn b32_select_u32(mask: [B32; 2], on_true: [u32; 2], on_false: [u32; 2]) -> [u32; 2] {
-        [mask[0].as_u32()&on_true[0] | !mask[0].as_u32()&on_false[0],
-         mask[1].as_u32()&on_true[1] | !mask[1].as_u32()&on_false[1]]
-    }
-
-    #[inline(always)]
-    fn b32_none(v: [B32; 2]) -> bool {
+    fn b32_none(v: Self::Repr) -> bool {
+        let v = load_b32x2(v);
         !v[0].to_bool() && !v[1].to_bool()
     }
 
     #[inline(always)]
-    fn b32_any(v: [B32; 2]) -> bool {
+    fn b32_any(v: Self::Repr) -> bool {
+        let v = load_b32x2(v);
         v[0].to_bool() || v[1].to_bool()
     }
 
     #[inline(always)]
-    fn b32_all(v: [B32; 2]) -> bool {
+    fn b32_all(v: Self::Repr) -> bool {
+        let v = load_b32x2(v);
         v[0].to_bool() && v[1].to_bool()
     }
 
     #[inline(always)]
-    fn b32_and(lhs: [B32; 2], rhs: [B32; 2]) -> [B32; 2] {
-        binop2!(lhs & rhs)
+    fn b32_and(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_u32x2, lhs & rhs)
     }
 
     #[inline(always)]
-    fn b32_or(lhs: [B32; 2], rhs: [B32; 2]) -> [B32; 2] {
-        binop2!(lhs | rhs)
+    fn b32_or(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_u32x2, lhs | rhs)
     }
 
     #[inline(always)]
-    fn b32_not(v: [B32; 2]) -> [B32; 2] {
-        unop2!(!v)
-    }
-
-
-    #[inline(always)]
-    fn i32_splat(v: i32) -> [i32; 2] {
-        [v, v]
-    }
-
-    #[inline(always)]
-    fn i32_as_u32(v: [i32; 2]) -> [u32; 2] {
-        unsafe { transmute(v) }
-    }
-
-    #[inline(always)]
-    fn i32_to_f32(v: [i32; 2]) -> [f32; 2] {
-        meth2!(v as f32)
-    }
-
-    #[inline(always)]
-    fn i32_min(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
-        binop2_m!(lhs min rhs)
-    }
-
-    #[inline(always)]
-    fn i32_max(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
-        binop2_m!(lhs max rhs)
-    }
-
-    #[inline(always)]
-    fn i32_eq(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
-        binop2_b!(lhs == rhs)
-    }
-
-    #[inline(always)]
-    fn i32_ne(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
-        binop2_b!(lhs != rhs)
-    }
-
-    #[inline(always)]
-    fn i32_le(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
-        binop2_b!(lhs <= rhs)
-    }
-
-    #[inline(always)]
-    fn i32_lt(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
-        binop2_b!(lhs < rhs)
-    }
-
-    #[inline(always)]
-    fn i32_ge(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
-        binop2_b!(lhs >= rhs)
-    }
-
-    #[inline(always)]
-    fn i32_gt(lhs: [i32; 2], rhs: [i32; 2]) -> [B32; 2] {
-        binop2_b!(lhs > rhs)
-    }
-
-    #[inline(always)]
-    fn i32_add(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
-        binop2!(lhs + rhs)
-    }
-
-    #[inline(always)]
-    fn i32_sub(lhs: [i32; 2], rhs: [i32; 2]) -> [i32; 2] {
-        binop2!(lhs - rhs)
-    }
-
-    #[inline(always)]
-    fn i32_neg(v: [i32; 2]) -> [i32; 2] {
-        unop2!(-v)
-    }
-
-    #[inline(always)]
-    fn i32_shl(v: [i32; 2], shift: i32) -> [i32; 2] {
-        binop2_c!(v << shift)
-    }
-
-    #[inline(always)]
-    fn i32_shr(v: [i32; 2], shift: i32) -> [i32; 2] {
-        binop2_c!(v >> shift)
+    fn b32_not(v: Self::Repr) -> Self::Repr {
+        unop2!(load_u32x2, !v)
     }
 
 
     #[inline(always)]
-    fn u32_splat(v: u32) -> [u32; 2] {
-        [v, v]
+    fn i32_splat(v: i32) -> Self::Repr {
+        store2([v, v])
     }
 
     #[inline(always)]
-    fn u32_as_i32(v: [u32; 2]) -> [i32; 2] {
-        meth2!(v as i32)
+    fn i32_to_f32(v: Self::Repr) -> Self::Repr {
+        meth2!(load_i32x2, v as f32)
     }
 
     #[inline(always)]
-    fn u32_min(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
-        binop2_m!(lhs min rhs)
+    fn i32_min(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_m!(load_i32x2, lhs min rhs)
     }
 
     #[inline(always)]
-    fn u32_max(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
-        binop2_m!(lhs max rhs)
+    fn i32_max(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_m!(load_i32x2, lhs max rhs)
     }
 
     #[inline(always)]
-    fn u32_le(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
-        binop2_b!(lhs <= rhs)
+    fn i32_eq(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_i32x2, lhs == rhs)
     }
 
     #[inline(always)]
-    fn u32_lt(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
-        binop2_b!(lhs < rhs)
+    fn i32_ne(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_i32x2, lhs != rhs)
     }
 
     #[inline(always)]
-    fn u32_ge(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
-        binop2_b!(lhs >= rhs)
+    fn i32_le(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_i32x2, lhs <= rhs)
     }
 
     #[inline(always)]
-    fn u32_gt(lhs: [u32; 2], rhs: [u32; 2]) -> [B32; 2] {
-        binop2_b!(lhs > rhs)
+    fn i32_lt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_i32x2, lhs < rhs)
     }
 
     #[inline(always)]
-    fn u32_zip(lhs: [u32; 2], rhs: [u32; 2]) -> ([u32; 2], [u32; 2]) {
-        ([lhs[0], rhs[0]],
-         [lhs[1], rhs[1]])
+    fn i32_ge(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_i32x2, lhs >= rhs)
     }
 
     #[inline(always)]
-    fn u32_unzip(lhs: [u32; 2], rhs: [u32; 2]) -> ([u32; 2], [u32; 2]) {
-        ([lhs[0], rhs[0]],
-         [lhs[1], rhs[1]])
+    fn i32_gt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_i32x2, lhs > rhs)
     }
 
     #[inline(always)]
-    fn u32_shr(v: [u32; 2], shift: u32) -> [u32; 2] {
-        binop2_c!(v >> shift)
+    fn i32_add(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_i32x2, lhs + rhs)
     }
 
     #[inline(always)]
-    fn u32_and(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
-        binop2!(lhs & rhs)
+    fn i32_sub(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_i32x2, lhs - rhs)
     }
 
     #[inline(always)]
-    fn u32_or(lhs: [u32; 2], rhs: [u32; 2]) -> [u32; 2] {
-        binop2!(lhs | rhs)
+    fn i32_neg(v: Self::Repr) -> Self::Repr {
+        unop2!(load_i32x2, -v)
     }
 
     #[inline(always)]
-    fn u32_not(v: [u32; 2]) -> [u32; 2] {
-        unop2!(!v)
+    fn i32_shl(v: Self::Repr, shift: i32) -> Self::Repr {
+        binop2_c!(load_i32x2, v << shift)
+    }
+
+    #[inline(always)]
+    fn i32_shr(v: Self::Repr, shift: i32) -> Self::Repr {
+        binop2_c!(load_i32x2, v >> shift)
     }
 
 
     #[inline(always)]
-    fn f32_splat(v: f32) -> [f32; 2] {
-        [v, v]
+    fn u32_splat(v: u32) -> Self::Repr {
+        store2([v, v])
     }
 
     #[inline(always)]
-    fn f32_as_bits(v: [f32; 2]) -> [u32; 2] {
-        unsafe { transmute(v) }
+    fn u32_as_i32(v: Self::Repr) -> Self::Repr {
+        meth2!(load_u32x2, v as i32)
     }
 
     #[inline(always)]
-    fn f32_from_bits(v: [u32; 2]) -> [f32; 2] {
-        unsafe { transmute(v) }
+    fn u32_min(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_m!(load_u32x2, lhs min rhs)
     }
 
     #[inline(always)]
-    fn f32_to_i32_unck(v: [f32; 2]) -> [i32; 2] {
-        unsafe { meth2!(v.to_int_unchecked()) }
+    fn u32_max(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_m!(load_u32x2, lhs max rhs)
     }
 
     #[inline(always)]
-    fn f32_to_i32(v: [f32; 2]) -> [i32; 2] {
-        meth2!(v as i32)
+    fn u32_le(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_u32x2, lhs <= rhs)
     }
 
     #[inline(always)]
-    fn f32_floor(v: [f32; 2]) -> [f32; 2] {
-        meth2!(v.floor())
+    fn u32_lt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_u32x2, lhs < rhs)
     }
 
     #[inline(always)]
-    fn f32_ceil(v: [f32; 2]) -> [f32; 2] {
-        meth2!(v.ceil())
+    fn u32_ge(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_u32x2, lhs >= rhs)
     }
 
     #[inline(always)]
-    fn f32_round(v: [f32; 2]) -> [f32; 2] {
-        meth2!(v.round())
+    fn u32_gt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_u32x2, lhs > rhs)
     }
 
     #[inline(always)]
-    fn f32_trunc(v: [f32; 2]) -> [f32; 2] {
-        meth2!(v.trunc())
+    fn u32_shr(v: Self::Repr, shift: u32) -> Self::Repr {
+        binop2_c!(load_u32x2, v >> shift)
     }
 
     #[inline(always)]
-    fn f32_abs(v: [f32; 2]) -> [f32; 2] {
-        meth2!(v.abs())
+    fn u32_and(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_u32x2, lhs & rhs)
     }
 
     #[inline(always)]
-    fn f32_sqrt(v: [f32; 2]) -> [f32; 2] {
-        meth2!(v.sqrt())
+    fn u32_or(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_u32x2, lhs | rhs)
     }
 
     #[inline(always)]
-    fn f32_with_sign_of(v: [f32; 2], sign: [f32; 2]) -> [f32; 2] {
-        binop2_m!(v copysign sign)
+    fn u32_not(v: Self::Repr) -> Self::Repr {
+        unop2!(load_u32x2, !v)
+    }
+
+
+    #[inline(always)]
+    fn f32_splat(v: f32) -> Self::Repr {
+        store2([v, v])
     }
 
     #[inline(always)]
-    fn f32_hadd(v: [f32; 2]) -> f32 {
+    fn f32_to_i32_unck(v: Self::Repr) -> Self::Repr {
+        unsafe { meth2!(load_f32x2, v.to_int_unchecked::<i32>()) }
+    }
+
+    #[inline(always)]
+    fn f32_to_i32(v: Self::Repr) -> Self::Repr {
+        meth2!(load_f32x2, v as i32)
+    }
+
+    #[inline(always)]
+    fn f32_floor(v: Self::Repr) -> Self::Repr {
+        meth2!(load_f32x2, v.floor())
+    }
+
+    #[inline(always)]
+    fn f32_ceil(v: Self::Repr) -> Self::Repr {
+        meth2!(load_f32x2, v.ceil())
+    }
+
+    #[inline(always)]
+    fn f32_round(v: Self::Repr) -> Self::Repr {
+        meth2!(load_f32x2, v.round())
+    }
+
+    #[inline(always)]
+    fn f32_trunc(v: Self::Repr) -> Self::Repr {
+        meth2!(load_f32x2, v.trunc())
+    }
+
+    #[inline(always)]
+    fn f32_abs(v: Self::Repr) -> Self::Repr {
+        meth2!(load_f32x2, v.abs())
+    }
+
+    #[inline(always)]
+    fn f32_sqrt(v: Self::Repr) -> Self::Repr {
+        meth2!(load_f32x2, v.sqrt())
+    }
+
+    #[inline(always)]
+    fn f32_with_sign_of(v: Self::Repr, sign: Self::Repr) -> Self::Repr {
+        binop2_m!(load_f32x2, v copysign sign)
+    }
+
+    #[inline(always)]
+    fn f32_hadd(v: Self::Repr) -> f32 {
+        let v = load_f32x2(v);
         v[0] + v[1]
     }
 
     #[inline(always)]
-    fn f32_min(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
-        binop2_m!(lhs min rhs)
+    fn f32_min(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_m!(load_f32x2, lhs min rhs)
     }
 
     #[inline(always)]
-    fn f32_max(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
-        binop2_m!(lhs max rhs)
+    fn f32_max(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_m!(load_f32x2, lhs max rhs)
     }
 
     #[inline(always)]
-    fn f32_eq(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
-        binop2_b!(lhs == rhs)
+    fn f32_eq(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_f32x2, lhs == rhs)
     }
 
     #[inline(always)]
-    fn f32_ne(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
-        binop2_b!(lhs != rhs)
+    fn f32_ne(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_f32x2, lhs != rhs)
     }
 
     #[inline(always)]
-    fn f32_le(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
-        binop2_b!(lhs <= rhs)
+    fn f32_le(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_f32x2, lhs <= rhs)
     }
 
     #[inline(always)]
-    fn f32_lt(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
-        binop2_b!(lhs < rhs)
+    fn f32_lt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_f32x2, lhs < rhs)
     }
 
     #[inline(always)]
-    fn f32_ge(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
-        binop2_b!(lhs >= rhs)
+    fn f32_ge(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_f32x2, lhs >= rhs)
     }
 
     #[inline(always)]
-    fn f32_gt(lhs: [f32; 2], rhs: [f32; 2]) -> [B32; 2] {
-        binop2_b!(lhs > rhs)
+    fn f32_gt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2_b!(load_f32x2, lhs > rhs)
     }
 
     #[inline(always)]
-    fn f32_neg(v: [f32; 2]) -> [f32; 2] {
-        unop2!(-v)
+    fn f32_neg(v: Self::Repr) -> Self::Repr {
+        unop2!(load_f32x2, -v)
     }
 
     #[inline(always)]
-    fn f32_add(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
-        binop2!(lhs + rhs)
+    fn f32_add(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_f32x2, lhs + rhs)
     }
 
     #[inline(always)]
-    fn f32_sub(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
-        binop2!(lhs - rhs)
+    fn f32_sub(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_f32x2, lhs - rhs)
     }
 
     #[inline(always)]
-    fn f32_mul(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
-        binop2!(lhs * rhs)
+    fn f32_mul(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_f32x2, lhs * rhs)
     }
 
     #[inline(always)]
-    fn f32_div(lhs: [f32; 2], rhs: [f32; 2]) -> [f32; 2] {
-        binop2!(lhs / rhs)
+    fn f32_div(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop2!(load_f32x2, lhs / rhs)
     }
 }
+
+
+
+#[inline(always)]
+fn load_b32x4(repr: Vec4) -> [B32; 4] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn load_i32x4(repr: Vec4) -> [i32; 4] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn load_u32x4(repr: Vec4) -> [u32; 4] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn load_f32x4(repr: Vec4) -> [f32; 4] { unsafe { transmute(repr) } }
+
+#[inline(always)]
+fn store4<T: SimdElement>(v: [T; 4]) -> Vec4 { unsafe { transmute(T::se_to_u32x4(v)) } }
 
 
 macro_rules! meth4 {
-    ($v:ident $($meth:tt)*) => {
-        [$v[0] $($meth)*,
-         $v[1] $($meth)*,
-         $v[2] $($meth)*,
-         $v[3] $($meth)*]
-    }
+    ($load:ident, $v:ident $($meth:tt)*) => {{
+        let v = $load($v);
+        store4(
+            [v[0] $($meth)*,
+             v[1] $($meth)*,
+             v[2] $($meth)*,
+             v[3] $($meth)*])
+    }}
 }
 
 macro_rules! unop4 {
-    ($op:tt $v:ident) => {
-        [$op $v[0],
-         $op $v[1],
-         $op $v[2],
-         $op $v[3]]
-    }
+    ($load:ident, $op:tt $v:ident) => {{
+        let v = $load($v);
+        store4(
+            [$op v[0],
+             $op v[1],
+             $op v[2],
+             $op v[3]])
+    }}
 }
 
 macro_rules! binop4 {
-    ($lhs:ident $op:tt $rhs:ident) => {
-        [$lhs[0] $op $rhs[0],
-         $lhs[1] $op $rhs[1],
-         $lhs[2] $op $rhs[2],
-         $lhs[3] $op $rhs[3]]
-    }
+    ($load:ident, $lhs:ident $op:tt $rhs:ident) => {{
+        let lhs = $load($lhs);
+        let rhs = $load($rhs);
+        store4(
+            [lhs[0] $op rhs[0],
+             lhs[1] $op rhs[1],
+             lhs[2] $op rhs[2],
+             lhs[3] $op rhs[3]])
+    }}
 }
 
 macro_rules! binop4_c {
-    ($lhs:ident $op:tt $rhs:expr) => {
-        [$lhs[0] $op $rhs,
-         $lhs[1] $op $rhs,
-         $lhs[2] $op $rhs,
-         $lhs[3] $op $rhs]
-    }
+    ($load:ident, $lhs:ident $op:tt $rhs:expr) => {{
+        let lhs = $load($lhs);
+        store4(
+            [lhs[0] $op $rhs,
+             lhs[1] $op $rhs,
+             lhs[2] $op $rhs,
+             lhs[3] $op $rhs])
+    }}
 }
 
 macro_rules! binop4_b {
-    ($lhs:ident $op:tt $rhs:ident) => {
-        [($lhs[0] $op $rhs[0]).into(),
-         ($lhs[1] $op $rhs[1]).into(),
-         ($lhs[2] $op $rhs[2]).into(),
-         ($lhs[3] $op $rhs[3]).into()]
-    }
+    ($load:ident, $lhs:ident $op:tt $rhs:ident) => {{
+        let lhs = $load($lhs);
+        let rhs = $load($rhs);
+        store4(
+            [B32::new(lhs[0] $op rhs[0]),
+             B32::new(lhs[1] $op rhs[1]),
+             B32::new(lhs[2] $op rhs[2]),
+             B32::new(lhs[3] $op rhs[3])])
+    }}
 }
 
 macro_rules! binop4_m {
-    ($lhs:ident $op:ident $rhs:ident) => {
-        [$lhs[0].$op($rhs[0]),
-         $lhs[1].$op($rhs[1]),
-         $lhs[2].$op($rhs[2]),
-         $lhs[3].$op($rhs[3])]
-    }
+    ($load:ident, $lhs:ident $op:ident $rhs:ident) => {{
+        let lhs = $load($lhs);
+        let rhs = $load($rhs);
+        store4(
+            [lhs[0].$op(rhs[0]),
+             lhs[1].$op(rhs[1]),
+             lhs[2].$op(rhs[2]),
+             lhs[3].$op(rhs[3])])
+    }}
 }
 
+
+
+#[derive(Clone, Copy)]
+#[repr(align(16))]
+pub struct Vec4([u32; 4]);
+
 impl SimdLanes<4> for () {
-    type Align = Align16;
+    type Repr = Vec4;
 
-    const ALIGN: Self::Align = Align16;
 
     #[inline(always)]
-    fn b32_splat(v: B32) -> [B32; 4] {
-        [v, v, v, v]
+    fn repr_from_se<T: SimdElement>(v: [T; 4]) -> Self::Repr {
+        store4(v)
     }
 
     #[inline(always)]
-    fn b32_as_u32(v: [B32; 4]) -> [u32; 4] {
-        unsafe { transmute(v) }
+    fn repr_zip(lhs: Self::Repr, rhs: Self::Repr) -> (Self::Repr, Self::Repr) {
+        let lhs = load_f32x4(lhs);
+        let rhs = load_f32x4(rhs);
+        (store4([lhs[0], rhs[0], lhs[1], rhs[1]]),
+         store4([lhs[2], rhs[2], lhs[3], rhs[3]]))
     }
 
     #[inline(always)]
-    fn b32_from_u32_unck(v: [u32; 4]) -> [B32; 4] {
-        unsafe { transmute(v) }
+    fn repr_unzip(lhs: Self::Repr, rhs: Self::Repr) -> (Self::Repr, Self::Repr) {
+        let lhs = load_f32x4(lhs);
+        let rhs = load_f32x4(rhs);
+        (store4([lhs[0], lhs[2], rhs[0], rhs[2]]),
+         store4([lhs[1], lhs[3], rhs[1], rhs[3]]))
     }
 
-    #[inline(always)]
-    fn b32_as_i32(v: [B32; 4]) -> [i32; 4] {
-        meth4!(v.as_u32() as i32)
-    }
-
-    #[inline(always)]
-    fn b32_select_u32(mask: [B32; 4], on_true: [u32; 4], on_false: [u32; 4]) -> [u32; 4] {
-        [mask[0].as_u32()&on_true[0] | !mask[0].as_u32()&on_false[0],
-         mask[1].as_u32()&on_true[1] | !mask[1].as_u32()&on_false[1],
-         mask[2].as_u32()&on_true[2] | !mask[2].as_u32()&on_false[2],
-         mask[3].as_u32()&on_true[3] | !mask[3].as_u32()&on_false[3]]
-    }
 
     #[inline(always)]
-    fn b32_none(v: [B32; 4]) -> bool {
-        !v[0].to_bool() && !v[1].to_bool()
+    fn b32_splat(v: B32) -> Self::Repr {
+        store4([v, v, v, v])
     }
 
     #[inline(always)]
-    fn b32_any(v: [B32; 4]) -> bool {
-        v[0].to_bool() || v[1].to_bool()
+    fn b32_select(mask: Self::Repr, on_true: Self::Repr, on_false: Self::Repr) -> Self::Repr {
+        let m = load_u32x4(mask);
+        let t = load_u32x4(on_true);
+        let f = load_u32x4(on_false);
+        store4(
+            [(m[0] & t[0]) | (!m[0] & f[0]),
+             (m[1] & t[1]) | (!m[1] & f[1]),
+             (m[2] & t[2]) | (!m[2] & f[2]),
+             (m[3] & t[3]) | (!m[3] & f[3])])
     }
 
     #[inline(always)]
-    fn b32_all(v: [B32; 4]) -> bool {
-        v[0].to_bool() && v[1].to_bool()
+    fn b32_none(v: Self::Repr) -> bool {
+        let v = load_u32x4(v);
+        (v[0] | v[1] | v[2] | v[3]) == 0
     }
 
     #[inline(always)]
-    fn b32_and(lhs: [B32; 4], rhs: [B32; 4]) -> [B32; 4] {
-        binop4!(lhs & rhs)
+    fn b32_any(v: Self::Repr) -> bool {
+        let v = load_u32x4(v);
+        (v[0] | v[1] | v[2] | v[3]) != 0
     }
 
     #[inline(always)]
-    fn b32_or(lhs: [B32; 4], rhs: [B32; 4]) -> [B32; 4] {
-        binop4!(lhs | rhs)
+    fn b32_all(v: Self::Repr) -> bool {
+        let v = load_u32x4(v);
+        (v[0] & v[1] & v[2] & v[3]) != 0
     }
 
     #[inline(always)]
-    fn b32_not(v: [B32; 4]) -> [B32; 4] {
-        unop4!(!v)
+    fn b32_and(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_b32x4, lhs & rhs)
     }
 
-
     #[inline(always)]
-    fn i32_splat(v: i32) -> [i32; 4] {
-        [v, v, v, v]
+    fn b32_or(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_b32x4, lhs | rhs)
     }
 
     #[inline(always)]
-    fn i32_as_u32(v: [i32; 4]) -> [u32; 4] {
-        unsafe { transmute(v) }
+    fn b32_not(v: Self::Repr) -> Self::Repr {
+        unop4!(load_b32x4, !v)
     }
 
-    #[inline(always)]
-    fn i32_to_f32(v: [i32; 4]) -> [f32; 4] {
-        meth4!(v as f32)
-    }
 
     #[inline(always)]
-    fn i32_min(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
-        binop4_m!(lhs min rhs)
+    fn i32_splat(v: i32) -> Self::Repr {
+        store4([v, v, v, v])
     }
 
     #[inline(always)]
-    fn i32_max(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
-        binop4_m!(lhs max rhs)
+    fn i32_to_f32(v: Self::Repr) -> Self::Repr {
+        meth4!(load_i32x4, v as f32)
     }
 
     #[inline(always)]
-    fn i32_eq(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
-        binop4_b!(lhs == rhs)
+    fn i32_min(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_m!(load_i32x4, lhs min rhs)
     }
 
     #[inline(always)]
-    fn i32_ne(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
-        binop4_b!(lhs != rhs)
+    fn i32_max(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_m!(load_i32x4, lhs max rhs)
     }
 
     #[inline(always)]
-    fn i32_le(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
-        binop4_b!(lhs <= rhs)
+    fn i32_eq(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_i32x4, lhs == rhs)
     }
 
     #[inline(always)]
-    fn i32_lt(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
-        binop4_b!(lhs < rhs)
+    fn i32_ne(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_i32x4, lhs != rhs)
     }
 
     #[inline(always)]
-    fn i32_ge(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
-        binop4_b!(lhs >= rhs)
+    fn i32_le(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_i32x4, lhs <= rhs)
     }
 
     #[inline(always)]
-    fn i32_gt(lhs: [i32; 4], rhs: [i32; 4]) -> [B32; 4] {
-        binop4_b!(lhs > rhs)
+    fn i32_lt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_i32x4, lhs < rhs)
     }
 
     #[inline(always)]
-    fn i32_add(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
-        binop4!(lhs + rhs)
+    fn i32_ge(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_i32x4, lhs >= rhs)
     }
 
     #[inline(always)]
-    fn i32_sub(lhs: [i32; 4], rhs: [i32; 4]) -> [i32; 4] {
-        binop4!(lhs - rhs)
+    fn i32_gt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_i32x4, lhs > rhs)
     }
 
     #[inline(always)]
-    fn i32_neg(v: [i32; 4]) -> [i32; 4] {
-        unop4!(-v)
+    fn i32_add(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_i32x4, lhs + rhs)
     }
 
     #[inline(always)]
-    fn i32_shl(v: [i32; 4], shift: i32) -> [i32; 4] {
-        binop4_c!(v << shift)
+    fn i32_sub(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_i32x4, lhs - rhs)
     }
 
     #[inline(always)]
-    fn i32_shr(v: [i32; 4], shift: i32) -> [i32; 4] {
-        binop4_c!(v >> shift)
+    fn i32_neg(v: Self::Repr) -> Self::Repr {
+        unop4!(load_i32x4, -v)
     }
 
-
     #[inline(always)]
-    fn u32_splat(v: u32) -> [u32; 4] {
-        [v, v, v, v]
+    fn i32_shl(v: Self::Repr, shift: i32) -> Self::Repr {
+        binop4_c!(load_i32x4, v << shift)
     }
 
     #[inline(always)]
-    fn u32_as_i32(v: [u32; 4]) -> [i32; 4] {
-        meth4!(v as i32)
+    fn i32_shr(v: Self::Repr, shift: i32) -> Self::Repr {
+        binop4_c!(load_i32x4, v >> shift)
     }
 
-    #[inline(always)]
-    fn u32_min(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
-        binop4_m!(lhs min rhs)
-    }
 
     #[inline(always)]
-    fn u32_max(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
-        binop4_m!(lhs max rhs)
+    fn u32_splat(v: u32) -> Self::Repr {
+        store4([v, v, v, v])
     }
 
     #[inline(always)]
-    fn u32_le(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
-        binop4_b!(lhs <= rhs)
+    fn u32_as_i32(v: Self::Repr) -> Self::Repr {
+        meth4!(load_u32x4, v as i32)
     }
 
     #[inline(always)]
-    fn u32_lt(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
-        binop4_b!(lhs < rhs)
+    fn u32_min(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_m!(load_u32x4, lhs min rhs)
     }
 
     #[inline(always)]
-    fn u32_ge(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
-        binop4_b!(lhs >= rhs)
+    fn u32_max(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_m!(load_u32x4, lhs max rhs)
     }
 
     #[inline(always)]
-    fn u32_gt(lhs: [u32; 4], rhs: [u32; 4]) -> [B32; 4] {
-        binop4_b!(lhs > rhs)
+    fn u32_le(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_u32x4, lhs <= rhs)
     }
 
     #[inline(always)]
-    fn u32_zip(lhs: [u32; 4], rhs: [u32; 4]) -> ([u32; 4], [u32; 4]) {
-        ([lhs[0], rhs[0], lhs[1], rhs[1]],
-         [lhs[2], rhs[2], lhs[3], rhs[3]])
+    fn u32_lt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_u32x4, lhs < rhs)
     }
 
     #[inline(always)]
-    fn u32_unzip(lhs: [u32; 4], rhs: [u32; 4]) -> ([u32; 4], [u32; 4]) {
-        ([lhs[0], lhs[2], rhs[0], rhs[2]],
-         [lhs[1], lhs[3], rhs[1], rhs[3]])
+    fn u32_ge(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_u32x4, lhs >= rhs)
     }
 
     #[inline(always)]
-    fn u32_shr(v: [u32; 4], shift: u32) -> [u32; 4] {
-        binop4_c!(v >> shift)
+    fn u32_gt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_u32x4, lhs > rhs)
     }
 
     #[inline(always)]
-    fn u32_and(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
-        binop4!(lhs & rhs)
+    fn u32_shr(v: Self::Repr, shift: u32) -> Self::Repr {
+        binop4_c!(load_u32x4, v >> shift)
     }
 
     #[inline(always)]
-    fn u32_or(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
-        binop4!(lhs | rhs)
+    fn u32_and(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_u32x4, lhs & rhs)
     }
 
     #[inline(always)]
-    fn u32_not(v: [u32; 4]) -> [u32; 4] {
-        unop4!(!v)
+    fn u32_or(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_u32x4, lhs | rhs)
     }
-
 
     #[inline(always)]
-    fn f32_splat(v: f32) -> [f32; 4] {
-        [v, v, v, v]
+    fn u32_not(v: Self::Repr) -> Self::Repr {
+        unop4!(load_u32x4, !v)
     }
 
-    #[inline(always)]
-    fn f32_as_bits(v: [f32; 4]) -> [u32; 4] {
-        unsafe { transmute(v) }
-    }
 
     #[inline(always)]
-    fn f32_from_bits(v: [u32; 4]) -> [f32; 4] {
-        unsafe { transmute(v) }
+    fn f32_splat(v: f32) -> Self::Repr {
+        store4([v, v, v, v])
     }
 
     #[inline(always)]
-    fn f32_to_i32_unck(v: [f32; 4]) -> [i32; 4] {
-        unsafe { meth4!(v.to_int_unchecked()) }
+    fn f32_to_i32_unck(v: Self::Repr) -> Self::Repr {
+        unsafe { meth4!(load_f32x4, v.to_int_unchecked::<i32>()) }
     }
 
     #[inline(always)]
-    fn f32_to_i32(v: [f32; 4]) -> [i32; 4] {
-        meth4!(v as i32)
+    fn f32_to_i32(v: Self::Repr) -> Self::Repr {
+        meth4!(load_f32x4, v as i32)
     }
 
     #[inline(always)]
-    fn f32_floor(v: [f32; 4]) -> [f32; 4] {
-        meth4!(v.floor())
+    fn f32_floor(v: Self::Repr) -> Self::Repr {
+        meth4!(load_f32x4, v.floor())
     }
 
     #[inline(always)]
-    fn f32_ceil(v: [f32; 4]) -> [f32; 4] {
-        meth4!(v.ceil())
+    fn f32_ceil(v: Self::Repr) -> Self::Repr {
+        meth4!(load_f32x4, v.ceil())
     }
 
     #[inline(always)]
-    fn f32_round(v: [f32; 4]) -> [f32; 4] {
-        meth4!(v.round())
+    fn f32_round(v: Self::Repr) -> Self::Repr {
+        meth4!(load_f32x4, v.round())
     }
 
     #[inline(always)]
-    fn f32_trunc(v: [f32; 4]) -> [f32; 4] {
-        meth4!(v.trunc())
+    fn f32_trunc(v: Self::Repr) -> Self::Repr {
+        meth4!(load_f32x4, v.trunc())
     }
 
     #[inline(always)]
-    fn f32_abs(v: [f32; 4]) -> [f32; 4] {
-        meth4!(v.abs())
+    fn f32_abs(v: Self::Repr) -> Self::Repr {
+        meth4!(load_f32x4, v.abs())
     }
 
     #[inline(always)]
-    fn f32_sqrt(v: [f32; 4]) -> [f32; 4] {
-        meth4!(v.sqrt())
+    fn f32_sqrt(v: Self::Repr) -> Self::Repr {
+        meth4!(load_f32x4, v.sqrt())
     }
 
     #[inline(always)]
-    fn f32_with_sign_of(v: [f32; 4], sign: [f32; 4]) -> [f32; 4] {
-        binop4_m!(v copysign sign)
+    fn f32_with_sign_of(v: Self::Repr, sign: Self::Repr) -> Self::Repr {
+        binop4_m!(load_f32x4, v copysign sign)
     }
 
     #[inline(always)]
-    fn f32_hadd(v: [f32; 4]) -> f32 {
-        v[0] + v[1]
+    fn f32_hadd(v: Self::Repr) -> f32 {
+        let v = load_f32x4(v);
+        v[0] + v[1] + v[2] + v[3]
     }
 
     #[inline(always)]
-    fn f32_min(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
-        binop4_m!(lhs min rhs)
+    fn f32_min(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_m!(load_f32x4, lhs min rhs)
     }
 
     #[inline(always)]
-    fn f32_max(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
-        binop4_m!(lhs max rhs)
+    fn f32_max(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_m!(load_f32x4, lhs max rhs)
     }
 
     #[inline(always)]
-    fn f32_eq(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
-        binop4_b!(lhs == rhs)
+    fn f32_eq(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_f32x4, lhs == rhs)
     }
 
     #[inline(always)]
-    fn f32_ne(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
-        binop4_b!(lhs != rhs)
+    fn f32_ne(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_f32x4, lhs != rhs)
     }
 
     #[inline(always)]
-    fn f32_le(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
-        binop4_b!(lhs <= rhs)
+    fn f32_le(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_f32x4, lhs <= rhs)
     }
 
     #[inline(always)]
-    fn f32_lt(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
-        binop4_b!(lhs < rhs)
+    fn f32_lt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_f32x4, lhs < rhs)
     }
 
     #[inline(always)]
-    fn f32_ge(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
-        binop4_b!(lhs >= rhs)
+    fn f32_ge(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_f32x4, lhs >= rhs)
     }
 
     #[inline(always)]
-    fn f32_gt(lhs: [f32; 4], rhs: [f32; 4]) -> [B32; 4] {
-        binop4_b!(lhs > rhs)
+    fn f32_gt(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4_b!(load_f32x4, lhs > rhs)
     }
 
     #[inline(always)]
-    fn f32_neg(v: [f32; 4]) -> [f32; 4] {
-        unop4!(-v)
+    fn f32_neg(v: Self::Repr) -> Self::Repr {
+        unop4!(load_f32x4, -v)
     }
 
     #[inline(always)]
-    fn f32_add(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
-        binop4!(lhs + rhs)
+    fn f32_add(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_f32x4, lhs + rhs)
     }
 
     #[inline(always)]
-    fn f32_sub(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
-        binop4!(lhs - rhs)
+    fn f32_sub(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_f32x4, lhs - rhs)
     }
 
     #[inline(always)]
-    fn f32_mul(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
-        binop4!(lhs * rhs)
+    fn f32_mul(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_f32x4, lhs * rhs)
     }
 
     #[inline(always)]
-    fn f32_div(lhs: [f32; 4], rhs: [f32; 4]) -> [f32; 4] {
-        binop4!(lhs / rhs)
+    fn f32_div(lhs: Self::Repr, rhs: Self::Repr) -> Self::Repr {
+        binop4!(load_f32x4, lhs / rhs)
     }
 }
 
