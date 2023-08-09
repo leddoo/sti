@@ -1,6 +1,8 @@
 
 - todo:
     - new simd module:
+        - scalar add/sub (ext trait, "add", "sub", maybe "sadd").
+        - scalar into, ext for "v2", "v4".
         - impl aarch64.
         - platform detection.
         - impl x86.
@@ -8,7 +10,6 @@
         - use `core::simd` on nightly.
         - make simd opt-in on x86 and warn if not enabled sse4.
     - `Vec::extend`.
-    - `Vec` drop tests & fix truncate.
     - thread local temp arena (dynamic stack enforcement).
 
 - backlog:

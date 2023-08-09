@@ -244,7 +244,7 @@ impl<T, A: Alloc> Vec<T, A> {
         unsafe {
             core::ptr::drop_in_place(
                 core::slice::from_raw_parts_mut(
-                    self.data.as_ptr().add(old_len), new_len));
+                    self.data.as_ptr().add(new_len), old_len - new_len));
         }
     }
 
@@ -467,6 +467,53 @@ impl<T, A: Alloc> core::borrow::BorrowMut<[T]> for Vec<T, A> {
     #[inline(always)]
     fn borrow_mut(&mut self) -> &mut [T] {
         self.as_slice_mut()
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vec_drop() {
+        use core::cell::Cell;
+
+        struct Dropper<'a> {
+            ticket: u32,
+            counter: &'a Cell<u32>
+        }
+
+        impl<'a> Drop for Dropper<'a> {
+            fn drop(&mut self) {
+                assert_eq!(self.counter.get(), self.ticket);
+                self.counter.set(self.counter.get() + 1);
+            }
+        }
+
+        let counter = Cell::new(0);
+        let d = |ticket: u32| {
+            Dropper { ticket, counter: &counter }
+        };
+
+        // basic drop.
+        let mut v = Vec::new();
+        v.push(d(0));
+        v.push(d(1));
+        v.push(d(2));
+        drop(v);
+        assert_eq!(counter.get(), 3);
+
+        // truncate.
+        counter.set(0);
+        let mut v = Vec::new();
+        v.push(d(2));
+        v.push(d(0));
+        v.push(d(1));
+        v.truncate(1);
+        drop(v);
+        assert_eq!(counter.get(), 3);
     }
 }
 
