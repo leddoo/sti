@@ -200,10 +200,11 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// - returns a slice, from the current offset, up to (and including) the last
     ///   element, for which the predicate returned true.
-    /// - returns `None`, if the end of input was reached before the predicate returned `false`.
+    /// - returns a bool, that's `false`, if the end of input was reached before
+    ///   the predicate returned `false`. (same as `consume_while`)
     /// - useful for parsing strings.
     #[inline(always)]
-    pub fn consume_while_slice<F: FnMut(&T) -> bool>(&mut self, f: F) -> Option<&'a [T]> {
+    pub fn consume_while_slice<F: FnMut(&T) -> bool>(&mut self, f: F) -> (&'a [T], bool) {
         let offset = self.offset();
         self.consume_while_slice_from(offset, f)
     }
@@ -212,19 +213,18 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// - returns a slice, from the specified `from_offset`, up to (and including) the
     ///   last element, for which the predicate returned true.
+    /// - returns a bool, that's `false`, if the end of input was reached before
+    ///   the predicate returned `false`. (same as `consume_while`)
     /// - elements from the specified `from_offset` to the (initial) current offset are
     ///   included in the slice, without being passed to the predicate.
-    /// - returns `None`, if the end of input was reached before the predicate returned `false`.
     /// - useful for parsing strings & identifiers.
     #[inline(always)]
-    pub fn consume_while_slice_from<F: FnMut(&T) -> bool>(&mut self, from_offset: usize, f: F) -> Option<&'a [T]> {
+    pub fn consume_while_slice_from<F: FnMut(&T) -> bool>(&mut self, from_offset: usize, f: F) -> (&'a [T], bool) {
         assert!(from_offset <= self.offset());
 
-        if self.consume_while(f) {
-            let to_offset = self.offset();
-            return Some(&self.original_slice()[from_offset..to_offset]);
-        }
-        return None;
+        let no_eoi = self.consume_while(f);
+        let slice = &self.original_slice()[from_offset..self.offset()];
+        return (slice, no_eoi);
     }
 }
 
@@ -344,13 +344,13 @@ mod tests {
         check_offset(&r, 16);
 
         assert_eq!(r.consume_while_slice(|at| at.is_ascii_alphabetic()),
-            Some(b"dfsadf".as_slice()));
+            (b"dfsadf".as_slice(), true));
         check_offset(&r, 22);
 
         let from = r.offset();
         assert_eq!(r.consume_if_eq(&b'\''), true);
         assert_eq!(r.consume_while_slice_from(from, |at| *at != b'\''),
-            Some(b"'abc".as_slice()));
+            (b"'abc".as_slice(), true));
         r.consume(1);
         check_offset(&r, 27);
 
@@ -359,11 +359,11 @@ mod tests {
 
         r.set_offset(27);
         check_offset(&r, 27);
-        assert_eq!(r.consume_while_slice(|_| true), None);
+        assert_eq!(r.consume_while_slice(|_| true), (b"def".as_slice(), false));
 
         r.set_offset(5);
         check_offset(&r, 5);
-        assert_eq!(r.consume_while_slice_from(1, |_| true), None);
+        assert_eq!(r.consume_while_slice_from(1, |_| true), (&input[1..], false));
     }
 }
 

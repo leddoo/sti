@@ -1,6 +1,7 @@
 0.1.5:
 - slice reader
     - `as_slice`, cause deref doesn't return `&'a [T]`.
+    - `consume_while_slice[_from]` now return `(&'a [T], bool)`.
 
 0.1.4:
 - slice reader.
