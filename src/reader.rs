@@ -36,7 +36,22 @@ impl<'a, T> Reader<'a, T> {
         }
     }
 
-    /// returns the remaining slice, same as `deref`.
+    /// returns the consumed slice.
+    ///
+    /// - same as `&original_slice[..offset]`
+    #[inline(always)]
+    pub fn consumed_slice(&self) -> &'a [T] {
+        unsafe {
+            core::slice::from_raw_parts(
+                self.start,
+                self.consumed())
+        }
+    }
+
+    /// returns the remaining slice.
+    ///
+    /// - same as `&original_slice[offset..]`
+    /// - same as `deref` (modulo the lifetime).
     #[inline(always)]
     pub fn as_slice(&self) -> &'a [T] {
         self.data
@@ -186,7 +201,8 @@ impl<'a, T> Reader<'a, T> {
 
     /// consume input, while a predicate is true.
     ///
-    /// - returns `false`, if the end of input was reached before the predicate returned `false`.
+    /// - returns a bool `no_eoi`, that's `false`, if the end of input was reached
+    ///   before the predicate returned `false`.
     #[inline(always)]
     pub fn consume_while<F: FnMut(&T) -> bool>(&mut self, mut f: F) -> bool {
         while let Some(at) = self.data.get(0) {
@@ -200,8 +216,8 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// - returns a slice, from the current offset, up to (and including) the last
     ///   element, for which the predicate returned true.
-    /// - returns a bool, that's `false`, if the end of input was reached before
-    ///   the predicate returned `false`. (same as `consume_while`)
+    /// - returns a bool `no_eoi`, that's `false`, if the end of input was reached
+    ///   before the predicate returned `false`. (same as `consume_while`)
     /// - useful for parsing strings.
     #[inline(always)]
     pub fn consume_while_slice<F: FnMut(&T) -> bool>(&mut self, f: F) -> (&'a [T], bool) {
@@ -213,8 +229,8 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// - returns a slice, from the specified `from_offset`, up to (and including) the
     ///   last element, for which the predicate returned true.
-    /// - returns a bool, that's `false`, if the end of input was reached before
-    ///   the predicate returned `false`. (same as `consume_while`)
+    /// - returns a bool `no_eoi`, that's `false`, if the end of input was reached
+    ///   before the predicate returned `false`. (same as `consume_while`)
     /// - elements from the specified `from_offset` to the (initial) current offset are
     ///   included in the slice, without being passed to the predicate.
     /// - useful for parsing strings & identifiers.
@@ -286,6 +302,8 @@ mod tests {
         let check_offset = |r: &Reader<u8>, offset: usize| {
             assert_eq!(r.original_len(), input.len());
             assert_eq!(r.original_slice(), input);
+            assert_eq!(r.consumed_slice(), &input[..offset]);
+            assert_eq!(r.as_slice(), &input[offset..]);
             assert_eq!(&**r, &input[offset..]);
             assert_eq!(r.offset(), offset);
             assert_eq!(r.consumed(), offset);
