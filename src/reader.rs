@@ -36,6 +36,12 @@ impl<'a, T> Reader<'a, T> {
         }
     }
 
+    /// returns the remaining slice, same as `deref`.
+    #[inline(always)]
+    pub fn as_slice(&self) -> &'a [T] {
+        self.data
+    }
+
     /// returns the current offset from the start of the `original_slice`.
     #[inline(always)]
     pub fn offset(&self) -> usize {
