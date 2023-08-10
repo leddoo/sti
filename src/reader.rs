@@ -275,14 +275,89 @@ mod tests {
 
     #[test]
     fn reader() {
-        let input = b"123 asdfsadf 'abc' def";
+        let input = b"123 xy  \t\n \t\n\r  dfsadf'abc'def";
+
+        let check_offset = |r: &Reader<u8>, offset: usize| {
+            assert_eq!(r.original_len(), input.len());
+            assert_eq!(r.original_slice(), input);
+            assert_eq!(&**r, &input[offset..]);
+            assert_eq!(r.offset(), offset);
+            assert_eq!(r.consumed(), offset);
+            assert_eq!(r.remaining(), input.len() - offset);
+            assert_eq!(r.len(), input.len() - offset);
+        };
 
         let mut r = Reader::new(input);
 
-        // initial state.
-        assert_eq!(r.consumed(),  0);
-        assert_eq!(r.remaining(), input.len());
-        assert_eq!(r.len(),       input.len());
+        check_offset(&r, 0);
+
+        assert_eq!(r.peek_ref(), Some(&b'1'));
+        assert_eq!(r.peek_ref_at(0), Some(&b'1'));
+        assert_eq!(r.peek_ref_at(1), Some(&b'2'));
+        assert_eq!(r.peek_ref_at(3), Some(&b' '));
+        assert_eq!(r.peek(), Some(b'1'));
+        assert_eq!(r.peek_at(0), Some(b'1'));
+        assert_eq!(r.peek_at(1), Some(b'2'));
+        assert_eq!(r.peek_at(3), Some(b' '));
+        assert_eq!(r.peek_n(4), Some(b"123 ".as_slice()));
+
+
+        assert_eq!(r.next_ref(), Some(&b'1'));
+        assert_eq!(r.next(), Some(b'2'));
+        assert_eq!(r.next_n(2), Some(b"3 ".as_slice()));
+
+        check_offset(&r, 4);
+
+        assert_eq!(r.next_ref_if(|at| at.is_ascii_whitespace()), None);
+        assert_eq!(r.offset(), 4);
+        assert_eq!(r.next_ref_if(|at| at.is_ascii_alphabetic()), Some(&b'x'));
+        assert_eq!(r.offset(), 5);
+        assert_eq!(r.next_if(|at| at.is_ascii_whitespace()), None);
+        assert_eq!(r.offset(), 5);
+        assert_eq!(r.next_if(|at| at.is_ascii_alphabetic()), Some(b'y'));
+        assert_eq!(r.offset(), 6);
+
+        r.consume(2);
+        assert_eq!(r.peek(), Some(b'\t'));
+
+        check_offset(&r, 8);
+
+        assert_eq!(r.consume_if(|at| at.is_ascii_digit()), false);
+        assert_eq!(r.offset(), 8);
+        assert_eq!(r.consume_if(|at| at.is_ascii_whitespace()), true);
+        assert_eq!(r.offset(), 9);
+
+        assert_eq!(r.consume_if_eq(&b'\n'), true);
+        assert_eq!(r.offset(), 10);
+        assert_eq!(r.consume_if_eq(&b'\n'), false);
+        assert_eq!(r.offset(), 10);
+
+        assert_eq!(r.consume_while(|at| at.is_ascii_whitespace()), true);
+        assert_eq!(r.offset(), 16);
+
+        check_offset(&r, 16);
+
+        assert_eq!(r.consume_while_slice(|at| at.is_ascii_alphabetic()),
+            Some(b"dfsadf".as_slice()));
+        check_offset(&r, 22);
+
+        let from = r.offset();
+        assert_eq!(r.consume_if_eq(&b'\''), true);
+        assert_eq!(r.consume_while_slice_from(from, |at| *at != b'\''),
+            Some(b"'abc".as_slice()));
+        r.consume(1);
+        check_offset(&r, 27);
+
+        assert_eq!(r.consume_while(|_| true), false);
+        check_offset(&r, 30);
+
+        r.set_offset(27);
+        check_offset(&r, 27);
+        assert_eq!(r.consume_while_slice(|_| true), None);
+
+        r.set_offset(5);
+        check_offset(&r, 5);
+        assert_eq!(r.consume_while_slice_from(1, |_| true), None);
     }
 }
 
