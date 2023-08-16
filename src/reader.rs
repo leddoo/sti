@@ -60,7 +60,7 @@ impl<'a, T> Reader<'a, T> {
     /// returns the current offset from the start of the `original_slice`.
     #[inline(always)]
     pub fn offset(&self) -> usize {
-        self.data.as_ptr() as usize - self.start as usize
+        unsafe { self.data.as_ptr().offset_from(self.start) as usize }
     }
 
     /// set the `offset` (in the `original_slice`) to a different value.
@@ -382,6 +382,43 @@ mod tests {
         r.set_offset(5);
         check_offset(&r, 5);
         assert_eq!(r.consume_while_slice_from(1, |_| true), (&input[1..], false));
+    }
+
+    #[test]
+    fn reader_offset_non_byte() {
+        let input: &[u16] = &[1, 2, 3, 0, 0, 7];
+
+        let check_offset = |r: &Reader<u16>, offset: usize| {
+            assert_eq!(r.original_len(), input.len());
+            assert_eq!(r.original_slice(), input);
+            assert_eq!(r.consumed_slice(), &input[..offset]);
+            assert_eq!(r.as_slice(), &input[offset..]);
+            assert_eq!(&**r, &input[offset..]);
+            assert_eq!(r.offset(), offset);
+            assert_eq!(r.consumed(), offset);
+            assert_eq!(r.remaining(), input.len() - offset);
+            assert_eq!(r.len(), input.len() - offset);
+        };
+
+        let mut r = Reader::new(input);
+
+        check_offset(&r, 0);
+
+        assert_eq!(r.next(), Some(1));
+        check_offset(&r, 1);
+        assert_eq!(r.next(), Some(2));
+        check_offset(&r, 2);
+        assert_eq!(r.next(), Some(3));
+        check_offset(&r, 3);
+        assert_eq!(r.next(), Some(0));
+        check_offset(&r, 4);
+
+        r.set_offset(5);
+        check_offset(&r, 5);
+
+        assert_eq!(r.next(), Some(7));
+        check_offset(&r, 6);
+        assert!(r.is_empty());
     }
 }
 

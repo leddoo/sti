@@ -3,6 +3,7 @@
     - `as_slice`, cause deref doesn't return `&'a [T]`.
     - `consume_while_slice[_from]` now return `(&'a [T], bool)`.
     - `consumed_slice`, opposite of `as_slice`.
+    - fix `offset` for types of size greater than 1.
 
 0.1.4:
 - slice reader.
