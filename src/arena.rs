@@ -8,38 +8,89 @@ use crate::num::{is_pow2, ceil_to_multiple_pow2, OrdUtils};
 use crate::alloc::{Alloc, GlobalAlloc};
 
 
-pub const MAX_ALIGN:      usize =   16;
-pub const MIN_BLOCK_SIZE: usize = 4096;
+/// maximum allocation size.
+///
+/// - larger allocations fail.
+/// - it's kinda big tho.
+///
+pub const MAX_ALLOC_SIZE: usize = MAX_CAP - HEADER_SIZE;
 
+/// maximum alignment.
+///
+/// - allocations with greater alignment fail.
+///
+pub const MAX_ALIGN: usize = 32;
 static_assert!(is_pow2(MAX_ALIGN));
 
 
-const HEADER_SIZE: usize = (size_of::<BlockHeader>() + MAX_ALIGN-1) / MAX_ALIGN * MAX_ALIGN;
+/// default minimum block size.
+pub const DEFAULT_CAP: usize = 4096;
 
-static_assert!(HEADER_SIZE >= size_of::<BlockHeader>());
-
-
-const CAP_MAX: usize = usize::MAX/4 + 1;
-
-static_assert!(CAP_MAX % MAX_ALIGN == 0);
+/// maximum block size.
+pub const MAX_CAP: usize = usize::MAX/4 + 1;
 
 
 
+/// Arena
+///
+/// - a memory arena, aka bump allocator, aka linear allocator.
+/// - allocates blocks on demand from a backing allocator.
+/// - blocks grow geometrically, but are bounded
+///   by the configurable fields `min/max_block_size`.
+/// - note: some space in each block may be reserved for metadata.
+/// - see `MAX_ALLOC_SIZE` and `MAX_ALIGN`.
+///
 pub struct Arena<A: Alloc = GlobalAlloc> {
     alloc: A,
+
+    // - block != NonNull::dangling() || cap == 0
+    // - block % MAX_ALIGN == 0       || cap == 0
     block: Cell<NonNull<u8>>,
-    cap:   Cell<usize>, // <= CAP_MAX
-    used:  Cell<usize>, // <= self.cap
-                        // && (self.used >= size_of::<BlockHeader>() || cap == 0)
-                        // && self.used % MAX_ALIGN == 0
+
+    // - cap <= MAX_CAP
+    // - cap >= size_of::<BlockHeader>() || cap == 0
+    cap: Cell<usize>,
+
+    // - used <= self.cap
+    // - self.used >= size_of::<BlockHeader>() || cap == 0
+    used: Cell<usize>,
 
     pub min_block_size: Cell<usize>,
+    pub max_block_size: Cell<usize>,
 }
+
+impl<A: Alloc> Arena<A> {
+    fn _integrity_check(&self) {
+        let cap = self.cap.get();
+        assert!(cap <= MAX_CAP);
+        assert!(cap >= size_of::<BlockHeader>() || cap == 0);
+
+        let block = self.block.get();
+        assert!(block != NonNull::dangling() || cap == 0);
+        assert!(block.as_ptr() as usize % MAX_ALIGN == 0 || cap == 0);
+
+        let used = self.used.get();
+        assert!(used <= cap);
+        assert!(used >= size_of::<BlockHeader>() || cap == 0);
+    }
+
+    #[inline(always)]
+    fn debug_integrity_check(&self) {
+        #[cfg(debug_assertions)]
+        self._integrity_check();
+    }
+}
+
 
 struct BlockHeader {
     prev:      NonNull<u8>,
     prev_cap:  usize,
 }
+
+static_assert!(size_of::<BlockHeader>()  <= HEADER_SIZE);
+static_assert!(align_of::<BlockHeader>() <= MAX_ALIGN);
+
+const HEADER_SIZE: usize = (size_of::<BlockHeader>() + MAX_ALIGN - 1) / MAX_ALIGN * MAX_ALIGN;
 
 
 impl Arena<GlobalAlloc> {
@@ -57,7 +108,8 @@ impl<A: Alloc> Arena<A> {
             block: NonNull::dangling().into(),
             cap:  0.into(),
             used: 0.into(),
-            min_block_size: MIN_BLOCK_SIZE.into(),
+            min_block_size: DEFAULT_CAP.into(),
+            max_block_size: MAX_CAP.into(),
         }
     }
 
@@ -91,51 +143,43 @@ impl<A: Alloc> Arena<A> {
 
 
     /// # safety:
-    /// - `layout.align() <= MAX_ALIGN`.
+    /// - `layout.align() <= MAX_ALIGN`
     #[cold]
     unsafe fn alloc_slow_path(&self, layout: Layout) -> Option<NonNull<u8>> {
-        debug_assert!(layout.align() <= MAX_ALIGN);
+        assert!(layout.align() <= MAX_ALIGN);
 
-        let size = ceil_to_multiple_pow2(layout.size(), MAX_ALIGN);
+        if layout.size() > MAX_ALLOC_SIZE {
+            return None;
+        }
 
         let new_cap = {
-            // can't overflow cause `cap <= CAP_MAX`.
+            // can't overflow cause `cap <= MAX_CAP`.
             let new_cap = 2*self.cap.get();
 
-            // can't overflow cause `layout.size() <= usize::MAX/2` (and block headers are small).
-            let new_cap = new_cap.at_least(HEADER_SIZE + size);
+            // can't overflow cause `layout.size() <= MAX_ALLOC_SIZE`.
+            let new_cap = new_cap.at_least(HEADER_SIZE + layout.size());
 
             let new_cap = new_cap.at_least(self.min_block_size.get());
-
-            if new_cap > CAP_MAX {
-                return None;
-            }
-
-            static_assert!(CAP_MAX % MAX_ALIGN == 0);
-
-            // MAX_ALIGN divides CAP_MAX.
-            let new_cap = ceil_to_multiple_pow2(new_cap, MAX_ALIGN);
-            debug_assert!(new_cap <= CAP_MAX);
-
+            let new_cap = new_cap.at_most(self.max_block_size.get());
+            let new_cap = new_cap.at_most(MAX_CAP);
             new_cap
         };
 
-        // `MAX_ALIGN` is a small non-zero power of two.
-        // `new_cap <= isize::MAX/2`.
+        assert!(new_cap <= MAX_CAP);
+        assert!(HEADER_SIZE + layout.size() <= new_cap);
+
+        // `MAX_ALIGN` is a power of two.
+        // `new_cap <= MAX_CAP <= isize::MAX/2`.
         let block_layout = unsafe { Layout::from_size_align_unchecked(new_cap, MAX_ALIGN) };
         let block = self.alloc.alloc(block_layout)?;
 
         // save current state.
         unsafe {
-            static_assert!(align_of::<BlockHeader>() <= MAX_ALIGN);
-
-            let header = BlockHeader {
+            // new_cap has enough space for a block header.
+            (block.as_ptr() as *mut BlockHeader).write(BlockHeader {
                 prev:     self.block.get(),
                 prev_cap: self.cap.get(),
-            };
-
-            // new_cap has enough space for a block header.
-            (block.as_ptr() as *mut BlockHeader).write(header);
+            });
         }
 
         // make allocation.
@@ -147,32 +191,16 @@ impl<A: Alloc> Arena<A> {
             // block is `NonNull` and `ptr` is a valid derived pointer.
             NonNull::new_unchecked(ptr)
         };
+        assert!(result.as_ptr() as usize % layout.align() == 0);
 
         // attach new block.
         self.block.set(block);
         self.cap.set(new_cap);
-        self.used.set(HEADER_SIZE + size);
+        self.used.set(HEADER_SIZE + layout.size());
 
         self.debug_integrity_check();
 
         return Some(result);
-    }
-
-
-    fn _integrity_check(&self) {
-        let cap = self.cap.get();
-        debug_assert!(cap <= CAP_MAX);
-
-        let used = self.used.get();
-        debug_assert!(used <= cap);
-        debug_assert!(used >= size_of::<BlockHeader>() || cap == 0);
-        debug_assert!(used % MAX_ALIGN == 0);
-    }
-
-    #[inline(always)]
-    fn debug_integrity_check(&self) {
-        #[cfg(debug_assertions)]
-        self._integrity_check();
     }
 }
 
@@ -208,31 +236,33 @@ impl<A: Alloc> Alloc for Arena<A> {
             return None;
         }
 
-        // at most `isize::MAX + a bit`.
-        let size = ceil_to_multiple_pow2(layout.size(), MAX_ALIGN);
-
         let cap  = self.cap.get();
         let used = self.used.get();
 
+        let aligned_used = ceil_to_multiple_pow2(used, layout.align());
+
         // can't overflow cause `used <= cap <= CAP_MAX`
-        // and `size <= usize::MAX/2 + a bit`.
-        if used + size <= cap {
+        // and `size <= isize::MAX`.
+        if aligned_used + layout.size() <= cap {
             let result = unsafe {
                 let block = self.block.get();
 
                 // `block.add(cap)` is the end of the allocation,
-                // and `used <= cap`.
-                let ptr = block.as_ptr().add(used);
+                // and `result + layout.size() <= cap`.
+                let ptr = block.as_ptr().add(aligned_used);
 
                 // the resulting pointer is aligned, because
-                // `block + used` is always `MAX_ALIGN` aligned,
-                // and `layout.align() divides MAX_ALIGN` (<= for power of two).
+                // `layout.align() <= MAX_ALIGN` and `block`
+                // is `MAX_ALIGN` aligned.
 
                 // `block` is always `NonNull`, so any valid derived pointer is also `NonNull`.
                 NonNull::new_unchecked(ptr)
             };
 
-            self.used.set(used + size);
+            self.used.set(aligned_used + layout.size());
+
+            debug_assert!(result.as_ptr() as usize % layout.align() == 0);
+            self.debug_integrity_check();
 
             Some(result)
         }
@@ -250,33 +280,31 @@ impl<A: Alloc> Alloc for Arena<A> {
 
     #[inline(always)]
     unsafe fn try_realloc_nonzero(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
+        debug_assert!(old_layout.size() > 0);
+        debug_assert!(new_layout.size() > 0);
+        debug_assert!(old_layout.align() == new_layout.align());
         self.debug_integrity_check();
 
+        let old_size = old_layout.size();
+        let new_size = new_layout.size();
+
         let block = self.block.get().as_ptr() as usize;
+        let block_end = block + self.cap.get();
+        let used_end  = block + self.used.get();
+
         let ptr = ptr.as_ptr() as usize;
-        debug_assert!(ptr % MAX_ALIGN == 0);
-
-        // at most `isize::MAX + a bit`.
-        let old_size = ceil_to_multiple_pow2(old_layout.size(), MAX_ALIGN);
-
-        let used_end = block + self.used.get();
         let alloc_end = ptr + old_size;
 
-        if alloc_end == used_end {
-            // at most `isize::MAX + a bit`.
-            let new_size = ceil_to_multiple_pow2(new_layout.size(), MAX_ALIGN);
+        let block_rem = block_end - ptr;
 
-            let block_end = block + self.cap.get();
-            let block_rem = block_end - ptr;
-            if new_size <= block_rem {
-                self.used.set(self.used.get() - old_size + new_size);
-                debug_assert!(self.used.get() <= self.cap.get());
-                return Ok(());
-            }
-        }
+        if alloc_end == used_end && new_size <= block_rem {
+            self.used.set(self.used.get() - old_size + new_size);
 
-        // @temp
-        Err(())
+            debug_assert!(self.used.get() <= self.cap.get());
+            self.debug_integrity_check();
+
+            Ok(())
+        } else { Err(()) }
     }
 }
 
@@ -321,13 +349,12 @@ mod tests {
             // zst does nothing.
             arena.alloc_new([(); 1_000_000]);
 
-            // next alloc is after first alloc (rounded up to MAX_ALIGN).
+            // next alloc is after first alloc.
             let second = arena.alloc_ptr::<u8>().as_ptr() as usize;
-            assert_eq!(second, first + MAX_ALIGN);
+            assert_eq!(second, first + 1);
 
-            // bigger than max align.
             let third = arena.alloc_ptr::<[u64; 2]>().as_ptr() as usize;
-            assert_eq!(third, second + MAX_ALIGN);
+            assert_eq!(third, second + 7);
 
             // alloc_new sets value.
             let foo = arena.alloc_new(Foo { name: "bar", age: 42 });

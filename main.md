@@ -1,8 +1,8 @@
 
 - todo:
     - arena:
-        - `growing_arena -> arena`.
-        - remove alignment constraint.
+        - `prev_cap`.
+        - realloc test.
         - usage stats.
         - alloc str.
     - vec:

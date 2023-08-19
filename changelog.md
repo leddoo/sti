@@ -1,6 +1,8 @@
 0.1.6:
 - arena:
     - renamed `GrowingArena` -> `Arena`.
+    - arena no longer rounds up allocation sizes to `MAX_ALIGN`.
+    - `MAX_ALIGN` is now 32.
 
 0.1.5:
 - slice reader:
