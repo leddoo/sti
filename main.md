@@ -1,9 +1,6 @@
 
 - todo:
     - arena:
-        - `prev_cap`.
-        - reset free.
-        - usage stats.
         - alloc str.
     - vec:
         - leak method.
@@ -30,6 +27,11 @@
 - utf-8 module:
     - ceil/floor.
     - iteration.
+
+- arena:
+    - `prev_cap` for consistent geometric growth.
+        - don't write when allocating block `> max_block_size`.
+        - test that.
 
 - simd:
     - scalar add/sub (ext trait, "add", "sub", maybe "sadd").

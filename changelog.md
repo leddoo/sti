@@ -3,6 +3,8 @@
     - renamed `GrowingArena` -> `Arena`.
     - arena no longer rounds up allocation sizes to `MAX_ALIGN`.
     - `MAX_ALIGN` is now 32.
+    - added `stats()`, which returns usage statistics.
+    - added `reset_all()`, which frees all arena blocks.
 
 0.1.5:
 - slice reader:
