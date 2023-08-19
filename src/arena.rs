@@ -25,7 +25,7 @@ static_assert!(CAP_MAX % MAX_ALIGN == 0);
 
 
 
-pub struct GrowingArena<A: Alloc = GlobalAlloc> {
+pub struct Arena<A: Alloc = GlobalAlloc> {
     alloc: A,
     block: Cell<NonNull<u8>>,
     cap:   Cell<usize>, // <= CAP_MAX
@@ -42,17 +42,17 @@ struct BlockHeader {
 }
 
 
-impl GrowingArena<GlobalAlloc> {
+impl Arena<GlobalAlloc> {
     #[inline(always)]
     pub fn new() -> Self {
         Self::new_in(GlobalAlloc)
     }
 }
 
-impl<A: Alloc> GrowingArena<A> {
+impl<A: Alloc> Arena<A> {
     #[inline(always)]
     pub fn new_in(alloc: A) -> Self {
-        GrowingArena {
+        Arena {
             alloc,
             block: NonNull::dangling().into(),
             cap:  0.into(),
@@ -177,7 +177,7 @@ impl<A: Alloc> GrowingArena<A> {
 }
 
 
-impl<A: Alloc> Drop for GrowingArena<A> {
+impl<A: Alloc> Drop for Arena<A> {
     fn drop(&mut self) {
         let mut block = self.block.get();
         let mut cap   = self.cap.get();
@@ -197,7 +197,7 @@ impl<A: Alloc> Drop for GrowingArena<A> {
 }
 
 
-impl<A: Alloc> Alloc for GrowingArena<A> {
+impl<A: Alloc> Alloc for Arena<A> {
     /// # safety:
     /// - `layout.size() > 0`.
     unsafe fn alloc_nonzero(&self, layout: Layout) -> Option<NonNull<u8>> {
@@ -286,7 +286,7 @@ impl<A: Alloc> Alloc for GrowingArena<A> {
 mod tests {
     use super::*;
 
-    fn get_base<A: Alloc>(arena: &GrowingArena<A>) -> Option<usize> {
+    fn get_base<A: Alloc>(arena: &Arena<A>) -> Option<usize> {
         (arena.cap.get() != 0).then_some(arena.block.get().as_ptr() as usize + HEADER_SIZE)
     }
 
@@ -298,7 +298,7 @@ mod tests {
         }
 
         // init.
-        let mut arena = GrowingArena::new();
+        let mut arena = Arena::new();
         assert!(get_base(&arena).is_none());
 
         // zst does nothing.
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn arena_max_align() {
-        let arena = GrowingArena::new();
+        let arena = Arena::new();
 
         let failed = arena.alloc(Layout::from_size_align(1, 2*MAX_ALIGN).unwrap());
         assert!(failed.is_none());

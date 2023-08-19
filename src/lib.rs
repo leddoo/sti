@@ -4,7 +4,7 @@ pub mod simd;
 pub mod float;
 
 pub mod alloc;
-pub mod growing_arena;
+pub mod arena;
 pub mod vec;
 pub mod rc;
 
