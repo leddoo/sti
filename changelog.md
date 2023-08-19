@@ -5,6 +5,7 @@
     - `MAX_ALIGN` is now 32.
     - added `stats()`, which returns usage statistics.
     - added `reset_all()`, which frees all arena blocks.
+    - added `alloc_str()`.
 
 0.1.5:
 - slice reader:

@@ -116,11 +116,26 @@ impl<A: Alloc> Arena<A> {
     }
 
     #[inline]
+    pub fn alloc_array_ptr<T>(&self, len: usize) -> NonNull<T> {
+        self.alloc(Layout::array::<T>(len).unwrap()).unwrap().cast()
+    }
+
+    #[inline]
     pub fn alloc_new<T>(&self, value: T) -> &mut T {
         let mut ptr = self.alloc_ptr::<T>();
         unsafe {
             ptr.as_ptr().write(value);
             ptr.as_mut()
+        }
+    }
+
+    #[inline]
+    pub fn alloc_str<'a>(&'a self, value: &str) -> &'a str {
+        unsafe {
+            let bytes = self.alloc_array_ptr(value.len());
+            core::ptr::copy_nonoverlapping(value.as_ptr(), bytes.as_ptr(), value.len());
+            core::str::from_utf8_unchecked(
+                core::slice::from_raw_parts(bytes.as_ptr(), value.len()))
         }
     }
 
@@ -437,6 +452,13 @@ mod tests {
 
             let foo = foo as *mut Foo as usize;
             assert_eq!(foo, third + size_of::<[u64; 2]>());
+
+            let hi = arena.alloc_str("hi");
+            assert_eq!(hi, "hi");
+            assert_eq!(hi.as_ptr() as usize, foo + size_of::<Foo>());
+
+            let last = arena.alloc_ptr::<u8>().as_ptr() as usize;
+            assert_eq!(last, hi.as_ptr() as usize + hi.len());
 
             // reset
             arena.reset();

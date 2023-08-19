@@ -1,7 +1,5 @@
 
 - todo:
-    - arena:
-        - alloc str.
     - vec:
         - leak method.
         - `Vec::extend`.
