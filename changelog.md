@@ -8,6 +8,7 @@
     - added `alloc_str()`.
 - vec:
     - made `leak` a method.
+    - added `move_into()`.
 
 0.1.5:
 - slice reader:

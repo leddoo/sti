@@ -354,10 +354,30 @@ impl<T, A: Alloc> Vec<T, A> {
         unsafe {
             let mut this = core::mem::ManuallyDrop::new(self);
 
+            // drop alloc.
             core::ptr::drop_in_place(&mut this.alloc);
 
             core::slice::from_raw_parts_mut(this.data.as_ptr(), this.len())
         }
+    }
+
+    pub fn move_into<B: Alloc>(mut self, new_alloc: B) -> Vec<T, B> {
+        let len = self.len;
+
+        let mut new_vec: Vec<T, B> = Vec::with_cap_in(len, new_alloc);
+
+        unsafe {
+            self.len = 0;
+
+            core::ptr::copy_nonoverlapping(
+                self.data.as_ptr(),
+                new_vec.data.as_ptr(),
+                len);
+
+            new_vec.len = len;
+        }
+
+        new_vec
     }
 }
 
