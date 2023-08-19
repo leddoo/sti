@@ -85,6 +85,8 @@ pub trait Alloc {
     ///
     #[inline(always)]
     unsafe fn try_realloc(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
+        debug_assert!(old_layout.align() == new_layout.align());
+
         if old_layout.size() == 0 || new_layout.size() == 0 {
             return Err(())
         }
@@ -107,6 +109,8 @@ pub trait Alloc {
     ///
     #[inline(always)]
     unsafe fn try_realloc_nonzero(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
+        debug_assert!(old_layout.align() == new_layout.align());
+
         let _ = (ptr, old_layout, new_layout);
         Err(())
     }

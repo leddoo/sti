@@ -374,6 +374,46 @@ mod tests {
     }
 
     #[test]
+    fn arena_realloc() {
+        let arena = Arena::new();
+
+        let layout_1 = Layout::from_size_align(1, 1).unwrap();
+        let ptr = arena.alloc(layout_1).unwrap();
+
+        let layout_2 = Layout::from_size_align(9, 1).unwrap();
+        let ok = unsafe { arena.try_realloc(ptr, layout_1, layout_2) };
+        assert!(ok.is_ok());
+
+        // can't ever resize to `0`.
+        let layout_cant = Layout::from_size_align(0, 1).unwrap();
+        let err = unsafe { arena.try_realloc(ptr, layout_2, layout_cant) };
+        assert!(err.is_err());
+
+        let layout_3 = Layout::from_size_align(5, 1).unwrap();
+        let ok = unsafe { arena.try_realloc(ptr, layout_2, layout_3) };
+        assert!(ok.is_ok());
+
+        let ok = unsafe { arena.try_realloc(ptr, layout_3, layout_3) };
+        assert!(ok.is_ok());
+
+        // new alloc.
+        let new_ptr = arena.alloc(Layout::from_size_align(2, 2).unwrap()).unwrap();
+        assert!(new_ptr.as_ptr() as usize == ptr.as_ptr() as usize + 6);
+
+        let layout_cant = Layout::from_size_align(5, 1).unwrap();
+        let err = unsafe { arena.try_realloc(ptr, layout_3, layout_cant) };
+        assert!(err.is_err());
+
+        let layout_cant = Layout::from_size_align(0, 1).unwrap();
+        let err = unsafe { arena.try_realloc(ptr, layout_3, layout_cant) };
+        assert!(err.is_err());
+
+        let layout_cant = Layout::from_size_align(1, 1).unwrap();
+        let err = unsafe { arena.try_realloc(ptr, layout_3, layout_cant) };
+        assert!(err.is_err());
+    }
+
+    #[test]
     fn arena_max_align() {
         let arena = Arena::new();
 

@@ -2,7 +2,7 @@
 - todo:
     - arena:
         - `prev_cap`.
-        - realloc test.
+        - reset free.
         - usage stats.
         - alloc str.
     - vec:
@@ -10,6 +10,7 @@
         - `Vec::extend`.
         - truncate track caller.
     - thread local temp arena (dynamic stack enforcement).
+        - arena unsafe save/restore.
     - `String`.
     - hash module.
 
