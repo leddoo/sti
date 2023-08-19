@@ -88,8 +88,13 @@ impl<T: ?Sized, A: Alloc> Rc<T, A> {
     #[cold]
     fn drop_impl(&mut self) {
         unsafe {
+            // dropped at end of scope.
             let alloc = (&mut (*self.inner.as_ptr()).alloc as *mut A).read();
+
+            // drop value.
             core::ptr::drop_in_place(&mut (*self.inner.as_ptr()).data);
+
+            // free memory.
             // ig `self.inner.as_ref` is technically UB, but std's rc does this too.
             alloc.free(self.inner.cast(), Layout::for_value(self.inner.as_ref()));
         }

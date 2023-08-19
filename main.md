@@ -1,7 +1,6 @@
 
 - todo:
     - vec:
-        - leak method.
         - `Vec::extend`.
         - truncate track caller.
     - thread local temp arena (dynamic stack enforcement).

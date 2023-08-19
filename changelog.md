@@ -6,6 +6,8 @@
     - added `stats()`, which returns usage statistics.
     - added `reset_all()`, which frees all arena blocks.
     - added `alloc_str()`.
+- vec:
+    - made `leak` a method.
 
 0.1.5:
 - slice reader:
