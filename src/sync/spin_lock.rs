@@ -9,8 +9,11 @@ pub struct SpinLock<T> {
 
 impl<T> SpinLock<T> {
     #[inline(always)]
-    pub fn new(value: T) -> Self {
-        Self { locked: false.into(), value: value.into() }
+    pub const fn new(value: T) -> Self {
+        Self {
+            locked: AtomicBool::new(false),
+            value:  UnsafeCell::new(value),
+        }
     }
 
     #[inline(always)]
@@ -78,7 +81,7 @@ mod tests {
         #[cfg(miri)]
         const TARGET: i32 = 25;
         #[cfg(not(miri))]
-        const TARGET: i32 = 1_000;
+        const TARGET: i32 = 5_000;
 
         fn thread(a: &SpinLock<i32>, b: &SpinLock<(i32, i32)>) {
             /*
@@ -100,18 +103,26 @@ mod tests {
                         b.1 = *a - b.0;
                     }
 
-                    while b.lock().0 != *a {}
+                    while b.lock().0 != *a {
+                        std::thread::yield_now();
+                    }
 
                     *a += 1;
                     std::thread::yield_now();
                 }
                 else {
                     let mut b = b.lock();
+
+                    // separate reads & writes to validate exclusive access.
                     let delta = b.1;
                     std::thread::yield_now();
                     b.0 += delta;
                     std::thread::yield_now();
-                    b.1  = 0;
+                    b.1 = 0;
+
+                    // don't prevent thread holding `a` from writing delta.
+                    drop(b);
+                    std::thread::yield_now();
                 }
             }
         }
@@ -123,9 +134,13 @@ mod tests {
 
         let t1 = std::thread::spawn({ let a = a.clone(); let b = b.clone(); move || thread(&a, &b) });
         let t2 = std::thread::spawn({ let a = a.clone(); let b = b.clone(); move || thread(&a, &b) });
+        let t3 = std::thread::spawn({ let a = a.clone(); let b = b.clone(); move || thread(&a, &b) });
+        let t4 = std::thread::spawn({ let a = a.clone(); let b = b.clone(); move || thread(&a, &b) });
 
         t1.join().unwrap();
         t2.join().unwrap();
+        t3.join().unwrap();
+        t4.join().unwrap();
 
         assert_eq!(*a.lock(), TARGET);
     }
