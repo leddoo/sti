@@ -102,6 +102,12 @@ impl<'a> PoolArenaA<'a> {
     pub const fn new(pool: &'a ArenaPool, arena: Arena) -> Self {
         Self { pool, arena: ManuallyDrop::new(arena) }
     }
+
+    #[inline(always)]
+    pub fn into_inner(self) -> Arena {
+        let mut this = ManuallyDrop::new(self);
+        unsafe { ManuallyDrop::take(&mut this.arena) }
+    }
 }
 
 impl<'a> Drop for PoolArenaA<'a> {
