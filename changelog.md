@@ -2,6 +2,7 @@
 - arena:
     - add save/restore api.
 - add `SpinLock`.
+- add `ArenaPool`.
 
 
 0.1.6:

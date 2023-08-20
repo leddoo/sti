@@ -5,6 +5,7 @@ pub mod float;
 
 pub mod alloc;
 pub mod arena;
+pub mod arena_pool;
 pub mod vec;
 pub mod rc;
 

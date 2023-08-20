@@ -1,6 +1,5 @@
 
 - todo:
-    - global pool based temp arena.
     - vec:
         - `Vec::extend`.
         - truncate track caller.
