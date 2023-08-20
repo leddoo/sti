@@ -1,18 +1,21 @@
 0.1.7:
 - arena:
-    - added save/restore api.
+    - add save/restore api.
+- add `SpinLock`.
+
 
 0.1.6:
 - arena:
-    - renamed `GrowingArena` -> `Arena`.
+    - rename `GrowingArena` -> `Arena`.
     - arena no longer rounds up allocation sizes to `MAX_ALIGN`.
     - `MAX_ALIGN` is now 32.
-    - added `stats()`, which returns usage statistics.
-    - added `reset_all()`, which frees all arena blocks.
-    - added `alloc_str()`.
+    - add `stats()`, which returns usage statistics.
+    - add `reset_all()`, which frees all arena blocks.
+    - add `alloc_str()`.
 - vec:
-    - made `leak` a method.
-    - added `move_into()`.
+    - make `leak` a method.
+    - add `move_into()`.
+
 
 0.1.5:
 - slice reader:
@@ -21,14 +24,17 @@
     - `consumed_slice`, opposite of `as_slice`.
     - fix `offset` for types of size greater than 1.
 
+
 0.1.4:
 - slice reader.
     - rewrite to be more useful.
     - support non-`Copy` types.
+
 
 0.1.3:
 - simd module.
     - rewrite to support abstracting over lanes (`Simd<T, N>`).
     - scalar impl for now.
     - stop failing to build on `x86`.
+
 

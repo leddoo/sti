@@ -8,6 +8,8 @@ pub mod arena;
 pub mod vec;
 pub mod rc;
 
+pub mod sync;
+
 pub mod reader;
 
 pub mod packed_option;

@@ -342,6 +342,14 @@ impl<A: Alloc> Arena<A> {
         });
 
         let block = self.block.get().as_ptr() as usize;
+
+        // detect incorrect usage.
+        if self.cap.get() > 0 {
+            assert!(save.used_end >= block + HEADER_SIZE
+                &&  save.used_end <= block + self.cap.get());
+        }
+        else { assert_eq!(save.used_end, block) }
+
         self.used.set(save.used_end - block);
 
         self.debug_integrity_check();
@@ -359,6 +367,7 @@ impl<A: Alloc> Drop for Arena<A> {
 impl<A: Alloc> Alloc for Arena<A> {
     /// # safety:
     /// - `layout.size() > 0`.
+    #[inline]
     unsafe fn alloc_nonzero(&self, layout: Layout) -> Option<NonNull<u8>> {
         debug_assert!(layout.size() > 0);
         self.debug_integrity_check();
@@ -405,8 +414,8 @@ impl<A: Alloc> Alloc for Arena<A> {
 
     #[inline(always)]
     unsafe fn free_nonzero(&self, ptr: NonNull<u8>, layout: Layout) {
-        let _ = (ptr, layout);
         // no-op.
+        let _ = (ptr, layout);
     }
 
     #[inline(always)]
