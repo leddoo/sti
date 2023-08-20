@@ -1,10 +1,9 @@
 
 - todo:
+    - thread local temp arena (dynamic stack enforcement).
     - vec:
         - `Vec::extend`.
         - truncate track caller.
-    - thread local temp arena (dynamic stack enforcement).
-        - arena unsafe save/restore.
     - `String`.
     - hash module.
 

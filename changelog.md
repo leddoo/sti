@@ -1,3 +1,7 @@
+0.1.7:
+- arena:
+    - added save/restore api.
+
 0.1.6:
 - arena:
     - renamed `GrowingArena` -> `Arena`.
