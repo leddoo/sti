@@ -37,6 +37,12 @@ impl<T> SpinLock<T> {
     pub fn get(&mut self) -> &mut T {
         unsafe { &mut *self.value.get() }
     }
+
+    #[inline(always)]
+    pub fn with_lock<R, F: FnOnce(&mut T) -> R>(&self, f: F) -> R {
+        let mut guard = self.lock();
+        f(&mut guard)
+    }
 }
 
 unsafe impl<T: Send> Sync for SpinLock<T> {}
@@ -111,17 +117,16 @@ mod tests {
                     std::thread::yield_now();
                 }
                 else {
-                    let mut b = b.lock();
-
-                    // separate reads & writes to validate exclusive access.
-                    let delta = b.1;
-                    std::thread::yield_now();
-                    b.0 += delta;
-                    std::thread::yield_now();
-                    b.1 = 0;
+                    b.with_lock(|b| {
+                        // separate reads & writes to validate exclusive access.
+                        let delta = b.1;
+                        std::thread::yield_now();
+                        b.0 += delta;
+                        std::thread::yield_now();
+                        b.1 = 0;
+                    });
 
                     // don't prevent thread holding `a` from writing delta.
-                    drop(b);
                     std::thread::yield_now();
                 }
             }

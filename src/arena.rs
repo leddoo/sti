@@ -107,7 +107,7 @@ impl<A: Alloc> Arena<A> {
             cap:  0.into(),
             used: 0.into(),
             min_block_size: DEFAULT_CAP.into(),
-            max_block_size: MAX_CAP.into(),
+            max_block_size: usize::MAX.into(),
         }
     }
 

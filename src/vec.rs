@@ -16,7 +16,7 @@ pub struct Vec<T, A: Alloc = GlobalAlloc> {
 
 impl<T> Vec<T> {
     #[inline(always)]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self::new_in(GlobalAlloc)
     }
 
@@ -28,7 +28,7 @@ impl<T> Vec<T> {
 
 impl<T, A: Alloc> Vec<T, A> {
     #[inline(always)]
-    pub fn new_in(alloc: A) -> Self {
+    pub const fn new_in(alloc: A) -> Self {
         Vec {
             alloc,
             data: NonNull::dangling(),
@@ -380,6 +380,10 @@ impl<T, A: Alloc> Vec<T, A> {
         new_vec
     }
 }
+
+
+unsafe impl<T: Sync, A: Alloc + Sync> Sync for Vec<T, A> {}
+unsafe impl<T: Send, A: Alloc + Send> Send for Vec<T, A> {}
 
 
 impl<T: Clone, A: Alloc + Copy> Clone for Vec<T, A> {
