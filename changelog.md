@@ -3,6 +3,7 @@
     - add save/restore api.
 - add `SpinLock`.
 - add `ArenaPool`.
+- add `prelude`.
 
 
 0.1.6:
