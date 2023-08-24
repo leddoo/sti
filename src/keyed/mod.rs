@@ -84,7 +84,7 @@ macro_rules! define_key_basic {
             }
 
             #[inline(always)]
-            pub const fn value(self) -> $ty { self.0 }
+            pub const fn inner(self) -> $ty { self.0 }
 
             #[inline(always)]
             pub fn some(self) -> sti::packed_option::PackedOption<Self> {
