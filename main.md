@@ -1,7 +1,6 @@
 
 - todo:
     - hash module.
-        - `HashFn`.
         - hash map.
     - rw lock.
     - vec:
@@ -12,11 +11,6 @@
 
 
 ### backlog:
-
-- hash module:
-    - swiss table.
-    - fnv-1 hasher.
-    - `hash<Hasher=DefaultHasher>` function.
 
 - string formatting:
     - infallible write trait.

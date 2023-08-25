@@ -1,6 +1,8 @@
 use core::hash::{Hash, Hasher};
 use core::ops::BitXor;
 
+use super::HashFn;
+
 
 const ROL: u32 = 5;
 // golden ratio in fixed point.
@@ -45,7 +47,7 @@ impl FxHasher32 {
     pub fn new() -> Self { Self { hash: INI32 } }
 
     #[inline(always)]
-    pub fn with_seed(seed: u32) -> Self { Self { hash: seed } }
+    pub fn from_seed(seed: u32) -> Self { Self { hash: seed } }
 
 
     #[inline(always)]
@@ -64,6 +66,17 @@ impl FxHasher32 {
 impl Default for FxHasher32 {
     #[inline(always)]
     fn default() -> Self { Self::new() }
+}
+
+impl HashFn<u32> for FxHasher32 {
+    const DEFAULT_SEED: u32 = INI32;
+
+    #[inline(always)]
+    fn hash_with_seed<T: Hash + ?Sized>(seed: u32, value: &T) -> u32 {
+        let mut hasher = Self::from_seed(seed);
+        value.hash(&mut hasher);
+        hasher.hash
+    }
 }
 
 impl Hasher for FxHasher32 {
@@ -166,12 +179,23 @@ impl FxHasher64 {
     pub fn new() -> Self { Self { hash: INI64 } }
 
     #[inline(always)]
-    pub fn with_seed(seed: u64) -> Self { Self { hash: seed } }
+    pub fn from_seed(seed: u64) -> Self { Self { hash: seed } }
 }
 
 impl Default for FxHasher64 {
     #[inline(always)]
     fn default() -> Self { Self::new() }
+}
+
+impl HashFn<u64> for FxHasher64 {
+    const DEFAULT_SEED: u64 = INI64;
+
+    #[inline(always)]
+    fn hash_with_seed<T: Hash + ?Sized>(seed: u64, value: &T) -> u64 {
+        let mut hasher = Self::from_seed(seed);
+        value.hash(&mut hasher);
+        hasher.hash
+    }
 }
 
 impl Hasher for FxHasher64 {
