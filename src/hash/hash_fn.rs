@@ -37,6 +37,11 @@ impl<F> DefaultHashFnSeed<F> {
     pub const fn new() -> Self { Self(PhantomData) }
 }
 
+impl<F> Default for DefaultHashFnSeed<F> {
+    #[inline(always)]
+    fn default() -> Self { Self::new() }
+}
+
 impl<T: ?Sized, F: HashFn<T>> HashFnSeed<T> for DefaultHashFnSeed<F> {
     type Seed = F::Seed;
     type Hash = F::Hash;

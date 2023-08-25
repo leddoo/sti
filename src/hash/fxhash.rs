@@ -1,7 +1,7 @@
 use core::hash::{Hash, Hasher};
 use core::ops::BitXor;
 
-use super::hash_fn::{HashFn, DefaultHashFnSeed};
+use crate::hash::{HashFn, DefaultHashFnSeed};
 
 
 const ROL: u32 = 5;
@@ -43,6 +43,9 @@ pub struct FxHasher32 {
 }
 
 impl FxHasher32 {
+    pub const DEFAULT_SEED: u32 = INI32;
+
+
     #[inline(always)]
     pub fn new() -> Self { Self { hash: INI32 } }
 
@@ -182,6 +185,9 @@ pub struct FxHasher64 {
 }
 
 impl FxHasher64 {
+    pub const DEFAULT_SEED: u64 = INI64;
+
+
     #[inline(always)]
     pub fn new() -> Self { Self { hash: INI64 } }
 
