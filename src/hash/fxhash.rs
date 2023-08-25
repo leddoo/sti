@@ -1,7 +1,7 @@
 use core::hash::{Hash, Hasher};
 use core::ops::BitXor;
 
-use super::HashFn;
+use super::hash_fn::{HashFn, DefaultHashFnSeed};
 
 
 const ROL: u32 = 5;
@@ -68,16 +68,23 @@ impl Default for FxHasher32 {
     fn default() -> Self { Self::new() }
 }
 
-impl HashFn<u32> for FxHasher32 {
+
+impl<T: Hash + ?Sized> HashFn<T> for FxHasher32 {
+    type Seed = u32;
+    type Hash = u32;
+
     const DEFAULT_SEED: u32 = INI32;
 
     #[inline(always)]
-    fn hash_with_seed<T: Hash + ?Sized>(seed: u32, value: &T) -> u32 {
+    fn hash_with_seed(seed: u32, value: &T) -> u32 {
         let mut hasher = Self::from_seed(seed);
         value.hash(&mut hasher);
         hasher.hash
     }
 }
+
+pub type FxHasher32DefaultSeed = DefaultHashFnSeed<FxHasher32>;
+
 
 impl Hasher for FxHasher32 {
     #[inline(always)]
@@ -187,16 +194,23 @@ impl Default for FxHasher64 {
     fn default() -> Self { Self::new() }
 }
 
-impl HashFn<u64> for FxHasher64 {
+
+impl<T: Hash + ?Sized> HashFn<T> for FxHasher64 {
+    type Seed = u64;
+    type Hash = u64;
+
     const DEFAULT_SEED: u64 = INI64;
 
     #[inline(always)]
-    fn hash_with_seed<T: Hash + ?Sized>(seed: u64, value: &T) -> u64 {
+    fn hash_with_seed(seed: u64, value: &T) -> u64 {
         let mut hasher = Self::from_seed(seed);
         value.hash(&mut hasher);
         hasher.hash
     }
 }
+
+pub type FxHasher64DefaultSeed = DefaultHashFnSeed<FxHasher64>;
+
 
 impl Hasher for FxHasher64 {
     #[inline(always)]
