@@ -1,10 +1,13 @@
 
 - todo:
+    - hash module.
+        - `HashFn`.
+        - hash map.
+    - rw lock.
     - vec:
         - `Vec::extend`.
         - truncate track caller.
     - `String`.
-    - hash module.
 
 
 

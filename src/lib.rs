@@ -8,6 +8,7 @@ pub mod arena;
 pub mod arena_pool;
 pub mod vec;
 pub mod rc;
+pub mod hash;
 
 pub mod sync;
 
