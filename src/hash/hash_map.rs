@@ -179,6 +179,10 @@ mod tests {
     #[test]
     fn hm_basic() {
         let mut hm: HashMap<String, u32> = HashMap::with_cap(69);
+
+        assert!(hm.get("hi").is_none());
+        assert!(hm.remove("ho").is_none());
+
         let size = (69*8/7 + GROUP_SIZE) / GROUP_SIZE * GROUP_SIZE;
         let cap = size*7/8;
         assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 0, 0));
@@ -253,6 +257,9 @@ mod tests {
         }
 
         let mut hm: HashMapF<u32, u32, DumbHash> = HashMapF::new();
+
+        assert_eq!(hm.probe_length(&0),  (0, 0));
+        assert_eq!(hm.probe_length(&69), (0, 0));
 
         hm.insert(0, 0);
         assert_eq!(hm.probe_length(&0), (1, 1));

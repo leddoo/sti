@@ -1,6 +1,8 @@
 
 - todo:
     - hash map.
+        - clone: same cap, memcpy the ctrl bytes.
+        - iter.
         - entry api.
     - rw lock.
     - vec:
