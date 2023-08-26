@@ -1,5 +1,8 @@
 use core::ptr::NonNull;
+use core::mem::{size_of, align_of};
+
 use crate::num::ceil_to_multiple_pow2;
+
 
 pub use core::alloc::Layout;
 
@@ -181,12 +184,12 @@ pub fn cat_join(a: Layout, b: Layout) -> Option<Layout> {
 }
 
 #[inline(always)]
-pub unsafe fn cat_next<T, U>(base: *const T, base_size: usize) -> *const U {
-    unsafe { cat_next_ex(base, base_size, core::mem::align_of::<U>()) }
+pub unsafe fn cat_next<T, U>(base: *const T, len: usize) -> *const U {
+    unsafe { cat_next_bytes(base, len*size_of::<T>(), align_of::<U>()) }
 }
 
 #[inline(always)]
-pub unsafe fn cat_next_ex<T, U>(base: *const T, base_size: usize, next_align: usize) -> *const U {
+pub unsafe fn cat_next_bytes<T, U>(base: *const T, base_size: usize, next_align: usize) -> *const U {
     let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
     #[cfg(miri)] {
         // miri doesn't like int->ptr casts.
@@ -199,12 +202,12 @@ pub unsafe fn cat_next_ex<T, U>(base: *const T, base_size: usize, next_align: us
 }
 
 #[inline(always)]
-pub unsafe fn cat_next_mut<T, U>(base: *mut T, base_size: usize) -> *mut U {
-    unsafe { cat_next_mut_ex(base, base_size, core::mem::align_of::<U>()) }
+pub unsafe fn cat_next_mut<T, U>(base: *mut T, len: usize) -> *mut U {
+    unsafe { cat_next_mut_bytes(base, len*size_of::<T>(), align_of::<U>()) }
 }
 
 #[inline(always)]
-pub unsafe fn cat_next_mut_ex<T, U>(base: *mut T, base_size: usize, next_align: usize) -> *mut U {
+pub unsafe fn cat_next_mut_bytes<T, U>(base: *mut T, base_size: usize, next_align: usize) -> *mut U {
     let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
     #[cfg(miri)] {
         // miri doesn't like int->ptr casts.

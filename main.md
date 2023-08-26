@@ -1,7 +1,6 @@
 
 - todo:
     - hash map.
-        - growing.
         - test collisions.
         - entry api.
     - rw lock.

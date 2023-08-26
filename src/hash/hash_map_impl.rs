@@ -165,31 +165,48 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
-    fn resize(&mut self, num_groups: u32) {
-        let layout = Self::layout(num_groups).expect("capacity overflow");
+    fn resize(&mut self, new_num_groups: u32) {
+        let layout = Self::layout(new_num_groups).expect("capacity overflow");
         let data = self.alloc.alloc(layout).expect("allocation failed");
 
-        let groups: *mut Group      = data.cast().as_ptr();
-        let slots:  *mut Slot<K, V> = unsafe { cat_next_mut(groups, num_groups as usize) };
+        let new_groups: NonNull<Group> = data.cast();
 
         // initialize groups:
-        for i in 0..num_groups as usize {
-            unsafe { groups.add(i).write(Group::empty()) }
+        for i in 0..new_num_groups as usize {
+            unsafe { new_groups.as_ptr().add(i).write(Group::empty()) }
         }
 
-        if self.used != 0 {
-            let _ = slots;
-            unimplemented!()
-        }
+        let old_groups = self.groups;
+        let old_slots = Self::slots_ptr(old_groups, self.num_groups);
+        let old_num_groups = self.num_groups;
+        let old_used = self.used;
 
-        if self.num_groups != 0 {
-            unimplemented!()
-        }
-
-        self.groups = unsafe { NonNull::new_unchecked(groups) };
-        self.num_groups = num_groups;
-        self.empty = load::EMPTY_PER_GROUP * num_groups;
+        self.groups = new_groups;
+        self.num_groups = new_num_groups;
+        self.empty = load::EMPTY_PER_GROUP * new_num_groups;
         self.used  = 0;
+
+        if old_used != 0 {
+            for group_idx in 0..old_num_groups as usize {
+                let group = unsafe { *Self::group_ref(old_groups, group_idx) };
+
+                for i in group.match_used() {
+                    let Slot { key, value } = unsafe {
+                        Self::slot_ptr(old_slots, group_idx, i).read()
+                    };
+
+                    debug_assert!(self.empty > 0);
+
+                    let none = self.insert(key, value);
+                    debug_assert!(none.is_none());
+                }
+            }
+        }
+
+        if old_num_groups != 0 {
+            let layout = Self::layout(old_num_groups).unwrap();
+            unsafe { self.alloc.free(old_groups.cast(), layout) }
+        }
     }
 
 

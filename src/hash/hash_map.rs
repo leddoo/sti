@@ -174,5 +174,34 @@ mod tests {
         assert_eq!(hm["ho"], 19);
         assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 1, 1));
     }
+
+    #[test]
+    fn hm_growing() {
+        let mut hm: HashMap<String, u32> = HashMap::new();
+
+        hm.insert("a".into(), 0);
+
+        let size_0 = hm.size();
+        let mut i = 1;
+        while hm.len() < hm.cap() {
+            hm.insert(format!("{i}"), i);
+            i += 1;
+        }
+        assert_eq!(hm.size(), size_0);
+        assert_eq!(hm.len(), hm.resident());
+
+        let len_1 = hm.len();
+
+        hm.insert("b".into(), 1);
+        assert_eq!(hm.size(), size_0*2);
+        assert_eq!(hm.len(), hm.resident());
+        assert_eq!(hm.len(), len_1 + 1);
+
+        assert_eq!(hm["a"], 0);
+        assert_eq!(hm["b"], 1);
+        for i in 1..i {
+            assert_eq!(hm[&format!("{i}")], i);
+        }
+    }
 }
 

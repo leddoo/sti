@@ -1,3 +1,10 @@
+0.1.8:
+- (breaking change): `cat_next` now takes a length, not a size in bytes.
+- hash:
+    - `fxhash` implementation.
+    - `HashFn` & `HashFnSeed` traits.
+    - `HashMap`.
+
 0.1.7:
 - arena:
     - add save/restore api.
