@@ -46,6 +46,10 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         return this;
     }
 
+
+    #[inline(always)]
+    pub fn alloc(&self) -> &A { &self.alloc }
+
     #[inline(always)]
     pub fn size(&self) -> usize {
         self.num_groups as usize * Group::WIDTH
@@ -266,6 +270,12 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         unsafe { slots.as_ptr().add(Group::WIDTH*group_idx + sub_idx) }
     }
 }
+
+unsafe impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc>
+    Sync for RawHashMap<K, V, S, A> where K: Sync, V: Sync, S: Sync, A: Sync {}
+
+unsafe impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc>
+    Send for RawHashMap<K, V, S, A> where K: Send, V: Send, S: Send, A: Send {}
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Drop for RawHashMap<K, V, S, A> {
     fn drop(&mut self) {

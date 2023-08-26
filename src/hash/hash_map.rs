@@ -72,6 +72,10 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
     }
 
 
+    /// backing allocator.
+    #[inline(always)]
+    pub fn alloc(&self) -> &A { self.inner.alloc() }
+
     /// size.
     /// - total number of allocated key/value pairs.
     #[inline(always)]

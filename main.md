@@ -1,7 +1,6 @@
 
 - todo:
     - hash map.
-        - test collisions.
         - entry api.
     - rw lock.
     - vec:
