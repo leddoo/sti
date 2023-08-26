@@ -164,6 +164,38 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         }
     }
 
+    pub fn probe_length<Q: ?Sized + Eq>(&self, key: &Q) -> (usize, usize)
+    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        let hash = self.seed.hash(key);
+
+        let slots = Self::slots_ptr(self.groups, self.num_groups);
+
+        let mut groups_visited = 0;
+        let mut keys_compared  = 0;
+
+        let mut group_idx = group_first(hash, self.num_groups);
+        loop {
+            let group = unsafe { *Self::group_ref(self.groups, group_idx) };
+
+            groups_visited += 1;
+
+            for i in group.match_hash(hash) {
+                keys_compared += 1;
+
+                let slot = unsafe { &mut *Self::slot_ptr(slots, group_idx, i) };
+                if slot.key.borrow() == key {
+                    return (groups_visited, keys_compared);
+                }
+            }
+
+            if group.match_empty().any() {
+                return (groups_visited, keys_compared);
+            }
+
+            group_next(&mut group_idx, self.num_groups);
+        }
+    }
+
 
     fn resize(&mut self, new_num_groups: u32) {
         let layout = Self::layout(new_num_groups).expect("capacity overflow");

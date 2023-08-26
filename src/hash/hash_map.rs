@@ -17,11 +17,13 @@ pub type HashMapF<K, V, F, A = GlobalAlloc> = HashMapEx<K, V, DefaultHashFnSeed<
 
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, GlobalAlloc> {
+    /// construct with default seed in `GlobalAlloc`.
     #[inline(always)]
     pub fn new() -> Self {
         Self { inner: RawHashMap::new(S::default(), GlobalAlloc) }
     }
 
+    /// construct with capacity, with default seed in `GlobalAlloc`.
     #[inline(always)]
     pub fn with_cap(cap: usize) -> Self {
         Self { inner: RawHashMap::with_cap(cap, S::default(), GlobalAlloc) }
@@ -29,11 +31,13 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, GlobalAl
 }
 
 impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, A> {
+    /// construct with default seed in `alloc`.
     #[inline(always)]
     pub fn new_in(alloc: A) -> Self {
         Self { inner: RawHashMap::new(S::default(), alloc) }
     }
 
+    /// construct with capacity, with default seed in `alloc`.
     #[inline(always)]
     pub fn with_cap_in(cap: usize, alloc: A) -> Self {
         Self { inner: RawHashMap::with_cap(cap, S::default(), alloc) }
@@ -41,11 +45,13 @@ impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S
 }
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMapEx<K, V, S, GlobalAlloc> {
+    /// construct with `seed` in `GlobalAlloc`.
     #[inline(always)]
     pub fn new_ex(seed: S) -> Self {
         Self { inner: RawHashMap::new(seed, GlobalAlloc) }
     }
 
+    /// construct with capacity, with `seed` in `GlobalAlloc`.
     #[inline(always)]
     pub fn with_cap_ex(cap: usize, seed: S) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, GlobalAlloc) }
@@ -53,33 +59,45 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMapEx<K, V, S, GlobalAlloc> {
 }
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
+    /// construct with `seed` in `alloc`.
     #[inline(always)]
     pub fn new_ex_in(seed: S, alloc: A) -> Self {
         Self { inner: RawHashMap::new(seed, alloc) }
     }
 
+    /// construct with capacity, with `seed` in `alloc`.
     #[inline(always)]
     pub fn with_cap_in_ex(cap: usize, seed: S, alloc: A) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, alloc) }
     }
 
 
+    /// size.
+    /// - total number of allocated key/value pairs.
     #[inline(always)]
     pub fn size(&self) -> usize { self.inner.size() }
 
+    /// capacity.
+    /// - how many residents the hash map can have before resizing.
     #[inline(always)]
     pub fn cap(&self) -> usize { self.inner.cap() }
 
+    /// number of residents.
+    /// - at least `len`, includes tombstones.
     #[inline(always)]
     pub fn resident(&self) -> usize { self.inner.resident() }
 
+    /// number of entries.
     #[inline(always)]
     pub fn len(&self) -> usize { self.inner.len() }
 
 
+    /// insert a key/value pair.
+    /// - returns old value, if present.
     #[inline(always)]
     pub fn insert(&mut self, k: K, v: V) -> Option<V> { self.inner.insert(k, v) }
 
+    /// remove a key/value pair.
     #[inline(always)]
     pub fn remove<Q: ?Sized + Eq>(&mut self, k: &Q) -> Option<(K, V)>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
@@ -87,6 +105,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
     }
 
 
+    /// get a key's value.
     #[inline(always)]
     pub fn get<Q: ?Sized + Eq>(&self, k: &Q) -> Option<&V>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
@@ -96,6 +115,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
         else { None }
     }
 
+    /// get a key's value mutably.
     #[inline(always)]
     pub fn get_mut<Q: ?Sized + Eq>(&mut self, k: &Q) -> Option<&mut V>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
@@ -103,6 +123,18 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
             unsafe { Some(v.as_mut()) }
         }
         else { None }
+    }
+
+
+    /// probe length of a key.
+    /// - returns `(groups_visited, keys_compared)`.
+    /// - useful for debugging hash collision issues.
+    /// - specific to the swiss table implementation.
+    ///   may be removed/changed in the future.
+    #[inline(always)]
+    pub fn probe_length<Q: ?Sized + Eq>(&self, k: &Q) -> (usize, usize)
+    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        self.inner.probe_length(k)
     }
 }
 
@@ -202,6 +234,45 @@ mod tests {
         for i in 1..i {
             assert_eq!(hm[&format!("{i}")], i);
         }
+    }
+
+    #[test]
+    fn hm_probe_length() {
+        use crate::hash::HashFn;
+
+        struct DumbHash;
+        impl HashFn<u32> for DumbHash {
+            type Seed = ();
+            type Hash = u32;
+            const DEFAULT_SEED: () = ();
+            fn hash_with_seed(_: (), value: &u32) -> u32 { *value % 32 / 2 }
+        }
+
+        let mut hm: HashMapF<u32, u32, DumbHash> = HashMapF::new();
+
+        hm.insert(0, 0);
+        assert_eq!(hm.probe_length(&0), (1, 1));
+        assert_eq!(hm.probe_length(&1), (1, 1));
+        assert_eq!(hm.probe_length(&2), (1, 0));
+        assert_eq!(hm.probe_length(&3), (1, 0));
+
+        hm.insert(1, 1);
+        assert_eq!(hm.probe_length(&32), (1, 2));
+
+        for i in 2..GROUP_SIZE as u32 {
+            hm.insert(2*i, 2*i);
+        }
+        assert_eq!(hm.size(), 2*GROUP_SIZE);
+        assert_eq!(hm.probe_length(&32), (2, 2));
+
+
+        assert_eq!(hm.resident(), hm.len());
+        hm.remove(&1).unwrap();
+        assert_eq!(hm.resident(), hm.len() + 1);
+        assert_eq!(hm.probe_length(&32), (2, 1));
+
+        hm.insert(32, 32);
+        assert_eq!(hm.probe_length(&32), (1, 2));
     }
 }
 
