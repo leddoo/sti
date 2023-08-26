@@ -21,6 +21,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, GlobalAl
     pub fn new() -> Self {
         Self { inner: RawHashMap::new(S::default(), GlobalAlloc) }
     }
+
+    #[inline(always)]
+    pub fn with_cap(cap: usize) -> Self {
+        Self { inner: RawHashMap::with_cap(cap, S::default(), GlobalAlloc) }
+    }
 }
 
 impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, A> {
@@ -28,12 +33,22 @@ impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S
     pub fn new_in(alloc: A) -> Self {
         Self { inner: RawHashMap::new(S::default(), alloc) }
     }
+
+    #[inline(always)]
+    pub fn with_cap_in(cap: usize, alloc: A) -> Self {
+        Self { inner: RawHashMap::with_cap(cap, S::default(), alloc) }
+    }
 }
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMapEx<K, V, S, GlobalAlloc> {
     #[inline(always)]
     pub fn new_ex(seed: S) -> Self {
         Self { inner: RawHashMap::new(seed, GlobalAlloc) }
+    }
+
+    #[inline(always)]
+    pub fn with_cap_ex(cap: usize, seed: S) -> Self {
+        Self { inner: RawHashMap::with_cap(cap, seed, GlobalAlloc) }
     }
 }
 
@@ -44,25 +59,47 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
     }
 
     #[inline(always)]
+    pub fn with_cap_in_ex(cap: usize, seed: S, alloc: A) -> Self {
+        Self { inner: RawHashMap::with_cap(cap, seed, alloc) }
+    }
+
+
+    #[inline(always)]
     pub fn len(&self) -> usize { self.inner.len() }
 
 
     #[inline(always)]
     pub fn insert(&mut self, k: K, v: V) -> Option<V> { self.inner.insert(k, v) }
 
+    #[inline(always)]
+    pub fn remove<Q: ?Sized + Eq>(&mut self, k: &Q) -> Option<(K, V)>
+    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        self.inner.remove(k)
+    }
+
 
     #[inline(always)]
-    pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&V>
-    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> { self.inner.get(k) }
+    pub fn get<Q: ?Sized + Eq>(&self, k: &Q) -> Option<&V>
+    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        if let Some(v) = self.inner.search(k) {
+            unsafe { Some(v.as_ref()) }
+        }
+        else { None }
+    }
 
     #[inline(always)]
-    pub fn get_mut<Q: ?Sized>(&mut self, k: &Q) -> Option<&mut V>
-    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> { self.inner.get_mut(k) }
+    pub fn get_mut<Q: ?Sized + Eq>(&mut self, k: &Q) -> Option<&mut V>
+    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        if let Some(mut v) = self.inner.search(k) {
+            unsafe { Some(v.as_mut()) }
+        }
+        else { None }
+    }
 }
 
 impl<Q, K, V, S, A> core::ops::Index<&Q> for HashMapEx<K, V, S, A>
 where 
-    Q: ?Sized, K: Eq + Borrow<Q>,
+    Q: ?Sized + Eq, K: Eq + Borrow<Q>,
     S: HashFnSeed<K, Hash=u32> + HashFnSeed<Q, Hash=u32>,
     A: Alloc
 {
@@ -71,20 +108,20 @@ where
     #[track_caller]
     #[inline(always)]
     fn index(&self, index: &Q) -> &Self::Output {
-        self.inner.get(index).expect("invalid key")
+        self.get(index).expect("invalid key")
     }
 }
 
 impl<Q, K, V, S, A> core::ops::IndexMut<&Q> for HashMapEx<K, V, S, A>
 where 
-    Q: ?Sized, K: Eq + Borrow<Q>,
+    Q: ?Sized + Eq, K: Eq + Borrow<Q>,
     S: HashFnSeed<K, Hash=u32> + HashFnSeed<Q, Hash=u32>,
     A: Alloc
 {
     #[track_caller]
     #[inline(always)]
     fn index_mut(&mut self, index: &Q) -> &mut Self::Output {
-        self.inner.get_mut(index).expect("invalid key")
+        self.get_mut(index).expect("invalid key")
     }
 }
 
@@ -95,10 +132,29 @@ mod tests {
 
     #[test]
     fn hm_basic() {
-        let mut hm: HashMap<String, u32> = HashMap::new();
+        let mut hm: HashMap<String, u32> = HashMap::with_cap(69);
+        assert_eq!(hm.len(), 0);
 
         hm.insert("hi".into(), 42);
         assert_eq!(hm["hi"], 42);
+        assert_eq!(hm.len(), 1);
+
+        hm.insert("ho".into(), 69);
+        assert_eq!(hm["hi"], 42);
+        assert_eq!(hm["ho"], 69);
+        assert_eq!(hm.len(), 2);
+
+        hm["hi"] = 17;
+        assert_eq!(hm["hi"], 17);
+        assert_eq!(hm["ho"], 69);
+        assert_eq!(hm.len(), 2);
+
+        let (hi_k, hi_v) = hm.remove("hi").unwrap();
+        assert_eq!(hi_k, "hi");
+        assert_eq!(hi_v, 17);
+        assert!(hm.get("hi").is_none());
+        assert_eq!(hm["ho"], 69);
+        assert_eq!(hm.len(), 1);
     }
 }
 

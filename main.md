@@ -2,6 +2,10 @@
 - todo:
     - hash module.
         - hash map.
+            - more stuff.
+            - expose & test resident metric.
+                - can use constant hash function.
+            - remove `empty_matches` & reuse tombstones.
     - rw lock.
     - vec:
         - `Vec::extend`.
