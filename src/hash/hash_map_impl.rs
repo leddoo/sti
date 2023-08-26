@@ -18,54 +18,9 @@ pub(super) struct RawHashMap<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> {
     phantom: PhantomData<(K, V)>,
 }
 
-#[derive(Clone, Copy)]
-#[repr(align(16))]
-struct Group {
-    entries: [u8; 16],
-}
-
 pub struct Slot<K, V> {
     pub key:   K,
     pub value: V,
-}
-
-
-mod load {
-    // max load: 14/16 = 7/8.
-
-    #[inline(always)]
-    pub const fn num_groups_for_cap(cap: u32) -> Option<u32> {
-        // max cap we can support:
-        //  cap*8/7 + 15 <= u32::MAX
-        //  cap <= (u32::MAX - 15)*7/8
-        const MAX_CAP: u32 = ((u32::MAX as u64 - 15)*7/8) as u32;
-        const _MAX_GROUPS: u32 = (MAX_CAP + MAX_CAP/7 + 15) / 16;
-        const _CHECK: () = assert!(MAX_CAP <= _MAX_GROUPS*16);
-
-        if cap <= MAX_CAP {
-            let groups = (cap + cap/7 + 15) / 16;
-            Some(groups)
-        }
-        else { None }
-    }
-
-    #[inline(always)]
-    pub const fn num_empty_for_groups(num_groups: u32) -> u32 {
-        num_groups*14
-    }
-}
-
-#[inline(always)]
-const fn reduce_hash(hash: u32, n: u32) -> u32 {
-    ((hash as u64 * n as u64) >> 32) as u32
-}
-
-#[inline(always)]
-fn group_next(i: &mut usize, num_groups: u32) {
-    *i += 1;
-    if *i >= num_groups as usize {
-        *i = 0;
-    }
 }
 
 
@@ -92,7 +47,24 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
     #[inline(always)]
-    pub fn len(&self) -> usize { self.used as usize }
+    pub fn size(&self) -> usize {
+        self.num_groups as usize * Group::WIDTH
+    }
+
+    #[inline(always)]
+    pub fn cap(&self) -> usize {
+        self.num_groups as usize * load::EMPTY_PER_GROUP as usize
+    }
+
+    #[inline(always)]
+    pub fn resident(&self) -> usize {
+        self.cap() - self.empty as usize
+    }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize {
+        self.used as usize
+    }
 
 
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
@@ -100,31 +72,29 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             self.resize(
                 self.num_groups.checked_mul(2).expect("capacity overflow")
                 .at_least(1));
-
             assert!(self.empty > 0);
         }
-
 
         let hash = self.seed.hash(&key);
 
         let slots = Self::slots_ptr(self.groups, self.num_groups);
 
-        let mut group_idx = reduce_hash(hash, self.num_groups) as usize;
+        let mut group_idx = group_first(hash, self.num_groups);
         loop {
-            let group_ptr = Self::group_ptr(self.groups, group_idx);
-            let group = unsafe { *group_ptr };
+            let group = unsafe { Self::group_ref(self.groups, group_idx) };
 
-            for i in group.hash_matches(hash) {
-                let slot = unsafe { &mut *slots.add(16*group_idx + i) };
+            for i in group.match_hash(hash) {
+                let slot = unsafe { &mut *Self::slot_ptr(slots, group_idx, i) };
                 if slot.key == key {
                     return Some(core::mem::replace(&mut slot.value, value));
                 }
             }
 
-            if let Some(i) = group.empty_matches().next() {
+            if let Some(i) = group.match_free().next() {
                 unsafe {
-                    slots.add(16*group_idx + i).write(Slot { key, value });
-                    (*group_ptr).use_entry(i, hash);
+                    let slot = Self::slot_ptr(slots, group_idx, i);
+                    slot.write(Slot { key, value });
+                    group.use_entry(i, hash);
 
                     self.empty -= 1;
                     self.used  += 1;
@@ -143,18 +113,17 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
         let slots = Self::slots_ptr(self.groups, self.num_groups);
 
-        let mut group_idx = reduce_hash(hash, self.num_groups) as usize;
+        let mut group_idx = group_first(hash, self.num_groups);
         loop {
-            let group_ptr = Self::group_ptr(self.groups, group_idx);
-            let group = unsafe { *group_ptr };
+            let group = unsafe { Self::group_ref(self.groups, group_idx) };
 
-            for i in group.hash_matches(hash) {
+            for i in group.match_hash(hash) {
                 unsafe {
-                    let slot_ptr = slots.add(16*group_idx + i);
+                    let slot_ptr = Self::slot_ptr(slots, group_idx, i);
                     if (*slot_ptr).key.borrow() == key {
                         let Slot { key, value } =  slot_ptr.read();
 
-                        self.empty += (*group_ptr).free_entry(i);
+                        self.empty += group.free_entry(i);
                         self.used  -= 1;
 
                         return Some((key, value));
@@ -162,7 +131,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
                 }
             }
 
-            if group.any_empty() {
+            if group.match_empty().any() {
                 return None;
             }
 
@@ -176,18 +145,18 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
         let slots = Self::slots_ptr(self.groups, self.num_groups);
 
-        let mut group_idx = reduce_hash(hash, self.num_groups) as usize;
+        let mut group_idx = group_first(hash, self.num_groups);
         loop {
-            let group = unsafe { *Self::group_ptr(self.groups, group_idx) };
+            let group = unsafe { *Self::group_ref(self.groups, group_idx) };
 
-            for i in group.hash_matches(hash) {
-                let slot = unsafe { &mut *slots.add(16*group_idx + i) };
+            for i in group.match_hash(hash) {
+                let slot = unsafe { &mut *Self::slot_ptr(slots, group_idx, i) };
                 if slot.key.borrow() == key {
                     return Some((&mut slot.value).into());
                 }
             }
 
-            if group.any_empty() {
+            if group.match_empty().any() {
                 return None;
             }
 
@@ -219,7 +188,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
         self.groups = unsafe { NonNull::new_unchecked(groups) };
         self.num_groups = num_groups;
-        self.empty = load::num_empty_for_groups(num_groups);
+        self.empty = load::EMPTY_PER_GROUP * num_groups;
         self.used  = 0;
     }
 
@@ -227,20 +196,25 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     #[inline(always)]
     fn layout(num_groups: u32) -> Option<Layout> {
         let num_groups: usize = num_groups.try_into().unwrap();
-        let num_slots = num_groups.checked_mul(16)?;
+        let num_slots = num_groups.checked_mul(Group::WIDTH)?;
         cat_join(
             Layout::array::<Group>(num_groups).ok()?,
             Layout::array::<Slot<K, V>>(num_slots).ok()?)
     }
 
     #[inline(always)]
-    fn group_ptr(groups: NonNull<Group>, idx: usize) -> *mut Group {
-        unsafe { groups.as_ptr().add(idx) }
+    unsafe fn group_ref<'a>(groups: NonNull<Group>, idx: usize) -> &'a mut Group {
+        unsafe { &mut *groups.as_ptr().add(idx) }
     }
 
     #[inline(always)]
-    fn slots_ptr(groups: NonNull<Group>, num_groups: u32) -> *mut Slot<K, V> {
-        unsafe { cat_next_mut(groups.as_ptr(), num_groups as usize) }
+    fn slots_ptr(groups: NonNull<Group>, num_groups: u32) -> NonNull<Slot<K, V>> {
+        unsafe { NonNull::new_unchecked(cat_next_mut(groups.as_ptr(), num_groups as usize)) }
+    }
+
+    #[inline(always)]
+    fn slot_ptr(slots: NonNull<Slot<K, V>>, group_idx: usize, sub_idx: usize) -> *mut Slot<K, V> {
+        unsafe { slots.as_ptr().add(Group::WIDTH*group_idx + sub_idx) }
     }
 }
 
@@ -251,10 +225,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Drop for RawHashMap<K, V, S
 
             // drop slots.
             for group_idx in 0..self.num_groups as usize {
-                let group = unsafe { *Self::group_ptr(self.groups, group_idx) };
-                group.iter_used(|i| { unsafe {
-                    core::ptr::drop_in_place(&mut *slots.add(16*group_idx + i))
-                }});
+                let group = unsafe { Self::group_ref(self.groups, group_idx) };
+
+                for i in group.match_used() { unsafe {
+                    core::ptr::drop_in_place(Self::slot_ptr(slots, group_idx, i))
+                }}
             }
 
             let layout = Self::layout(self.num_groups).unwrap();
@@ -263,96 +238,169 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Drop for RawHashMap<K, V, S
     }
 }
 
-impl Group {
-    const EMPTY:     u8 = 0x80;
-    const TOMBSTONE: u8 = 0xff;
 
-    #[inline(always)]
-    const fn empty() -> Group {
-        Group { entries: [Self::EMPTY; 16] }
-    }
-
-    #[inline(always)]
-    fn use_entry(&mut self, idx: usize, hash: u32) {
-        self.entries[idx] = (hash & 0x7f) as u8;
-    }
-
-    #[inline(always)]
-    fn free_entry(&mut self, idx: usize) -> u32 {
-        if self.any_empty() {
-            self.entries[idx] = Self::EMPTY;
-            return 1;
-        }
-        else {
-            self.entries[idx] = Self::TOMBSTONE;
-            return 0;
-        }
-    }
-}
-
-mod group_scalar {
+mod load {
     use super::Group;
 
-    pub struct Matches {
-        group:  Group,
-        cursor: usize,
-        query:  u8,
+    // max load: 14/16 = 7/8.
+
+    #[inline(always)]
+    pub const fn num_groups_for_cap(cap: u32) -> Option<u32> {
+        const W: u32 = Group::WIDTH as u32;
+
+        // max cap we can support:
+        //  cap*8/7 + w-1 <= u32::MAX
+        //  cap <= (u32::MAX - w-1)*7/8
+        const MAX_CAP: u32 = (((u32::MAX - (W-1)) as u64)*7/8) as u32;
+
+        const _MAX_GROUPS: u32 = (MAX_CAP + MAX_CAP/7 + (W-1)) / W;
+        const _: () = assert!(MAX_CAP <= _MAX_GROUPS*W);
+
+        if cap <= MAX_CAP {
+            let groups = (cap + cap/7 + (W-1)) / W;
+            Some(groups)
+        }
+        else { None }
+    }
+
+    const _: () = assert!(Group::WIDTH % 8 == 0);
+    pub const EMPTY_PER_GROUP: u32 = Group::WIDTH as u32 * 7/8;
+}
+
+
+#[inline(always)]
+fn group_first(hash: u32, num_groups: u32) -> usize {
+    let result = ((hash as u64 * num_groups as u64) >> 32) as usize;
+    debug_assert!(result < num_groups as usize);
+    return result;
+}
+
+#[inline(always)]
+fn group_next(i: &mut usize, num_groups: u32) {
+    debug_assert!(*i < num_groups as usize);
+
+    *i += 1;
+    if *i >= num_groups as usize {
+        *i = 0;
+    }
+
+    debug_assert!(*i < num_groups as usize);
+}
+
+
+use group_u64::*;
+mod group_u64 {
+    #[derive(Clone, Copy)]
+    pub(super) struct Group(u64);
+
+    #[derive(Clone, Copy)]
+    pub(super) struct Bitmask(u64);
+
+    #[inline(always)]
+    const fn splat(value: u8) -> u64 {
+        u64::from_ne_bytes([value; 8])
     }
 
     impl Group {
+        pub const WIDTH: usize = 8;
+
+        const EMPTY:     u8  = 0xff;
+        const TOMBSTONE: u8  = 0x80;
+        const HASH_MASK: u32 = 0x7f;
+
+
         #[inline(always)]
-        pub fn any_empty(&self) -> bool {
-            for e in self.entries {
-                if e == Self::EMPTY {
-                    return true;
-                }
-            }
-            false
+        pub const fn empty() -> Group {
+            Self(splat(Self::EMPTY))
         }
 
         #[inline(always)]
-        pub fn hash_matches(&self, hash: u32) -> Matches {
-            Matches {
-                group:  *self,
-                cursor: 0,
-                query:  (hash & 0x7f) as u8,
-            }
+        const fn mask_hash(hash: u32) -> u8 {
+            (hash & Self::HASH_MASK) as u8
         }
 
         #[inline(always)]
-        pub fn empty_matches(&self) -> Matches {
-            Matches {
-                group:  *self,
-                cursor: 0,
-                query:  Self::EMPTY,
-            }
+        pub fn match_hash(&self, hash: u32) -> Bitmask {
+            // 0x00 for all matching bytes.
+            let mask = self.0 ^ splat(Self::mask_hash(hash));
+            // https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
+            let zero_or_high = mask.wrapping_sub(splat(1));
+            let not_high = !mask & splat(0x80);
+            let mask = zero_or_high & not_high;
+            Bitmask(mask)
         }
 
         #[inline(always)]
-        pub fn iter_used<F: FnMut(usize)>(&self, mut f: F) {
-            for i in 0..self.entries.len() {
-                if self.entries[i] & 0x80 == 0 {
-                    f(i);
-                }
+        pub fn match_empty(&self) -> Bitmask {
+            // check high bit and second highest bit set.
+            // only empty & tombstone have the high bit.
+            // and tombstone only has the high bit.
+            let mask = self.0 & (self.0 << 1);
+            let mask = mask & splat(0x80);
+            Bitmask(mask)
+        }
+
+        #[inline(always)]
+        pub fn match_free(&self) -> Bitmask {
+            // only empty & tombstone have the high bit.
+            let mask = self.0 & splat(0x80);
+            Bitmask(mask)
+        }
+
+        #[inline(always)]
+        pub fn match_used(&self) -> Bitmask {
+            // used entries don't have the high bit.
+            let mask = (self.0 & splat(0x80)) ^ splat(0x80);
+            Bitmask(mask)
+        }
+
+
+        #[inline(always)]
+        fn set(&mut self, idx: usize, value: u8) {
+            let mut this = self.0.to_ne_bytes();
+            this[idx] = value;
+            self.0 = u64::from_ne_bytes(this);
+        }
+
+        #[inline(always)]
+        pub fn use_entry(&mut self, idx: usize, hash: u32) {
+            self.set(idx, Self::mask_hash(hash))
+        }
+
+        #[inline(always)]
+        pub fn free_entry(&mut self, idx: usize) -> u32 {
+            if self.match_empty().any() {
+                self.set(idx, Self::EMPTY);
+                return 1;
+            }
+            else {
+                self.set(idx, Self::TOMBSTONE);
+                return 0;
             }
         }
     }
 
-    impl Iterator for Matches {
+    impl Bitmask {
+        #[inline(always)]
+        pub fn any(&self) -> bool { self.0 != 0 }
+    }
+
+    impl Iterator for Bitmask {
         type Item = usize;
 
         #[inline(always)]
         fn next(&mut self) -> Option<Self::Item> {
-            while self.cursor < self.group.entries.len() {
-                let at = self.cursor;
-                self.cursor += 1;
-
-                if self.group.entries[at] == self.query {
-                    return Some(at);
-                }
+            if self.0 != 0 {
+                let i = self.0.trailing_zeros() / 8;
+                self.0 &= self.0 - 1;
+                return Some(i as usize);
             }
-            None
+            return None;
         }
     }
 }
+
+
+#[cfg(test)]
+pub(crate) const GROUP_SIZE: usize = Group::WIDTH;
 

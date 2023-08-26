@@ -65,6 +65,15 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
 
 
     #[inline(always)]
+    pub fn size(&self) -> usize { self.inner.size() }
+
+    #[inline(always)]
+    pub fn cap(&self) -> usize { self.inner.cap() }
+
+    #[inline(always)]
+    pub fn resident(&self) -> usize { self.inner.resident() }
+
+    #[inline(always)]
     pub fn len(&self) -> usize { self.inner.len() }
 
 
@@ -129,32 +138,41 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::hash_map_impl::GROUP_SIZE;
 
     #[test]
     fn hm_basic() {
         let mut hm: HashMap<String, u32> = HashMap::with_cap(69);
-        assert_eq!(hm.len(), 0);
+        let size = (69*8/7 + GROUP_SIZE) / GROUP_SIZE * GROUP_SIZE;
+        let cap = size*7/8;
+        assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 0, 0));
 
         hm.insert("hi".into(), 42);
         assert_eq!(hm["hi"], 42);
-        assert_eq!(hm.len(), 1);
+        assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 1, 1));
 
         hm.insert("ho".into(), 69);
         assert_eq!(hm["hi"], 42);
         assert_eq!(hm["ho"], 69);
-        assert_eq!(hm.len(), 2);
+        assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 2, 2));
 
         hm["hi"] = 17;
         assert_eq!(hm["hi"], 17);
         assert_eq!(hm["ho"], 69);
-        assert_eq!(hm.len(), 2);
+        assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 2, 2));
+
+        let old = hm.insert("ho".into(), 19).unwrap();
+        assert_eq!(old, 69);
+        assert_eq!(hm["hi"], 17);
+        assert_eq!(hm["ho"], 19);
+        assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 2, 2));
 
         let (hi_k, hi_v) = hm.remove("hi").unwrap();
         assert_eq!(hi_k, "hi");
         assert_eq!(hi_v, 17);
         assert!(hm.get("hi").is_none());
-        assert_eq!(hm["ho"], 69);
-        assert_eq!(hm.len(), 1);
+        assert_eq!(hm["ho"], 19);
+        assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 1, 1));
     }
 }
 
