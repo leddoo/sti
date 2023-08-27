@@ -185,7 +185,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             return unsafe { &mut (*entry.slot.as_ptr()).value };
         }
 
-        if unlikely(entry.group.is_none()) {
+        if unlikely(entry.group.is_none() || self.empty == 0) {
             self.grow();
 
             entry = self.entry(key);
@@ -380,7 +380,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
     fn entry<Q: ?Sized + Eq>(&self, key: &Q) -> RawEntry<K, V>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
-        if self.empty == 0 {
+        if self.num_groups == 0 {
             return RawEntry {
                 hash:  0,
                 group: None,

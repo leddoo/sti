@@ -1,9 +1,15 @@
 
 - todo:
     - hash map.
+        - fix entry k-issue.
+            - `K: Copy` shouldn't be required.
+            - kinda thinking we wanna make `K` the default?
+            - can we abstract over `K, &Q` somehow?
         - use `entry` for everything.
             - for non-insert, return none for `num_groups == 0`, not `empty`.
+                - test non-allocation for those funcs.
             - rename `empty` to something less misleading.
+            - actually cache the hash for inserts.
         - should `get_or_insert_with_key` be unsafe?
         - slot api for ptr eq keys.
     - rw lock.
