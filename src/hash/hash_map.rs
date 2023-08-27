@@ -4,7 +4,7 @@ use crate::alloc::{Alloc, GlobalAlloc};
 use crate::hash::{HashFnSeed, DefaultHashFnSeed};
 use crate::hash::fxhash::FxHasher32;
 
-use super::hash_map_impl::RawHashMap;
+use super::hash_map_impl::{RawHashMap, RawIter};
 
 
 pub struct HashMap<K: Eq, V,
@@ -141,7 +141,34 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.probe_length(k)
     }
+
+
+    #[inline(always)]
+    pub fn iter(&self) -> Iter<K, V> {
+        Iter { inner: self.inner.iter() }
+    }
 }
+
+pub struct Iter<'a, K, V> {
+    inner: RawIter<'a, K, V>,
+}
+
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next() }
+}
+
+
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Clone for HashMap<K, V, S, A>
+where K: Clone, V: Clone, S: Clone, A: Clone {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        Self { inner: self.inner.clone() }
+    }
+}
+
 
 impl<Q, K, V, S, A> core::ops::Index<&Q> for HashMap<K, V, S, A>
 where 
@@ -247,16 +274,6 @@ mod tests {
 
     #[test]
     fn hm_probe_length() {
-        use crate::hash::HashFn;
-
-        struct DumbHash;
-        impl HashFn<u32> for DumbHash {
-            type Seed = ();
-            type Hash = u32;
-            const DEFAULT_SEED: () = ();
-            fn hash_with_seed(_: (), value: &u32) -> u32 { *value % 32 / 2 }
-        }
-
         let mut hm: HashMapF<u32, u32, DumbHash> = HashMap::new();
 
         assert_eq!(hm.probe_length(&0),  (0, 0));
@@ -285,6 +302,85 @@ mod tests {
 
         hm.insert(32, 32);
         assert_eq!(hm.probe_length(&32), (1, 2));
+    }
+
+    #[test]
+    fn hm_iter() {
+        let hm: HashMapF<u32, i8, IdHash> = HashMap::with_cap(69);
+        assert!(hm.iter().next().is_none());
+
+        let mut hm: HashMapF<u32, i8, IdHash> = HashMap::new();
+        assert!(hm.iter().next().is_none());
+
+        for i in 0..2*GROUP_SIZE as u32 {
+            hm.insert(i, i as i8 + 1);
+        }
+
+        let mut iter = hm.iter();
+        for i in 0..2*GROUP_SIZE as u32 {
+            let (k, v) = iter.next().unwrap();
+            assert_eq!(*k, i);
+            assert_eq!(*v, i as i8 + 1);
+        }
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn hm_clone() {
+        let mut hm1: HashMapF<String, Vec<i8>, ConstHash> = HashMap::new();
+
+        assert!(hm1.iter().next().is_none());
+
+        for i in 0..2*GROUP_SIZE as u32 {
+            let mut v = Vec::new();
+            for k in 0..i { v.push(k as i8) }
+
+            hm1.insert(format!("{i}"), v);
+        }
+
+        let hm2 = hm1.clone();
+
+        let iter1 = hm1.iter();
+        let iter2 = hm2.iter();
+        let mut iter = iter1.zip(iter2);
+        for i in 0..2*GROUP_SIZE as u32 {
+            let mut v = Vec::new();
+            for k in 0..i { v.push(k as i8) }
+
+            let ((k1, v1), (k2, v2)) = iter.next().unwrap();
+            assert_eq!(*k1, format!("{i}"));
+            assert_eq!(*v1, v);
+            assert_eq!(*k1, *k2);
+            assert_eq!(*v1, *v2);
+        }
+        assert!(iter.next().is_none());
+    }
+
+
+    use crate::hash::HashFn;
+
+    struct DumbHash;
+    impl HashFn<u32> for DumbHash {
+        type Seed = ();
+        type Hash = u32;
+        const DEFAULT_SEED: () = ();
+        fn hash_with_seed(_: (), value: &u32) -> u32 { *value % 32 / 2 }
+    }
+
+    struct IdHash;
+    impl HashFn<u32> for IdHash {
+        type Seed = ();
+        type Hash = u32;
+        const DEFAULT_SEED: () = ();
+        fn hash_with_seed(_: (), value: &u32) -> u32 { *value }
+    }
+
+    struct ConstHash;
+    impl<T> HashFn<T> for ConstHash {
+        type Seed = ();
+        type Hash = u32;
+        const DEFAULT_SEED: () = ();
+        fn hash_with_seed(_: (), _: &T) -> u32 { 0 }
     }
 }
 

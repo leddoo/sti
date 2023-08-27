@@ -30,6 +30,7 @@ pub trait HashFnSeed<T: ?Sized> {
 }
 
 
+#[derive(Copy)]
 pub struct DefaultHashFnSeed<F>(PhantomData<F>);
 
 impl<F> DefaultHashFnSeed<F> {
@@ -40,6 +41,11 @@ impl<F> DefaultHashFnSeed<F> {
 impl<F> Default for DefaultHashFnSeed<F> {
     #[inline(always)]
     fn default() -> Self { Self::new() }
+}
+
+impl<F> Clone for DefaultHashFnSeed<F> {
+    #[inline(always)]
+    fn clone(&self) -> Self { Self(PhantomData) }
 }
 
 impl<T: ?Sized, F: HashFn<T>> HashFnSeed<T> for DefaultHashFnSeed<F> {

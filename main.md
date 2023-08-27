@@ -1,9 +1,7 @@
 
 - todo:
     - hash map.
-        - clone: same cap, memcpy the ctrl bytes.
-        - iter.
-        - entry api.
+        - entry api + `get_or_insert/_with` wrapper.
     - rw lock.
     - vec:
         - `Vec::extend`.

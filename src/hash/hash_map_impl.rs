@@ -85,10 +85,10 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
         let mut group_idx = group_first(hash, self.num_groups);
         loop {
-            let group = unsafe { Self::group_ref(self.groups, group_idx) };
+            let group = unsafe { group_ref(self.groups, group_idx) };
 
             for i in group.match_hash(hash) {
-                let slot = unsafe { &mut *Self::slot_ptr(slots, group_idx, i) };
+                let slot = unsafe { &mut *slot_ptr(slots, group_idx, i) };
                 if slot.key == key {
                     return Some(core::mem::replace(&mut slot.value, value));
                 }
@@ -96,7 +96,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
             if let Some(i) = group.match_free().next() {
                 unsafe {
-                    let slot = Self::slot_ptr(slots, group_idx, i);
+                    let slot = slot_ptr(slots, group_idx, i);
                     slot.write(Slot { key, value });
                     group.use_entry(i, hash);
 
@@ -123,11 +123,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
         let mut group_idx = group_first(hash, self.num_groups);
         loop {
-            let group = unsafe { Self::group_ref(self.groups, group_idx) };
+            let group = unsafe { group_ref(self.groups, group_idx) };
 
             for i in group.match_hash(hash) {
                 unsafe {
-                    let slot_ptr = Self::slot_ptr(slots, group_idx, i);
+                    let slot_ptr = slot_ptr(slots, group_idx, i);
                     if (*slot_ptr).key.borrow() == key {
                         let Slot { key, value } =  slot_ptr.read();
 
@@ -159,10 +159,10 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
         let mut group_idx = group_first(hash, self.num_groups);
         loop {
-            let group = unsafe { *Self::group_ref(self.groups, group_idx) };
+            let group = unsafe { *group_ref(self.groups, group_idx) };
 
             for i in group.match_hash(hash) {
-                let slot = unsafe { &mut *Self::slot_ptr(slots, group_idx, i) };
+                let slot = unsafe { &mut *slot_ptr(slots, group_idx, i) };
                 if slot.key.borrow() == key {
                     return Some((&mut slot.value).into());
                 }
@@ -180,8 +180,57 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     pub fn clone_in<A2>(&self, alloc: A2) -> RawHashMap<K, V, S, A2>
     where K: Clone, V: Clone, S: Clone, A2: Alloc
     {
-        let _ = alloc;
-        unimplemented!()
+        // allocate uninitialized hash map with same capacity.
+        let mut result = {
+            let layout = Self::layout(self.num_groups).unwrap();
+            let data = alloc.alloc(layout).expect("allocation failed");
+
+            RawHashMap {
+                seed: self.seed.clone(),
+                alloc,
+
+                groups: data.cast(),
+                num_groups: self.num_groups,
+                empty: self.empty,
+                // `used` is set once data was cloned successfully.
+                // this prevents `drop` from accessing uninit data,
+                // if `K/V::clone` panic.
+                used: 0,
+
+                phantom: PhantomData,
+            }
+        };
+
+        // initialize groups.
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                self.groups.as_ptr(),
+                result.groups.as_ptr(),
+                self.num_groups as usize);
+        }
+
+        // clone slots.
+        let src_slots = Self::slots_ptr(self.groups,   self.num_groups);
+        let dst_slots = Self::slots_ptr(result.groups, result.num_groups);
+        for group_idx in 0..self.num_groups as usize {
+            let group = unsafe { *group_ref(result.groups, group_idx) };
+
+            for i in group.match_used() {
+                unsafe {
+                    let src = slot_ptr(src_slots, group_idx, i);
+                    let dst = slot_ptr(dst_slots, group_idx, i);
+                    dst.write(Slot {
+                        key:   (*src).key.clone(),
+                        value: (*src).value.clone(),
+                    });
+                }
+            }
+        }
+
+        // finalize.
+        result.used = self.used;
+
+        result
     }
 
 
@@ -200,14 +249,14 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
         let mut group_idx = group_first(hash, self.num_groups);
         loop {
-            let group = unsafe { *Self::group_ref(self.groups, group_idx) };
+            let group = unsafe { *group_ref(self.groups, group_idx) };
 
             groups_visited += 1;
 
             for i in group.match_hash(hash) {
                 keys_compared += 1;
 
-                let slot = unsafe { &mut *Self::slot_ptr(slots, group_idx, i) };
+                let slot = unsafe { &mut *slot_ptr(slots, group_idx, i) };
                 if slot.key.borrow() == key {
                     return (groups_visited, keys_compared);
                 }
@@ -218,6 +267,29 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             }
 
             group_next(&mut group_idx, self.num_groups);
+        }
+    }
+
+
+    #[inline(always)]
+    pub fn iter(&self) -> RawIter<K, V> {
+        RawIter {
+            groups: self.groups,
+            slots:  Self::slots_ptr(self.groups, self.num_groups),
+            num_groups: self.num_groups,
+
+            group_idx:
+                if self.used > 0 { 0 }
+                else { self.num_groups as usize },
+
+            bitmask:
+                if self.num_groups > 0 {
+                    let group = unsafe { *group_ref(self.groups, 0) };
+                    group.match_used()
+                }
+                else { Bitmask::none() },
+
+            phantom: PhantomData,
         }
     }
 
@@ -246,11 +318,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         if old_num_groups != 0 {
             if old_used != 0 {
                 for group_idx in 0..old_num_groups as usize {
-                    let group = unsafe { *Self::group_ref(old_groups, group_idx) };
+                    let group = unsafe { *group_ref(old_groups, group_idx) };
 
                     for i in group.match_used() {
                         let Slot { key, value } = unsafe {
-                            Self::slot_ptr(old_slots, group_idx, i).read()
+                            slot_ptr(old_slots, group_idx, i).read()
                         };
 
                         debug_assert!(self.empty > 0);
@@ -278,26 +350,28 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
     #[inline(always)]
-    unsafe fn group_ref<'a>(groups: NonNull<Group>, idx: usize) -> &'a mut Group {
-        unsafe { &mut *groups.as_ptr().add(idx) }
-    }
-
-    #[inline(always)]
     fn slots_ptr(groups: NonNull<Group>, num_groups: u32) -> NonNull<Slot<K, V>> {
         unsafe { NonNull::new_unchecked(cat_next_mut(groups.as_ptr(), num_groups as usize)) }
     }
-
-    #[inline(always)]
-    fn slot_ptr(slots: NonNull<Slot<K, V>>, group_idx: usize, sub_idx: usize) -> *mut Slot<K, V> {
-        unsafe { slots.as_ptr().add(Group::WIDTH*group_idx + sub_idx) }
-    }
 }
+
+#[inline(always)]
+unsafe fn group_ref<'a>(groups: NonNull<Group>, idx: usize) -> &'a mut Group {
+    unsafe { &mut *groups.as_ptr().add(idx) }
+}
+
+#[inline(always)]
+fn slot_ptr<K, V>(slots: NonNull<Slot<K, V>>, group_idx: usize, sub_idx: usize) -> *mut Slot<K, V> {
+    unsafe { slots.as_ptr().add(Group::WIDTH*group_idx + sub_idx) }
+}
+
 
 unsafe impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc>
     Sync for RawHashMap<K, V, S, A> where K: Sync, V: Sync, S: Sync, A: Sync {}
 
 unsafe impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc>
     Send for RawHashMap<K, V, S, A> where K: Send, V: Send, S: Send, A: Send {}
+
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Drop for RawHashMap<K, V, S, A> {
     fn drop(&mut self) {
@@ -307,10 +381,10 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Drop for RawHashMap<K, V, S
 
                 // drop slots.
                 for group_idx in 0..self.num_groups as usize {
-                    let group = unsafe { Self::group_ref(self.groups, group_idx) };
+                    let group = unsafe { group_ref(self.groups, group_idx) };
 
                     for i in group.match_used() { unsafe {
-                        core::ptr::drop_in_place(Self::slot_ptr(slots, group_idx, i))
+                        core::ptr::drop_in_place(slot_ptr(slots, group_idx, i))
                     }}
                 }
             }
@@ -327,6 +401,42 @@ where K: Clone, V: Clone, S: Clone, A: Clone {
     #[inline(always)]
     fn clone(&self) -> Self {
         self.clone_in(self.alloc.clone())
+    }
+}
+
+
+pub struct RawIter<'a, K, V> {
+    groups: NonNull<Group>,
+    slots:  NonNull<Slot<K, V>>,
+    num_groups: u32,
+
+    group_idx: usize,
+    bitmask: Bitmask,
+
+    phantom: PhantomData<&'a Slot<K, V>>,
+}
+
+impl<'a, K, V> Iterator for RawIter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(i) = self.bitmask.next() {
+                let slot = unsafe { &*slot_ptr(self.slots, self.group_idx, i) };
+                return Some((&slot.key, &slot.value));
+            }
+
+            self.group_idx += 1;
+
+            if self.group_idx < self.num_groups as usize {
+                let group = unsafe { *group_ref(self.groups, self.group_idx) };
+                self.bitmask = group.match_used();
+            }
+            else {
+                return None;
+            }
+        }
     }
 }
 
@@ -473,6 +583,9 @@ mod group_u64 {
     }
 
     impl Bitmask {
+        #[inline(always)]
+        pub fn none() -> Self { Bitmask(0) }
+
         #[inline(always)]
         pub fn any(&self) -> bool { self.0 != 0 }
     }
