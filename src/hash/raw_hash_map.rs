@@ -200,6 +200,9 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             slot.write(Slot { key, value });
             group.use_entry(entry.i, entry.hash);
 
+            self.empty -= 1;
+            self.used  += 1;
+
             &mut (*slot).value
         }
     }

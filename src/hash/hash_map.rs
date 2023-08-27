@@ -441,11 +441,15 @@ mod tests {
         let inc = || { counter.set(counter.get() + 1); };
 
         assert_eq!(counter.get(), 0);
+        assert_eq!(hm.resident(), 0);
+        assert_eq!(hm.len(), 0);
 
         // get_or_insert.
         let v = hm.get_or_insert(&str("hi"), 69);
         assert_eq!(*v, 69);
         assert_eq!(counter.get(), 1);
+        assert_eq!(hm.resident(), 1);
+        assert_eq!(hm.len(), 1);
 
 
         // insert same key does nothing.
@@ -453,21 +457,29 @@ mod tests {
         let v = hm.get_or_insert(&str("hi"), 70);
         assert_eq!(*v, 69);
         assert_eq!(counter.get(), 1);
+        assert_eq!(hm.resident(), 1);
+        assert_eq!(hm.len(), 1);
 
         let v = hm.get_or_insert_with(&str("hi"), || { inc(); 70 });
         assert_eq!(*v, 69);
         assert_eq!(counter.get(), 1);
+        assert_eq!(hm.resident(), 1);
+        assert_eq!(hm.len(), 1);
 
         let v = hm.get_or_insert_with_key(&str("hi"),
             |k| { inc(); (k.into(), 70) });
         assert_eq!(*v, 69);
         assert_eq!(counter.get(), 1);
+        assert_eq!(hm.resident(), 1);
+        assert_eq!(hm.len(), 1);
 
 
         // get_or_insert_with.
         let v = hm.get_or_insert_with(&str("ho"), || { inc(); 12 });
         assert_eq!(*v, 12);
         assert_eq!(counter.get(), 3);
+        assert_eq!(hm.resident(), 2);
+        assert_eq!(hm.len(), 2);
 
 
         // get_or_insert_with_key.
@@ -478,6 +490,8 @@ mod tests {
         });
         assert_eq!(*v, 8);
         assert_eq!(counter.get(), 5);
+        assert_eq!(hm.resident(), 3);
+        assert_eq!(hm.len(), 3);
     }
 
 

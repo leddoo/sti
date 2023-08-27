@@ -2,6 +2,8 @@
 - todo:
     - hash map.
         - use `entry` for everything.
+            - for non-insert, return none for `num_groups == 0`, not `empty`.
+            - rename `empty` to something less misleading.
         - should `get_or_insert_with_key` be unsafe?
         - slot api for ptr eq keys.
     - rw lock.
