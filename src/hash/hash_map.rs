@@ -2,21 +2,22 @@ use core::borrow::Borrow;
 
 use crate::alloc::{Alloc, GlobalAlloc};
 use crate::hash::{HashFnSeed, DefaultHashFnSeed};
-use crate::hash::fxhash::FxHasher32DefaultSeed;
+use crate::hash::fxhash::FxHasher32;
 
 use super::hash_map_impl::RawHashMap;
 
 
-pub struct HashMapEx<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc = GlobalAlloc> {
+pub struct HashMap<K: Eq, V,
+    S: HashFnSeed<K, Hash=u32> = DefaultHashFnSeed<FxHasher32>,
+    A: Alloc = GlobalAlloc>
+{
     inner: RawHashMap<K, V, S, A>,
 }
 
-pub type HashMap<K, V, A = GlobalAlloc> = HashMapEx<K, V, FxHasher32DefaultSeed, A>;
-
-pub type HashMapF<K, V, F, A = GlobalAlloc> = HashMapEx<K, V, DefaultHashFnSeed<F>, A>;
+pub type HashMapF<K, V, F, A = GlobalAlloc> = HashMap<K, V, DefaultHashFnSeed<F>, A>;
 
 
-impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, GlobalAlloc> {
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default> HashMap<K, V, S, GlobalAlloc> {
     /// construct with default seed in `GlobalAlloc`.
     #[inline(always)]
     pub fn new() -> Self {
@@ -30,7 +31,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, GlobalAl
     }
 }
 
-impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S, A> {
+impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMap<K, V, S, A> {
     /// construct with default seed in `alloc`.
     #[inline(always)]
     pub fn new_in(alloc: A) -> Self {
@@ -44,30 +45,30 @@ impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMapEx<K, V, S
     }
 }
 
-impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMapEx<K, V, S, GlobalAlloc> {
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMap<K, V, S, GlobalAlloc> {
     /// construct with `seed` in `GlobalAlloc`.
     #[inline(always)]
-    pub fn new_ex(seed: S) -> Self {
+    pub fn with_seed(seed: S) -> Self {
         Self { inner: RawHashMap::new(seed, GlobalAlloc) }
     }
 
     /// construct with capacity, with `seed` in `GlobalAlloc`.
     #[inline(always)]
-    pub fn with_cap_ex(cap: usize, seed: S) -> Self {
+    pub fn with_cap_with_seed(cap: usize, seed: S) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, GlobalAlloc) }
     }
 }
 
-impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     /// construct with `seed` in `alloc`.
     #[inline(always)]
-    pub fn new_ex_in(seed: S, alloc: A) -> Self {
+    pub fn with_seed_in(seed: S, alloc: A) -> Self {
         Self { inner: RawHashMap::new(seed, alloc) }
     }
 
     /// construct with capacity, with `seed` in `alloc`.
     #[inline(always)]
-    pub fn with_cap_in_ex(cap: usize, seed: S, alloc: A) -> Self {
+    pub fn with_cap_with_seed_in(cap: usize, seed: S, alloc: A) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, alloc) }
     }
 
@@ -142,7 +143,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMapEx<K, V, S, A> {
     }
 }
 
-impl<Q, K, V, S, A> core::ops::Index<&Q> for HashMapEx<K, V, S, A>
+impl<Q, K, V, S, A> core::ops::Index<&Q> for HashMap<K, V, S, A>
 where 
     Q: ?Sized + Eq, K: Eq + Borrow<Q>,
     S: HashFnSeed<K, Hash=u32> + HashFnSeed<Q, Hash=u32>,
@@ -157,7 +158,7 @@ where
     }
 }
 
-impl<Q, K, V, S, A> core::ops::IndexMut<&Q> for HashMapEx<K, V, S, A>
+impl<Q, K, V, S, A> core::ops::IndexMut<&Q> for HashMap<K, V, S, A>
 where 
     Q: ?Sized + Eq, K: Eq + Borrow<Q>,
     S: HashFnSeed<K, Hash=u32> + HashFnSeed<Q, Hash=u32>,
@@ -256,7 +257,7 @@ mod tests {
             fn hash_with_seed(_: (), value: &u32) -> u32 { *value % 32 / 2 }
         }
 
-        let mut hm: HashMapF<u32, u32, DumbHash> = HashMapF::new();
+        let mut hm: HashMapF<u32, u32, DumbHash> = HashMap::new();
 
         assert_eq!(hm.probe_length(&0),  (0, 0));
         assert_eq!(hm.probe_length(&69), (0, 0));

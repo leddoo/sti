@@ -1,7 +1,7 @@
 use core::hash::{Hash, Hasher};
 use core::ops::BitXor;
 
-use crate::hash::{HashFn, DefaultHashFnSeed};
+use crate::hash::HashFn;
 
 
 const ROL: u32 = 5;
@@ -85,8 +85,6 @@ impl<T: Hash + ?Sized> HashFn<T> for FxHasher32 {
         hasher.hash
     }
 }
-
-pub type FxHasher32DefaultSeed = DefaultHashFnSeed<FxHasher32>;
 
 
 impl Hasher for FxHasher32 {
@@ -214,8 +212,6 @@ impl<T: Hash + ?Sized> HashFn<T> for FxHasher64 {
         hasher.hash
     }
 }
-
-pub type FxHasher64DefaultSeed = DefaultHashFnSeed<FxHasher64>;
 
 
 impl Hasher for FxHasher64 {
