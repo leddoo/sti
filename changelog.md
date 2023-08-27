@@ -1,9 +1,11 @@
 0.1.8:
 - (breaking change): `cat_next` now takes a length, not a size in bytes.
-- hash:
+- new `hash` module:
     - `fxhash` implementation.
     - `HashFn` & `HashFnSeed` traits.
     - `HashMap`.
+- new `hint` module:
+    - `cold`, `likely`, `unlikely`.
 
 0.1.7:
 - arena:

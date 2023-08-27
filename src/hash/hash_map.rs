@@ -100,21 +100,43 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     /// insert a key/value pair.
     /// - returns old value, if present.
     #[inline(always)]
-    pub fn insert(&mut self, k: K, v: V) -> Option<V> { self.inner.insert(k, v) }
+    pub fn insert(&mut self, key: K, value: V) -> Option<V> {
+        self.inner.insert(key, value)
+    }
 
     /// remove a key/value pair.
     #[inline(always)]
-    pub fn remove<Q: ?Sized + Eq>(&mut self, k: &Q) -> Option<(K, V)>
+    pub fn remove<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<(K, V)>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
-        self.inner.remove(k)
+        self.inner.remove(key)
+    }
+
+
+    #[inline(always)]
+    pub fn get_or_insert<'q, Q: ?Sized + Eq>(&mut self, key: &'q Q, default: V) -> &mut V
+    where K: From<&'q Q> + Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        self.inner.get_or_insert(key, |_| (key.into(), default))
+    }
+
+    #[inline(always)]
+    pub fn get_or_insert_with<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
+    where F: FnOnce() -> V, K: From<&'q Q> + Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        self.inner.get_or_insert(key, |_| (key.into(), f()))
+    }
+
+    // @todo: unsafe?
+    #[inline(always)]
+    pub fn get_or_insert_with_key<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
+    where F: FnOnce(&'q Q) -> (K, V), K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        self.inner.get_or_insert(key, f)
     }
 
 
     /// get a key's value.
     #[inline(always)]
-    pub fn get<Q: ?Sized + Eq>(&self, k: &Q) -> Option<&V>
+    pub fn get<Q: ?Sized + Eq>(&self, key: &Q) -> Option<&V>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
-        if let Some(v) = self.inner.search(k) {
+        if let Some(v) = self.inner.search(key) {
             unsafe { Some(v.as_ref()) }
         }
         else { None }
@@ -122,9 +144,9 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
 
     /// get a key's value mutably.
     #[inline(always)]
-    pub fn get_mut<Q: ?Sized + Eq>(&mut self, k: &Q) -> Option<&mut V>
+    pub fn get_mut<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<&mut V>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
-        if let Some(mut v) = self.inner.search(k) {
+        if let Some(mut v) = self.inner.search(key) {
             unsafe { Some(v.as_mut()) }
         }
         else { None }
@@ -137,12 +159,14 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     /// - specific to the swiss table implementation.
     ///   may be removed/changed in the future.
     #[inline(always)]
-    pub fn probe_length<Q: ?Sized + Eq>(&self, k: &Q) -> (usize, usize)
+    pub fn probe_length<Q: ?Sized + Eq>(&self, key: &Q) -> (usize, usize)
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
-        self.inner.probe_length(k)
+        self.inner.probe_length(key)
     }
 
 
+    /// iterate key/value pairs.
+    /// - iteration order is not specified.
     #[inline(always)]
     pub fn iter(&self) -> Iter<K, V> {
         Iter { inner: self.inner.iter() }
@@ -354,6 +378,106 @@ mod tests {
             assert_eq!(*v1, *v2);
         }
         assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn hm_get_or_insert() {
+        use core::hash::{Hash, Hasher};
+        use core::cell::Cell;
+
+
+        struct MagicString {
+            str: MagicStr<'static>,
+        }
+
+        impl PartialEq for MagicString {
+            fn eq(&self, other: &Self) -> bool { self.str.value == other.str.value }
+        }
+        impl Eq for MagicString {}
+
+        impl Hash for MagicString {
+            fn hash<H: Hasher>(&self, state: &mut H) { self.str.value.hash(state) }
+        }
+
+        impl<'a> Borrow<MagicStr<'a>> for MagicString {
+            fn borrow(&self) -> &MagicStr<'a> { &self.str }
+        }
+
+
+        struct MagicStr<'a> {
+            value: &'static str,
+            counter: Option<&'a Cell<u32>>,
+        }
+
+        impl<'a> PartialEq for MagicStr<'a> {
+            fn eq(&self, other: &Self) -> bool { self.value == other.value }
+        }
+        impl<'a> Eq for MagicStr<'a> {}
+
+        impl<'a> Hash for MagicStr<'a> {
+            fn hash<H: Hasher>(&self, state: &mut H) { self.value.hash(state) }
+        }
+
+        impl<'a> From<&MagicStr<'a>> for MagicString {
+            fn from(value: &MagicStr<'a>) -> Self {
+                let counter = value.counter.as_ref().unwrap();
+                counter.set(counter.get() + 1);
+
+                MagicString { str: MagicStr {
+                    value: value.value,
+                    counter: None,
+                }}
+            }
+        }
+
+
+        let mut hm: HashMap<MagicString, i32> = HashMap::new();
+
+        let counter = Cell::new(0);
+        let str = |value: &'static str| -> MagicStr {
+            MagicStr { counter: Some(&counter), value }
+        };
+
+        let inc = || { counter.set(counter.get() + 1); };
+
+        assert_eq!(counter.get(), 0);
+
+        // get_or_insert.
+        let v = hm.get_or_insert(&str("hi"), 69);
+        assert_eq!(*v, 69);
+        assert_eq!(counter.get(), 1);
+
+
+        // insert same key does nothing.
+
+        let v = hm.get_or_insert(&str("hi"), 70);
+        assert_eq!(*v, 69);
+        assert_eq!(counter.get(), 1);
+
+        let v = hm.get_or_insert_with(&str("hi"), || { inc(); 70 });
+        assert_eq!(*v, 69);
+        assert_eq!(counter.get(), 1);
+
+        let v = hm.get_or_insert_with_key(&str("hi"),
+            |k| { inc(); (k.into(), 70) });
+        assert_eq!(*v, 69);
+        assert_eq!(counter.get(), 1);
+
+
+        // get_or_insert_with.
+        let v = hm.get_or_insert_with(&str("ho"), || { inc(); 12 });
+        assert_eq!(*v, 12);
+        assert_eq!(counter.get(), 3);
+
+
+        // get_or_insert_with_key.
+        let v = hm.get_or_insert_with_key(&str("hu"), |k| {
+            assert_eq!(counter.get(), 3);
+            inc();
+            (k.into(), 8)
+        });
+        assert_eq!(*v, 8);
+        assert_eq!(counter.get(), 5);
     }
 
 

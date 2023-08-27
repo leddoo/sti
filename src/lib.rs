@@ -1,4 +1,5 @@
 pub mod num;
+pub mod hint;
 
 pub mod simd;
 pub mod float;

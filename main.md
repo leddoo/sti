@@ -1,7 +1,9 @@
 
 - todo:
     - hash map.
-        - entry api + `get_or_insert/_with` wrapper.
+        - use `entry` for everything.
+        - should `get_or_insert_with_key` be unsafe?
+        - slot api for ptr eq keys.
     - rw lock.
     - vec:
         - `Vec::extend`.
