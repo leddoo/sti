@@ -4,7 +4,7 @@ use crate::alloc::{Alloc, GlobalAlloc};
 use crate::hash::{HashFnSeed, DefaultHashFnSeed};
 use crate::hash::fxhash::FxHasher32;
 
-use super::hash_map_impl::{RawHashMap, RawIter};
+use super::raw_hash_map::{RawHashMap, RawIter};
 
 
 pub struct HashMap<K: Eq, V,
@@ -202,7 +202,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::hash_map_impl::GROUP_SIZE;
+    use super::super::raw_hash_map::GROUP_SIZE;
 
     #[test]
     fn hm_basic() {

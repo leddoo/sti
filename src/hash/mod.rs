@@ -1,7 +1,7 @@
 mod hash_fn;
 pub mod fxhash;
 
-mod hash_map_impl;
+mod raw_hash_map;
 mod hash_map;
 
 pub use hash_fn::*;
