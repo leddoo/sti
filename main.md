@@ -1,9 +1,8 @@
 
 - todo:
     - hash map.
-        - `kget_or_insert where K: ?Copy`.
-            - or maybe `qget_or_insert`.
         - test non-allocation for non-inserting funcs.
+            - full test for `get_or_insert`, fn to test both versions (k/not).
         - rename `empty` to something less misleading.
         - slot api for ptr eq keys.
     - rw lock.

@@ -122,21 +122,17 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
         self.inner.get_or_insert(key, |_| (key.into(), f()))
     }
 
-    // @todo: unsafe?
     pub fn get_or_insert_with_key<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
     where F: FnOnce(&'q Q) -> (K, V), K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.get_or_insert(key, f)
     }
 
-
-    pub fn kget_or_insert(&mut self, key: K, default: V) -> &mut V
-    where K: Copy {
-        self.inner.get_or_insert(&key, |_| (key, default))
+    pub fn kget_or_insert(&mut self, key: K, default: V) -> &mut V {
+        self.inner.kget_or_insert(key, || default)
     }
 
-    pub fn kget_or_insert_with<F>(&mut self, key: K, f: F) -> &mut V
-    where K: Copy, F: FnOnce() -> V {
-        self.inner.get_or_insert(&key, |_| (key, f()))
+    pub fn kget_or_insert_with<F: FnOnce() -> V>(&mut self, key: K, f: F) -> &mut V {
+        self.inner.kget_or_insert(key, f)
     }
 
 
@@ -445,6 +441,9 @@ mod tests {
         let str = |value: &'static str| -> MagicStr {
             MagicStr { counter: Some(&counter), value }
         };
+        let string = |value: &'static str| -> MagicString {
+            MagicString { str: MagicStr { counter: None, value } }
+        };
 
         let inc = || { counter.set(counter.get() + 1); };
 
@@ -482,6 +481,18 @@ mod tests {
         assert_eq!(hm.resident(), 1);
         assert_eq!(hm.len(), 1);
 
+        let v = hm.kget_or_insert(string("hi"), 70);
+        assert_eq!(*v, 69);
+        assert_eq!(counter.get(), 1);
+        assert_eq!(hm.resident(), 1);
+        assert_eq!(hm.len(), 1);
+
+        let v = hm.kget_or_insert_with(string("hi"), || { inc(); 70 });
+        assert_eq!(*v, 69);
+        assert_eq!(counter.get(), 1);
+        assert_eq!(hm.resident(), 1);
+        assert_eq!(hm.len(), 1);
+
 
         // get_or_insert_with.
         let v = hm.get_or_insert_with(&str("ho"), || { inc(); 12 });
@@ -489,7 +500,6 @@ mod tests {
         assert_eq!(counter.get(), 3);
         assert_eq!(hm.resident(), 2);
         assert_eq!(hm.len(), 2);
-
 
         // get_or_insert_with_key.
         let v = hm.get_or_insert_with_key(&str("hu"), |k| {
@@ -501,6 +511,20 @@ mod tests {
         assert_eq!(counter.get(), 5);
         assert_eq!(hm.resident(), 3);
         assert_eq!(hm.len(), 3);
+
+        // kget_or_insert
+        let v = hm.kget_or_insert(string("he"), 123);
+        assert_eq!(*v, 123);
+        assert_eq!(counter.get(), 5);
+        assert_eq!(hm.resident(), 4);
+        assert_eq!(hm.len(), 4);
+
+        // kget_or_insert_with
+        let v = hm.kget_or_insert_with(string("ha"), || { inc(); 231 });
+        assert_eq!(*v, 231);
+        assert_eq!(counter.get(), 6);
+        assert_eq!(hm.resident(), 5);
+        assert_eq!(hm.len(), 5);
     }
 
     #[test]

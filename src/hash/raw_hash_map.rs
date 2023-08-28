@@ -3,7 +3,7 @@ use core::borrow::Borrow;
 use core::marker::PhantomData;
 
 use crate::num::OrdUtils;
-use crate::hint::{likely, unlikely};
+use crate::hint::unlikely;
 use crate::alloc::*;
 use crate::hash::HashFnSeed;
 
@@ -74,9 +74,8 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
 
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
-        if self.empty == 0 {
+        if unlikely(self.empty == 0) {
             self.grow();
-            assert!(self.empty > 0);
         }
 
         let hash = self.seed.hash(&key);
@@ -140,30 +139,44 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     #[inline]
     pub fn get_or_insert<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32>, F: FnOnce(&'q Q) -> (K, V) {
+        if unlikely(self.empty == 0) {
+            self.grow();
+        }
+
         let hash = self.seed.hash(key);
 
-        let mut entry;
-        if likely(self.used > 0) {
-            entry = unsafe { self.entry(key, hash) };
-            if entry.used {
-                return unsafe { &mut (*entry.slot).value };
-            }
-
-            if unlikely(self.empty == 0) {
-                self.grow();
-                entry = unsafe { self.entry(key, hash) };
-            }
+        let entry = unsafe { self.entry(key, hash) };
+        if entry.used {
+            return unsafe { &mut (*entry.slot).value };
         }
-        else {
-            if self.empty == 0 {
-                self.grow();
-            }
-            entry = unsafe { self.entry(key, hash) };
-        }
-        debug_assert!(entry.used == false);
 
         unsafe {
             let (key, value) = f(key);
+            entry.slot.write(Slot { key, value });
+            (*entry.group).use_entry(entry.i, hash);
+
+            self.empty -= 1;
+            self.used  += 1;
+
+            &mut (*entry.slot).value
+        }
+    }
+
+    #[inline]
+    pub fn kget_or_insert<F: FnOnce() -> V>(&mut self, key: K, f: F) -> &mut V {
+        if unlikely(self.empty == 0) {
+            self.grow();
+        }
+
+        let hash = self.seed.hash(&key);
+
+        let entry = unsafe { self.entry(&key, hash) };
+        if entry.used {
+            return unsafe { &mut (*entry.slot).value };
+        }
+
+        unsafe {
+            let value = f();
             entry.slot.write(Slot { key, value });
             (*entry.group).use_entry(entry.i, hash);
 
@@ -354,6 +367,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         self.resize(
             self.num_groups.checked_mul(2).expect("capacity overflow")
             .at_least(1));
+        assert!(self.empty > 0);
     }
 
 
