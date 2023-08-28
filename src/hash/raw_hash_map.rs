@@ -536,8 +536,58 @@ mod load {
 
 #[inline(always)]
 fn group_first(hash: u32, num_groups: u32) -> usize {
+    // note: we're quadratic.
+    // because we're using the high bits of the 64 bit product,
+    // the first group is primarily determined by the hash's high bits.
+    // this is problematic, because it effectively sorts the entries by hash.
+    // which then leads to quadratic runtime when inserting the elements
+    // in `iter` order into a fresh hash map with the same hash function + seed.
+    // this happens, because the new, smaller hashmap will contain the entries
+    // in the same order. but because its capacity is smaller, the entries
+    // need to "sit closer together". and because we're inserting in order,
+    // we get a ton of hash collisions, as we over-populate the first group,
+    // then the second, and so on.
+    //
+    // note: we currently don't address this issue.
+    // potential fixes:
+    //  - make the hash function capacity dependeng.
+    //      - eg: `let hash = hash.rotate_right(num_groups.trailing_zeros());`
+    //      - this makes resizes *much more* expensive, as memory is no longer
+    //        walked linearly.
+    //      - perf wise, this solution is unacceptable.
+    //  - use a different reduction function.
+    //      - eg modulo, which may be too slow.
+    //      - or masking with 2^n table sizes.
+    //          - this mitigates the above issue, as each resize introduces another
+    //            high bit, distributing the elements evenly in the upper/lower half.
+    //          - but 2^n table sizes come at the cost of up to 100% memory overhead.
+    //            though that may not be too much of an issue, as most hashmaps aren't
+    //            created with a known capacity, and `grow` still produces 2^n sizes.
+    //      - neither of these fix the issue, they merely reduce the slowdown to < 10x,
+    //        compared to becoming completely unusable (current slowdown is >100x).
+    //  - random seed by default.
+    //      - this would be the most robust solution.
+    //      - but it also has the highest cost: non-determinism.
+    //        no more easy `diff` on debug prints to find bugs.
+    //      - on 64 bit architectures, we 4 unused bytes.
+    //      - i suppose, if you could globally disable randomization or seed it,
+    //        this solution could be fine.
+    //        it would also help detect hash map iteration order dependent logic,
+    //        which should be avoided.
+    //  - randomized iteration as an opt-in method.
+    //      - user still needs to be aware of the issue.
+    //      - and it still breaks determinism.
+    //  - retained insertion order.
+    //      - this would be the nicest solution. also because it actually adds
+    //        functionality.
+    //      - but it's unclear, whether we want to pay the memory overhead.
+    //      - could this be an opt-out?
+    //      - what about the runtime overhead? reverse insertion order would be
+    //        effectively free for insertion.
+
     let result = ((hash as u64 * num_groups as u64) >> 32) as usize;
     debug_assert!(result < num_groups as usize);
+
     return result;
 }
 
