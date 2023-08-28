@@ -3,7 +3,7 @@ use core::borrow::Borrow;
 use core::marker::PhantomData;
 
 use crate::num::OrdUtils;
-use crate::hint::unlikely;
+use crate::hint::{likely, unlikely};
 use crate::alloc::*;
 use crate::hash::HashFnSeed;
 
@@ -180,25 +180,35 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     #[inline]
     pub fn get_or_insert<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32>, F: FnOnce(&'q Q) -> (K, V) {
-        let mut entry = self.entry(key);
-        if entry.used {
-            return unsafe { &mut (*entry.slot.as_ptr()).value };
-        }
+        let hash = self.seed.hash(key);
 
-        if unlikely(entry.group.is_none() || self.empty == 0) {
-            self.grow();
+        let mut entry;
+        if likely(self.used > 0) {
+            entry = unsafe { self.entry(key, hash) };
+            if entry.used {
+                return unsafe { &mut (*entry.slot.as_ptr()).value };
+            }
 
-            entry = self.entry(key);
-            debug_assert!(entry.used == false);
+            if unlikely(self.empty == 0) {
+                self.grow();
+                entry = unsafe { self.entry(key, hash) };
+            }
         }
+        else {
+            if self.empty == 0 {
+                self.grow();
+            }
+            entry = unsafe { self.entry(key, hash) };
+        }
+        debug_assert!(entry.used == false);
 
         unsafe {
-            let group = &mut *entry.group.unwrap().as_ptr();
+            let group = &mut *entry.group.as_ptr();
             let slot  = entry.slot.as_ptr();
 
             let (key, value) = f(key);
             slot.write(Slot { key, value });
-            group.use_entry(entry.i, entry.hash);
+            group.use_entry(entry.i, hash);
 
             self.empty -= 1;
             self.used  += 1;
@@ -378,20 +388,8 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
-    fn entry<Q: ?Sized + Eq>(&self, key: &Q) -> RawEntry<K, V>
+    unsafe fn entry<Q: ?Sized + Eq>(&self, key: &Q, hash: u32) -> RawEntry<K, V>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
-        if self.num_groups == 0 {
-            return RawEntry {
-                hash:  0,
-                group: None,
-                slot:  NonNull::dangling(),
-                used:  false,
-                i:     0,
-            };
-        }
-
-        let hash = self.seed.hash(key);
-
         let slots = Self::slots_ptr(self.groups, self.num_groups);
 
         let mut group_idx = group_first(hash, self.num_groups);
@@ -402,8 +400,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
                 let slot = unsafe { &mut *slot_ptr(slots, group_idx, i) };
                 if slot.key.borrow() == key {
                     return RawEntry {
-                        hash,
-                        group: Some(group.into()),
+                        group: group.into(),
                         slot:  slot.into(),
                         used:  true,
                         i,
@@ -414,8 +411,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             if let Some(i) = group.match_free().next() {
                 let slot = unsafe { &mut *slot_ptr(slots, group_idx, i) };
                 return RawEntry {
-                    hash,
-                    group: Some(group.into()),
+                    group: group.into(),
                     slot:  slot.into(),
                     used:  false,
                     i,
@@ -529,8 +525,7 @@ impl<'a, K, V> Iterator for RawIter<'a, K, V> {
 
 
 struct RawEntry<K, V> {
-    hash:  u32,
-    group: Option<NonNull<Group>>,
+    group: NonNull<Group>,
     slot:  NonNull<Slot<K, V>>,
     used:  bool,
     i:     usize,
