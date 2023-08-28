@@ -1,3 +1,4 @@
+use core::hash::Hash;
 use core::borrow::Borrow;
 
 use crate::alloc::{Alloc, GlobalAlloc};
@@ -8,44 +9,59 @@ use super::raw_hash_map::{RawHashMap, RawIter};
 
 
 pub struct HashMap<K: Eq, V,
-    S: HashFnSeed<K, Hash=u32> = DefaultHashFnSeed<FxHasher32>,
+    S: HashFnSeed<K, Hash=u32> = DefaultSeed,
     A: Alloc = GlobalAlloc>
 {
     inner: RawHashMap<K, V, S, A>,
 }
 
+
+pub type DefaultSeed = DefaultHashFnSeed<FxHasher32>;
+
 pub type HashMapF<K, V, F, A = GlobalAlloc> = HashMap<K, V, DefaultHashFnSeed<F>, A>;
 
 
-impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default> HashMap<K, V, S, GlobalAlloc> {
+impl<K: Hash + Eq, V> HashMap<K, V, DefaultSeed, GlobalAlloc> {
     /// construct with default seed in `GlobalAlloc`.
     #[inline(always)]
     pub fn new() -> Self {
-        Self { inner: RawHashMap::new(S::default(), GlobalAlloc) }
+        Self { inner: RawHashMap::new(DefaultSeed::new(), GlobalAlloc) }
     }
 
     /// construct with capacity, with default seed in `GlobalAlloc`.
     #[inline(always)]
     pub fn with_cap(cap: usize) -> Self {
-        Self { inner: RawHashMap::with_cap(cap, S::default(), GlobalAlloc) }
+        Self { inner: RawHashMap::with_cap(cap, DefaultSeed::new(), GlobalAlloc) }
     }
 }
 
-impl<K: Eq, V, A: Alloc, S: HashFnSeed<K, Hash=u32> + Default> HashMap<K, V, S, A> {
+impl<K: Hash + Eq, V, A: Alloc> HashMap<K, V, DefaultSeed, A> {
     /// construct with default seed in `alloc`.
     #[inline(always)]
     pub fn new_in(alloc: A) -> Self {
-        Self { inner: RawHashMap::new(S::default(), alloc) }
+        Self { inner: RawHashMap::new(DefaultSeed::new(), alloc) }
     }
 
     /// construct with capacity, with default seed in `alloc`.
     #[inline(always)]
     pub fn with_cap_in(cap: usize, alloc: A) -> Self {
-        Self { inner: RawHashMap::with_cap(cap, S::default(), alloc) }
+        Self { inner: RawHashMap::with_cap(cap, DefaultSeed::new(), alloc) }
     }
 }
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMap<K, V, S, GlobalAlloc> {
+    /// construct with default seed in `GlobalAlloc`.
+    #[inline(always)]
+    pub fn fnew() -> Self where S: Default {
+        Self { inner: RawHashMap::new(S::default(), GlobalAlloc) }
+    }
+
+    /// construct with capacity, with default seed in `GlobalAlloc`.
+    #[inline(always)]
+    pub fn fwith_cap(cap: usize) -> Self where S: Default {
+        Self { inner: RawHashMap::with_cap(cap, S::default(), GlobalAlloc) }
+    }
+
     /// construct with `seed` in `GlobalAlloc`.
     #[inline(always)]
     pub fn with_seed(seed: S) -> Self {
@@ -60,6 +76,18 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMap<K, V, S, GlobalAlloc> {
 }
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
+    /// construct with default seed in `alloc`.
+    #[inline(always)]
+    pub fn fnew_in(alloc: A) -> Self where S: Default {
+        Self { inner: RawHashMap::new(S::default(), alloc) }
+    }
+
+    /// construct with capacity, with default seed in `alloc`.
+    #[inline(always)]
+    pub fn fwith_cap_in(cap: usize, alloc: A) -> Self where S: Default {
+        Self { inner: RawHashMap::with_cap(cap, S::default(), alloc) }
+    }
+
     /// construct with `seed` in `alloc`.
     #[inline(always)]
     pub fn with_seed_in(seed: S, alloc: A) -> Self {
@@ -302,7 +330,7 @@ mod tests {
 
     #[test]
     fn hm_probe_length() {
-        let mut hm: HashMapF<u32, u32, DumbHash> = HashMap::new();
+        let mut hm: HashMapF<u32, u32, DumbHash> = HashMap::fnew();
 
         assert_eq!(hm.probe_length(&0),  (0, 0));
         assert_eq!(hm.probe_length(&69), (0, 0));
@@ -334,10 +362,10 @@ mod tests {
 
     #[test]
     fn hm_iter() {
-        let hm: HashMapF<u32, i8, IdHash> = HashMap::with_cap(69);
+        let hm: HashMapF<u32, i8, IdHash> = HashMap::fwith_cap(69);
         assert!(hm.iter().next().is_none());
 
-        let mut hm: HashMapF<u32, i8, IdHash> = HashMap::new();
+        let mut hm: HashMapF<u32, i8, IdHash> = HashMap::fnew();
         assert!(hm.iter().next().is_none());
 
         for i in 0..2*GROUP_SIZE as u32 {
@@ -355,7 +383,7 @@ mod tests {
 
     #[test]
     fn hm_clone() {
-        let mut hm1: HashMapF<String, Vec<i8>, ConstHash> = HashMap::new();
+        let mut hm1: HashMapF<String, Vec<i8>, ConstHash> = HashMap::fnew();
 
         assert!(hm1.iter().next().is_none());
 
