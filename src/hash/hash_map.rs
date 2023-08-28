@@ -112,33 +112,28 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     }
 
 
-    #[inline(always)]
     pub fn get_or_insert<'q, Q: ?Sized + Eq>(&mut self, key: &'q Q, default: V) -> &mut V
     where K: From<&'q Q> + Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.get_or_insert(key, |_| (key.into(), default))
     }
 
-    #[inline(always)]
     pub fn get_or_insert_with<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
     where F: FnOnce() -> V, K: From<&'q Q> + Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.get_or_insert(key, |_| (key.into(), f()))
     }
 
     // @todo: unsafe?
-    #[inline(always)]
     pub fn get_or_insert_with_key<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
     where F: FnOnce(&'q Q) -> (K, V), K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.get_or_insert(key, f)
     }
 
 
-    #[inline(always)]
     pub fn kget_or_insert(&mut self, key: K, default: V) -> &mut V
     where K: Copy {
         self.inner.get_or_insert(&key, |_| (key, default))
     }
 
-    #[inline(always)]
     pub fn kget_or_insert_with<F>(&mut self, key: K, f: F) -> &mut V
     where K: Copy, F: FnOnce() -> V {
         self.inner.get_or_insert(&key, |_| (key, f()))
