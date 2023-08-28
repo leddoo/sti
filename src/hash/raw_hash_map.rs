@@ -623,9 +623,13 @@ mod group_u64 {
 
         #[inline(always)]
         fn set(&mut self, idx: usize, value: u8) {
-            let mut this = self.0.to_ne_bytes();
-            this[idx] = value;
-            self.0 = u64::from_ne_bytes(this);
+            // note: the hashmap ops only ever mutate <= 1 byte
+            // of a group. so we can just use a single byte store.
+            unsafe {
+                // the safe version of this generates shit code.
+                let bytes: &mut [u8; Group::WIDTH] = core::mem::transmute(&mut self.0);
+                bytes[idx] = value;
+            }
         }
 
         #[inline(always)]
