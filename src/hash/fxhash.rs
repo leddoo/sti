@@ -64,6 +64,47 @@ impl FxHasher32 {
         hasher.write_u32(self.hash);
         hasher.hash
     }
+
+
+    #[inline]
+    pub fn write_bytes(&mut self, mut bytes: &[u8]) {
+        // llvm can be a bit silly with pointers.
+        let mut hash = self.hash;
+
+        while bytes.len() >= 4 {
+            let value = unsafe {
+                (bytes.as_ptr() as *const u32).read_unaligned()
+            };
+            add_to_hash_u32(&mut hash, value);
+            bytes = &bytes[4..];
+        }
+
+        if bytes.len() > 0 {
+            let rest =
+                if bytes.len() == 3 {
+                      ((bytes[0] as u32) <<  0)
+                    | ((bytes[1] as u32) <<  8)
+                    | ((bytes[2] as u32) << 16)
+                }
+                else if bytes.len() == 2 {
+                      ((bytes[0] as u32) << 0)
+                    | ((bytes[1] as u32) << 8)
+                }
+                else {
+                    bytes[0] as u32
+                };
+            add_to_hash_u32(&mut hash, rest);
+        }
+
+        self.hash = hash;
+    }
+
+    #[inline(always)]
+    pub fn hash_bytes(bytes: &[u8]) -> u32 {
+        let mut hasher = Self::new();
+        hasher.write_bytes(bytes);
+        return hasher.finish_u32();
+    }
 }
 
 impl Default for FxHasher32 {
@@ -98,37 +139,8 @@ impl Hasher for FxHasher32 {
         self.finish_u64()
     }
 
-    #[inline]
-    fn write(&mut self, mut bytes: &[u8]) {
-        // llvm can be a bit silly with pointers.
-        let mut hash = self.hash;
-
-        while bytes.len() >= 4 {
-            let value = unsafe {
-                (bytes.as_ptr() as *const u32).read_unaligned()
-            };
-            add_to_hash_u32(&mut hash, value);
-            bytes = &bytes[4..];
-        }
-
-        if bytes.len() > 0 {
-            let rest =
-                if bytes.len() == 3 {
-                      ((bytes[0] as u32) <<  0)
-                    | ((bytes[1] as u32) <<  8)
-                    | ((bytes[2] as u32) << 16)
-                }
-                else if bytes.len() == 2 {
-                      ((bytes[0] as u32) << 0)
-                    | ((bytes[1] as u32) << 8)
-                }
-                else {
-                    bytes[0] as u32
-                };
-            add_to_hash_u32(&mut hash, rest);
-        }
-
-        self.hash = hash;
+    fn write(&mut self, bytes: &[u8]) {
+        self.write_bytes(bytes);
     }
 
     #[inline(always)]
@@ -191,35 +203,10 @@ impl FxHasher64 {
 
     #[inline(always)]
     pub fn from_seed(seed: u64) -> Self { Self { hash: seed } }
-}
 
-impl Default for FxHasher64 {
-    #[inline(always)]
-    fn default() -> Self { Self::new() }
-}
-
-
-impl<T: Hash + ?Sized> HashFn<T> for FxHasher64 {
-    type Seed = u64;
-    type Hash = u64;
-
-    const DEFAULT_SEED: u64 = INI64;
-
-    #[inline(always)]
-    fn hash_with_seed(seed: u64, value: &T) -> u64 {
-        let mut hasher = Self::from_seed(seed);
-        value.hash(&mut hasher);
-        hasher.hash
-    }
-}
-
-
-impl Hasher for FxHasher64 {
-    #[inline(always)]
-    fn finish(&self) -> u64 { self.hash }
 
     #[inline]
-    fn write(&mut self, mut bytes: &[u8]) {
+    pub fn write_bytes(&mut self, mut bytes: &[u8]) {
         let mut hash = self.hash;
 
         while bytes.len() >= 8 {
@@ -256,6 +243,43 @@ impl Hasher for FxHasher64 {
         }
 
         self.hash = hash;
+    }
+
+    #[inline(always)]
+    pub fn hash_bytes(bytes: &[u8]) -> u64 {
+        let mut hasher = Self::new();
+        hasher.write_bytes(bytes);
+        return hasher.finish();
+    }
+}
+
+impl Default for FxHasher64 {
+    #[inline(always)]
+    fn default() -> Self { Self::new() }
+}
+
+
+impl<T: Hash + ?Sized> HashFn<T> for FxHasher64 {
+    type Seed = u64;
+    type Hash = u64;
+
+    const DEFAULT_SEED: u64 = INI64;
+
+    #[inline(always)]
+    fn hash_with_seed(seed: u64, value: &T) -> u64 {
+        let mut hasher = Self::from_seed(seed);
+        value.hash(&mut hasher);
+        hasher.hash
+    }
+}
+
+
+impl Hasher for FxHasher64 {
+    #[inline(always)]
+    fn finish(&self) -> u64 { self.hash }
+
+    fn write(&mut self, bytes: &[u8]) {
+        self.write_bytes(bytes);
     }
 
     #[inline(always)]
