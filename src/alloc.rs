@@ -223,6 +223,9 @@ pub unsafe fn cat_next_mut_bytes<T, U>(base: *mut T, base_size: usize, next_alig
 #[derive(Copy, Clone, Default, Debug)]
 pub struct GlobalAlloc;
 
+unsafe impl Sync for GlobalAlloc {}
+unsafe impl Send for GlobalAlloc {}
+
 impl Alloc for GlobalAlloc {
     /// # safety (same as `Alloc::alloc_impl`).
     /// - `layout.size() > 0`.
