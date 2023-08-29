@@ -6,6 +6,8 @@
     - `HashMap`.
 - new `hint` module:
     - `cold`, `likely`, `unlikely`.
+- `GlobalAlloc` is `Send + Sync` now.
+- `Reader` is now `Debug`.
 
 0.1.7:
 - arena:

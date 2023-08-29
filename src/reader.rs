@@ -10,13 +10,13 @@
 #[derive(Clone)]
 pub struct Reader<'a, T> {
     start: *const T,
-    data: &'a [T],
+    remaining: &'a [T],
 }
 
 impl<'a, T> Reader<'a, T> {
     #[inline(always)]
     pub fn new(data: &'a [T]) -> Self {
-        Reader { start: data.as_ptr(), data }
+        Reader { start: data.as_ptr(), remaining: data }
     }
 
 
@@ -54,13 +54,13 @@ impl<'a, T> Reader<'a, T> {
     /// - same as `deref` (modulo the lifetime).
     #[inline(always)]
     pub fn as_slice(&self) -> &'a [T] {
-        self.data
+        self.remaining
     }
 
     /// returns the current offset from the start of the `original_slice`.
     #[inline(always)]
     pub fn offset(&self) -> usize {
-        unsafe { self.data.as_ptr().offset_from(self.start) as usize }
+        unsafe { self.remaining.as_ptr().offset_from(self.start) as usize }
     }
 
     /// set the `offset` (in the `original_slice`) to a different value.
@@ -69,7 +69,7 @@ impl<'a, T> Reader<'a, T> {
     /// - if `new_offset > self.original_len()`.
     #[inline(always)]
     pub fn set_offset(&mut self, new_offset: usize) {
-        self.data = &self.original_slice()[new_offset..];
+        self.remaining = &self.original_slice()[new_offset..];
     }
 
     /// number of consumed values.
@@ -83,39 +83,39 @@ impl<'a, T> Reader<'a, T> {
     /// number of remaining values.
     #[inline(always)]
     pub fn remaining(&self) -> usize {
-        self.data.len()
+        self.remaining.len()
     }
 
 
     /// reference to next element.
     #[inline(always)]
     pub fn peek_ref(&self) -> Option<&'a T> {
-        self.data.get(0)
+        self.remaining.get(0)
     }
 
     /// reference to element at index.
     #[inline(always)]
     pub fn peek_ref_at(&self, index: usize) -> Option<&'a T> {
-        self.data.get(index)
+        self.remaining.get(index)
     }
 
     /// value of next element.
     #[inline(always)]
     pub fn peek(&self) -> Option<T>  where T: Copy {
-        self.data.get(0).copied()
+        self.remaining.get(0).copied()
     }
 
     /// value of element at index.
     #[inline(always)]
     pub fn peek_at(&self, index: usize) -> Option<T>  where T: Copy {
-        self.data.get(index).copied()
+        self.remaining.get(index).copied()
     }
 
     /// next `n` elements.
     #[inline(always)]
     pub fn peek_n(&self, n: usize) -> Option<&'a [T]> {
-        if n <= self.data.len() {
-            return Some(&self.data[..n]);
+        if n <= self.remaining.len() {
+            return Some(&self.remaining[..n]);
         }
         return None;
     }
@@ -126,7 +126,7 @@ impl<'a, T> Reader<'a, T> {
     #[inline(always)]
     #[must_use]
     pub fn next_ref(&mut self) -> Option<&'a T> {
-        let result = self.data.get(0);
+        let result = self.remaining.get(0);
         if result.is_some() {
             self.consume(1);
         }
@@ -144,8 +144,8 @@ impl<'a, T> Reader<'a, T> {
     #[inline(always)]
     #[must_use]
     pub fn next_n(&mut self, n: usize) -> Option<&'a [T]> {
-        if n <= self.data.len() {
-            let result = &self.data[..n];
+        if n <= self.remaining.len() {
+            let result = &self.remaining[..n];
             self.consume(n);
             return Some(result);
         }
@@ -155,7 +155,7 @@ impl<'a, T> Reader<'a, T> {
     /// reference to next element and advance offset, if predicate true.
     #[inline(always)]
     pub fn next_ref_if<F: FnOnce(&T) -> bool>(&mut self, f: F) -> Option<&'a T> {
-        if let Some(at) = self.data.get(0) {
+        if let Some(at) = self.remaining.get(0) {
             if f(at) {
                 self.consume(1);
                 return Some(at);
@@ -178,7 +178,7 @@ impl<'a, T> Reader<'a, T> {
     /// - if there are fewer than `n` elements remaining.
     #[inline(always)]
     pub fn consume(&mut self, n: usize) {
-        self.data = &self.data[n..];
+        self.remaining = &self.remaining[n..];
     }
 
     /// consume input, if a predicate is true.
@@ -205,7 +205,7 @@ impl<'a, T> Reader<'a, T> {
     ///   before the predicate returned `false`.
     #[inline(always)]
     pub fn consume_while<F: FnMut(&T) -> bool>(&mut self, mut f: F) -> bool {
-        while let Some(at) = self.data.get(0) {
+        while let Some(at) = self.remaining.get(0) {
             if f(at) { self.consume(1); }
             else     { return true      }
         }
@@ -272,7 +272,7 @@ impl<'a, T: Copy> Reader<'a, T> {
         }
 
         for i in 0..values.len() {
-            if self.data[i] != values[i] {
+            if self.remaining[i] != values[i] {
                 return Err(());
             }
         }
@@ -286,17 +286,17 @@ impl<'a, T> core::ops::Deref for Reader<'a, T> {
     type Target = [T];
 
     #[inline(always)]
-    fn deref(&self) -> &Self::Target { self.data }
+    fn deref(&self) -> &Self::Target { self.remaining }
 }
 
 
 impl<'a, T: core::fmt::Debug> core::fmt::Debug for Reader<'a, T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("Reader")
             .field("len", &self.original_len())
             .field("consumed", &self.consumed())
             .field("remaining", &self.remaining())
-            .field("remaining_slice", &self.data)
+            .field("remaining_slice", &self.remaining)
             .finish()
     }
 }
