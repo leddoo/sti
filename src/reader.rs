@@ -290,6 +290,18 @@ impl<'a, T> core::ops::Deref for Reader<'a, T> {
 }
 
 
+impl<'a, T: core::fmt::Debug> core::fmt::Debug for Reader<'a, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Reader")
+            .field("len", &self.original_len())
+            .field("consumed", &self.consumed())
+            .field("remaining", &self.remaining())
+            .field("remaining_slice", &self.data)
+            .finish()
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {
