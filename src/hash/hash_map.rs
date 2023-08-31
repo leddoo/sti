@@ -203,6 +203,14 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     pub fn iter(&self) -> Iter<K, V> {
         Iter { inner: self.inner.iter() }
     }
+
+
+    // clears the hashmap dropping the items within
+    #[inline(always)]
+    pub fn clear(&mut self) {
+        self.inner.clear()
+    }
+
 }
 
 pub struct Iter<'a, K, V> {
@@ -595,6 +603,85 @@ mod tests {
         type Hash = u32;
         const DEFAULT_SEED: () = ();
         fn hash_with_seed(_: (), _: &T) -> u32 { 0 }
+    }
+
+
+    #[test]
+    fn hm_drop_and_clear() {
+        use core::cell::Cell;
+
+        #[derive(PartialEq, Eq)]
+        struct Dropper<'a> {
+            ticket: u32,
+            counter: &'a Cell<u32>
+        }
+
+        impl<'a> Drop for Dropper<'a> {
+            fn drop(&mut self) {
+                assert_eq!(self.counter.get(), self.ticket);
+                self.counter.set(self.counter.get() + 1);
+            }
+        }
+
+        impl<'a> core::hash::Hash for Dropper<'a> {
+            fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+                self.ticket.hash(state)
+            }
+        }
+
+        let counter = Cell::new(0);
+        let d = |ticket: u32| {
+            Dropper { ticket, counter: &counter }
+        };
+
+        // basic drop.
+        let mut hm = HashMap::new();
+        hm.insert(d(0), d(1));
+        hm.insert(d(2), d(3));
+        hm.insert(d(4), d(5));
+        drop(hm);
+        assert_eq!(counter.get(), 6);
+
+        // clear.
+        counter.set(0);
+        let mut hm = HashMap::new();
+        hm.insert(d(0), d(1));
+        hm.insert(d(2), d(3));
+        hm.insert(d(4), d(5));
+        hm.clear();
+        assert_eq!(hm.len(), 0);
+        assert_eq!(counter.get(), 6);
+
+        counter.set(0);
+        hm.insert(d(0), d(1));
+        hm.insert(d(2), d(3));
+        hm.insert(d(4), d(5));
+        drop(hm);
+        assert_eq!(counter.get(), 6);
+
+        counter.set(0);
+        let mut hm = HashMap::new();
+        hm.insert(d(0), d(1));
+        hm.insert(d(2), d(3));
+        hm.insert(d(4), d(5));
+        hm.clear();
+
+        counter.set(0);
+        drop(hm);
+        assert_eq!(counter.get(), 0);
+
+        // use after clear.
+        counter.set(0);
+        let mut hm = HashMap::new();
+        hm.insert(0, 1);
+        hm.insert(2, 3);
+        hm.insert(4, 5);
+        hm.clear();
+        hm.insert(6, 7);
+        assert!(hm.get(&0).is_none());
+        assert!(hm.get(&2).is_none());
+        assert!(hm.get(&4).is_none());
+        assert_eq!(hm.get(&6), Some(&7));
     }
 }
 
