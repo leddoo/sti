@@ -305,6 +305,28 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
+    pub fn clear(&mut self) {
+        if self.used == 0 {
+            return
+        }
+
+        let slots = Self::slots_ptr(self.groups, self.num_groups);
+
+        self.empty = load::EMPTY_PER_GROUP * self.num_groups;
+        self.used = 0;
+
+        for group_idx in 0..self.num_groups as usize {
+            let group = unsafe { group_ref(self.groups, group_idx) };
+
+            for i in group.match_used() { unsafe {
+                core::ptr::drop_in_place(slot_ptr(slots, group_idx, i));
+            }}
+
+            *group = Group::empty();
+        }
+    }
+
+
     fn resize(&mut self, new_num_groups: u32) {
         let layout = Self::layout(new_num_groups).expect("capacity overflow");
         let data = self.alloc.alloc(layout).expect("allocation failed");
