@@ -205,7 +205,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     }
 
 
-    // clears the hashmap dropping the items within
+    /// remove all key/value pairs.
     #[inline(always)]
     pub fn clear(&mut self) {
         self.inner.clear()

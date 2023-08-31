@@ -3,6 +3,7 @@
     - hash map.
         - test non-allocation for non-inserting funcs.
             - full test for `get_or_insert`, fn to test both versions (k/not).
+        - test key mutation.
         - rename `empty` to something less misleading.
         - slot api for ptr eq keys.
     - rw lock.

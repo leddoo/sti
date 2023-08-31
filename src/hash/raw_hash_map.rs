@@ -307,12 +307,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
     pub fn clear(&mut self) {
         if self.used == 0 {
-            return
+            return;
         }
 
         let slots = Self::slots_ptr(self.groups, self.num_groups);
 
-        self.empty = load::EMPTY_PER_GROUP * self.num_groups;
         self.used = 0;
 
         for group_idx in 0..self.num_groups as usize {
@@ -324,6 +323,8 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
             *group = Group::empty();
         }
+
+        self.empty = load::EMPTY_PER_GROUP * self.num_groups;
     }
 
 
