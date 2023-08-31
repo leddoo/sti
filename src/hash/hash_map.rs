@@ -263,8 +263,8 @@ where
 }
 
 
-impl<K, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> core::fmt::Debug for HashMap<K, V, S, A> 
-where K: core::fmt::Debug + Eq, V: core::fmt::Debug + Eq {
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> core::fmt::Debug for HashMap<K, V, S, A> 
+where K: core::fmt::Debug, V: core::fmt::Debug {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_map().entries(self.iter()).finish()
     }
