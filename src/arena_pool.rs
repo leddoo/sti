@@ -2,6 +2,7 @@ use core::cell::{Cell, UnsafeCell};
 use core::ptr::NonNull;
 use core::mem::{ManuallyDrop, MaybeUninit};
 
+use crate::hint::cold;
 use crate::alloc::GlobalAlloc;
 use crate::arena::{Arena, ArenaSavePoint};
 use crate::boks::Box;
@@ -115,7 +116,7 @@ impl ArenaPool {
             slot.mode.set(requested_mode);
             return (slot.arena.inner(), Some(slot.into()));
         }
-        // else, give user an owned arena.
+        // else, allocate a new arena.
         else {
             let arena = Arena::new();
             arena.min_block_size.set(self.arena_size);
@@ -128,6 +129,7 @@ impl ArenaPool {
                 mode: Cell::new(requested_mode),
             };
 
+            // add to slots, if we have space left.
             if self.len.get() < self.max_arenas {
                 // @temp.
                 println!("allocated arena number {}", self.len.get() + 1);
@@ -139,6 +141,7 @@ impl ArenaPool {
                 self.len.set(self.len.get() + 1);
                 (arena_ptr, Some(slot.into()))
             }
+            // give as owned to user.
             else {
                 // @temp.
                 println!("allocated arena, but oh no, we'll need to drop it :L");
@@ -215,6 +218,7 @@ impl Drop for PoolArena {
         }
         // owned arena -> drop.
         else {
+            cold();
             unsafe { drop(Box::from_raw_parts(self.arena, GlobalAlloc)) }
         }
     }
@@ -256,6 +260,7 @@ impl Drop for ScopedPoolArena {
         }
         // owned arena -> drop.
         else {
+            cold();
             unsafe { drop(Box::from_raw_parts(self.arena, GlobalAlloc)) }
         }
     }
