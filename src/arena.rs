@@ -326,6 +326,7 @@ impl<A: Alloc> Arena<A> {
     /// - all allocations made before the save point remain live.
     ///
     /// # safety:
+    /// - the save point must be from this arena.
     /// - all allocations made before the save point must still be live.
     ///   this means, the arena must not have been reset since the save point.
     ///   and no save point made before this save point may have been restored.
@@ -345,8 +346,9 @@ impl<A: Alloc> Arena<A> {
 
         // detect incorrect usage.
         if self.cap.get() > 0 {
-            assert!(save.used_end >= block + HEADER_SIZE
-                &&  save.used_end <= block + self.cap.get());
+            debug_assert!(
+                   save.used_end >= block + HEADER_SIZE
+                && save.used_end <= block + self.cap.get());
         }
         else { assert_eq!(save.used_end, block) }
 

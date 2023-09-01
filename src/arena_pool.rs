@@ -1,132 +1,270 @@
-use core::mem::ManuallyDrop;
+use core::cell::{Cell, UnsafeCell};
+use core::ptr::NonNull;
+use core::mem::{ManuallyDrop, MaybeUninit};
 
-use crate::vec::Vec;
-use crate::arena::Arena;
-use crate::sync::spin_lock::SpinLock;
-
-
-pub const DEFAULT_MAX_ARENAS: usize = 16;
-
-pub const DEFAULT_ARENA_SIZE: usize = 1*1024*1024;
+use crate::alloc::GlobalAlloc;
+use crate::arena::{Arena, ArenaSavePoint};
+use crate::boks::Box;
 
 
-pub static ARENA_POOL: ArenaPool = ArenaPool::new();
+pub const MAX_ARENAS_LIMIT: usize = 16;
+
+// @todo: make configurable.
+pub const DEFAULT_MAX_ARENAS: usize = 4;
+pub const DEFAULT_ARENA_SIZE: usize = 512*1024;
+
+
+thread_local! {
+    pub static ARENA_POOL: ArenaPool = unsafe { ArenaPool::new() };
+}
 
 
 pub struct ArenaPool {
-    inner: SpinLock<Inner>,
+    slots: [MaybeUninit<UnsafeCell<ArenaSlot>>; MAX_ARENAS_LIMIT],
+    len: Cell<usize>,
+    max_arenas: usize, // <= MAX_ARENAS_LIMIT
+    arena_size: usize,
 }
 
-struct Inner {
-    max_arenas: usize,
-    arena_size: usize,
+struct ArenaSlot {
+    arena: Box<UnsafeCell<Arena>>,
+    refs: Cell<usize>,
+    mode: Cell<SlotMode>, // only valid if `refs > 0`.
+}
 
-    // - `arenas.len() <= max_arenas`
-    // - `∀ a in arenas, a.total_allocated == arena_size && a.num_blocks == 1`
-    arenas: Vec<Arena>,
+#[derive(Clone, Copy, PartialEq)]
+enum SlotMode {
+    Temp,
+    Rec,
+    Scoped,
 }
 
 impl ArenaPool {
-    pub const fn new() -> Self {
-        ArenaPool { inner: SpinLock::new(Inner {
+    pub const unsafe fn new() -> Self {
+        Self {
+            slots: unsafe {
+                // cf MaybeUninit::uninit_array()
+                MaybeUninit::uninit().assume_init()
+            },
+            len: Cell::new(0),
             max_arenas: DEFAULT_MAX_ARENAS,
             arena_size: DEFAULT_ARENA_SIZE,
-
-            arenas: Vec::new(),
-        })}
-    }
-
-    pub fn set_max_arenas(&self, max_arenas: usize) {
-        let mut this = self.inner.lock();
-        this.max_arenas = max_arenas;
-
-        if this.arenas.len() > max_arenas {
-            this.arenas.truncate(max_arenas);
         }
     }
 
-    pub fn set_arena_size(&self, arena_size: usize) {
-        let mut this = self.inner.lock();
 
-        if arena_size != this.arena_size {
-            this.arena_size = arena_size;
-            this.arenas.clear();
-        }
-    }
-
-    pub fn get(&self) -> PoolArenaA {
-        let mut this = self.inner.lock();
-
-        if let Some(arena) = this.arenas.pop() {
-            return PoolArenaA::new(self, arena);
-        }
-
-        let arena_size = this.arena_size;
-        drop(this);
-
-        let arena = Arena::new();
-        arena.min_block_size.set(arena_size);
-        PoolArenaA::new(self, arena)
-    }
-
-    pub fn put(&self, mut arena: Arena) {
-        arena.reset();
-
-        let arena_size = arena.current_block_size();
-        debug_assert_eq!(arena_size, arena.stats().total_allocated);
-
-        arena.min_block_size.set(arena_size);
-        arena.max_block_size.set(usize::MAX);
-
-        let mut this = self.inner.lock();
-
-        let max_arenas = this.max_arenas;
-
-        if this.arenas.len() < max_arenas && arena_size == this.arena_size {
-            this.arenas.reserve(max_arenas);
-            this.arenas.push(arena);
-        }
-    }
-}
-
-
-pub type PoolArena = PoolArenaA<'static>;
-
-pub struct PoolArenaA<'a> {
-    pool:  &'a ArenaPool,
-    arena: ManuallyDrop<Arena>,
-}
-
-impl<'a> PoolArenaA<'a> {
     #[inline(always)]
-    pub const fn new(pool: &'a ArenaPool, arena: Arena) -> Self {
-        Self { pool, arena: ManuallyDrop::new(arena) }
+    pub fn get_temp(&self) -> PoolArena {
+        let (arena, slot) = self.get(SlotMode::Temp, &[]);
+        PoolArena { arena, slot }
     }
 
     #[inline(always)]
-    pub fn into_inner(self) -> Arena {
-        let mut this = ManuallyDrop::new(self);
-        unsafe { ManuallyDrop::take(&mut this.arena) }
+    pub fn get_rec(&self) -> PoolArena {
+        let (arena, slot) = self.get(SlotMode::Rec, &[]);
+        PoolArena { arena, slot }
+    }
+
+    #[inline(always)]
+    pub unsafe fn get_scoped(&self, conflicts: &[*const Arena]) -> ScopedPoolArena {
+        let (arena, slot) = self.get(SlotMode::Scoped, conflicts);
+        let save = unsafe { (*(*arena.as_ptr()).get()).save() };
+        ScopedPoolArena { arena, slot, save }
+    }
+
+    fn get(&self, requested_mode: SlotMode, conflicts: &[*const Arena])
+    -> (NonNull<UnsafeCell<Arena>>, Option<NonNull<ArenaSlot>>) {
+        let mut best = 0;
+        let mut min_refs = usize::MAX;
+        for i in 0..self.len.get() {
+            let slot = unsafe { &*self.slot_ptr(i) };
+
+            let arena = slot.arena.get() as *const Arena;
+            let mode = slot.mode.get();
+            let refs = slot.refs.get();
+
+            // free arena.
+            if refs == 0 {
+                // only temp takes free arenas greedily.
+                if requested_mode == SlotMode::Temp {
+                    slot.refs.set(1);
+                    slot.mode.set(requested_mode);
+                    return (slot.arena.inner(), Some(slot.into()));
+                }
+                // found nothing so far, remember this free slot.
+                else if min_refs == usize::MAX {
+                    best = i;
+                    min_refs = usize::MAX - 1;
+                }
+            }
+            else {
+                // best in-use arena with requested mode.
+                if mode == requested_mode
+                && refs < min_refs
+                && !conflicts.contains(&arena) {
+                    best = i;
+                    min_refs = refs;
+                }
+            }
+        }
+
+        // found a usable arena.
+        if min_refs < usize::MAX {
+            let slot = unsafe { &*self.slot_ptr(best) };
+            slot.refs.set(slot.refs.get() + 1);
+            slot.mode.set(requested_mode);
+            return (slot.arena.inner(), Some(slot.into()));
+        }
+        // else, give user an owned arena.
+        else {
+            let arena = Arena::new();
+            arena.min_block_size.set(self.arena_size);
+            let arena = Box::new(UnsafeCell::new(arena));
+
+            let arena_ptr = arena.inner();
+            let slot = ArenaSlot {
+                arena,
+                refs: Cell::new(1),
+                mode: Cell::new(requested_mode),
+            };
+
+            if self.len.get() < self.max_arenas {
+                // @temp.
+                println!("allocated arena number {}", self.len.get() + 1);
+                let slot = unsafe {
+                    let ptr = self.slot_ptr(self.len.get());
+                    ptr.write(slot);
+                    &*ptr
+                };
+                self.len.set(self.len.get() + 1);
+                (arena_ptr, Some(slot.into()))
+            }
+            else {
+                // @temp.
+                println!("allocated arena, but oh no, we'll need to drop it :L");
+                let _ = ManuallyDrop::new(slot.arena);
+                (arena_ptr, None)
+            }
+        }
+    }
+
+    #[inline(always)]
+    unsafe fn slot_ptr(&self, i: usize) -> *mut ArenaSlot {
+        debug_assert!(i < self.slots.len());
+        unsafe { (*self.slots.get_unchecked(i).as_ptr()).get() }
+    }
+
+
+    #[inline(always)]
+    pub fn tls_get_temp() -> PoolArena {
+        ARENA_POOL.with(|this| { this.get_temp() })
+    }
+
+    #[inline(always)]
+    pub fn tls_get_rec() -> PoolArena {
+        ARENA_POOL.with(|this| { this.get_rec() })
+    }
+
+    #[inline(always)]
+    pub unsafe fn tls_get_scoped(conflicts: &[*const Arena]) -> ScopedPoolArena {
+        ARENA_POOL.with(|this| unsafe { this.get_scoped(conflicts) })
     }
 }
 
-impl<'a> Drop for PoolArenaA<'a> {
-    #[inline(always)]
+impl Drop for ArenaPool {
     fn drop(&mut self) {
-        let arena = unsafe { ManuallyDrop::take(&mut self.arena) };
-        self.pool.put(arena);
+        debug_assert!(self.len.get() < self.slots.len());
+
+        for i in 0..self.len.get() {
+            unsafe {
+                let ptr = self.slot_ptr(i);
+                if (*ptr).refs.get() > 0 {
+                    panic!("ArenaPool dropped while in use");
+                }
+                core::ptr::drop_in_place(ptr);
+            }
+        }
     }
 }
 
-impl<'a> core::ops::Deref for PoolArenaA<'a> {
-    type Target = Arena;
 
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target { &self.arena }
+pub struct PoolArena {
+    arena: NonNull<UnsafeCell<Arena>>,
+
+    // none if this is an owned arena.
+    slot: Option<NonNull<ArenaSlot>>,
 }
 
-impl<'a> core::ops::DerefMut for PoolArenaA<'a> {
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.arena }
+impl Drop for PoolArena {
+    #[inline]
+    fn drop(&mut self) {
+        // borrowed arena.
+        if let Some(slot) = self.slot {
+            let slot = unsafe { &*slot.as_ptr() };
+
+            // dec ref (implicit free).
+            let refs = slot.refs.get();
+            debug_assert!(refs > 0);
+            slot.refs.set(refs - 1);
+
+            // reset.
+            if refs == 1 { unsafe {
+                let arena = &mut *(*self.arena.as_ptr()).get();
+                arena.reset();
+            }}
+        }
+        // owned arena -> drop.
+        else {
+            unsafe { drop(Box::from_raw_parts(self.arena, GlobalAlloc)) }
+        }
+    }
+}
+
+impl core::ops::Deref for PoolArena {
+    type Target = Arena;
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(*self.arena.as_ptr()).get() }
+    }
+}
+
+
+pub struct ScopedPoolArena {
+    arena: NonNull<UnsafeCell<Arena>>,
+
+    // none if this is an owned arena.
+    slot: Option<NonNull<ArenaSlot>>,
+
+    save: ArenaSavePoint,
+}
+
+impl Drop for ScopedPoolArena {
+    #[inline]
+    fn drop(&mut self) {
+        // borrowed arena.
+        if let Some(slot) = self.slot {
+            let slot = unsafe { &*slot.as_ptr() };
+
+            // dec ref (implicit free).
+            let refs = slot.refs.get();
+            debug_assert!(refs > 0);
+            slot.refs.set(refs - 1);
+
+            unsafe {
+                let arena = &*(*self.arena.as_ptr()).get();
+                arena.restore(self.save.clone());
+            }
+        }
+        // owned arena -> drop.
+        else {
+            unsafe { drop(Box::from_raw_parts(self.arena, GlobalAlloc)) }
+        }
+    }
+}
+
+impl core::ops::Deref for ScopedPoolArena {
+    type Target = Arena;
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(*self.arena.as_ptr()).get() }
+    }
 }
 

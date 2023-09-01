@@ -7,9 +7,11 @@ pub mod float;
 pub mod alloc;
 pub mod arena;
 pub mod arena_pool;
-pub mod vec;
+pub mod boks;
 pub mod rc;
+pub mod vec;
 pub mod hash;
+pub mod static_vec;
 
 pub mod sync;
 
@@ -42,6 +44,13 @@ macro_rules! static_assert_ne {
     ($a: expr, $b: expr) => {
         //const _: () = assert_ne!($a, $b);
         const _: () = assert!($a != $b);
+    };
+}
+
+#[macro_export]
+macro_rules! write {
+    ($dst:expr, $($arg:tt)*) => {
+        { let _ = core::write!($dst, $($arg)*); }
     };
 }
 
