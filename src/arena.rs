@@ -110,35 +110,25 @@ impl<A: Alloc> Arena<A> {
             max_block_size: usize::MAX.into(),
         }
     }
-
-
+    
     #[inline]
     pub fn alloc_ptr<T>(&self) -> NonNull<T> {
-        self.alloc(Layout::new::<T>()).unwrap().cast()
+        <Self as Alloc>::alloc_ptr(self).unwrap()
     }
 
     #[inline]
     pub fn alloc_array_ptr<T>(&self, len: usize) -> NonNull<T> {
-        self.alloc(Layout::array::<T>(len).unwrap()).unwrap().cast()
+        <Self as Alloc>::alloc_array_ptr(self, len).unwrap()
     }
 
     #[inline]
     pub fn alloc_new<T>(&self, value: T) -> &mut T {
-        let mut ptr = self.alloc_ptr::<T>();
-        unsafe {
-            ptr.as_ptr().write(value);
-            ptr.as_mut()
-        }
+        <Self as Alloc>::alloc_new(self, value).unwrap()
     }
 
     #[inline]
     pub fn alloc_str<'a>(&'a self, value: &str) -> &'a str {
-        unsafe {
-            let bytes = self.alloc_array_ptr(value.len());
-            core::ptr::copy_nonoverlapping(value.as_ptr(), bytes.as_ptr(), value.len());
-            core::str::from_utf8_unchecked(
-                core::slice::from_raw_parts(bytes.as_ptr(), value.len()))
-        }
+        <Self as Alloc>::alloc_str(self, value).unwrap()
     }
 
     // pred: (block, cap).
