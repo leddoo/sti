@@ -141,7 +141,6 @@ impl<A: Alloc> Arena<A> {
         }
     }
 
-
     // pred: (block, cap).
     #[inline]
     fn reset_until<F: Fn(NonNull<BlockHeader>, usize) -> bool>(&self, f: F) {
