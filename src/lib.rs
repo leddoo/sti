@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "sti_bench", feature(test))]
+
 pub mod num;
 pub mod hint;
 

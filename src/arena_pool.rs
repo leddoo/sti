@@ -273,3 +273,130 @@ impl core::ops::Deref for ScopedPoolArena {
     }
 }
 
+
+#[cfg(all(feature = "sti_bench", test))]
+mod benches {
+    extern crate test;
+    use test::Bencher;
+
+    use crate::alloc::Alloc;
+    use crate::vec::Vec;
+
+    use super::*;
+
+    mod single {
+        use super::*;
+
+        fn do_it<A: Alloc>(alloc: A) -> i32 {
+            let mut v = Vec::with_cap_in(4, alloc);
+            v.push(1);
+            v.push(unsafe { core::ptr::read_volatile(&v[0]) });
+            let result = v.iter().sum();
+            assert_eq!(result, 2);
+            return result;
+        }
+
+        #[bench]
+        fn global_alloc(b: &mut Bencher) {
+            b.iter(|| { do_it(GlobalAlloc) });
+        }
+
+        #[bench]
+        fn tls_get_temp(b: &mut Bencher) {
+            b.iter(|| { do_it(&*ArenaPool::tls_get_temp()) });
+        }
+
+        #[bench]
+        fn own_arena(b: &mut Bencher) {
+            let mut arena = Arena::new();
+            arena.min_block_size.set(DEFAULT_ARENA_SIZE);
+            b.iter(|| { arena.reset(); do_it(&arena) });
+        }
+    }
+
+    mod multi {
+        use super::*;
+
+        fn do_it<A: Alloc>(alloc: A) -> i32 {
+            let mut v = Vec::new_in(alloc);
+            for _ in 0..10 {
+                v.reserve_exact(v.len() + 2);
+                v.push(1);
+                v.push(unsafe { core::ptr::read_volatile(v.rev(0)) });
+            }
+            let result = v.iter().sum();
+            assert_eq!(result, 20);
+            return result;
+        }
+
+        #[bench]
+        fn global_alloc(b: &mut Bencher) {
+            b.iter(|| { do_it(GlobalAlloc) });
+        }
+
+        #[bench]
+        fn tls_get_temp(b: &mut Bencher) {
+            b.iter(|| { do_it(&*ArenaPool::tls_get_temp()) });
+        }
+
+        #[bench]
+        fn own_arena(b: &mut Bencher) {
+            let mut arena = Arena::new();
+            arena.min_block_size.set(DEFAULT_ARENA_SIZE);
+            b.iter(|| { arena.reset(); do_it(&arena) });
+        }
+    }
+
+    mod compute {
+        use super::*;
+
+        fn do_it<A: Alloc>(reserve: bool, alloc: A) -> i32 {
+            let n = 50;
+            let mut v = Vec::with_cap_in(if reserve { n } else { 0 }, alloc);
+            v.push(1);
+            for _ in 0..n-1 {
+                let a: i32 = v.iter().sum();
+                let b: i32 = v.iter().rev().sum();
+                let c: i32 = v.iter().chain(v.iter().rev()).sum();
+                v.push(a.wrapping_mul(b).wrapping_add(c));
+            }
+            if reserve { assert_eq!(v.cap(), n) }
+            return v.iter().sum();
+        }
+
+        #[bench]
+        fn grow_global_alloc(b: &mut Bencher) {
+            b.iter(|| { do_it(false, GlobalAlloc) });
+        }
+
+        #[bench]
+        fn grow_tls_get_temp(b: &mut Bencher) {
+            b.iter(|| { do_it(false, &*ArenaPool::tls_get_temp()) });
+        }
+
+        #[bench]
+        fn grow_own_arena(b: &mut Bencher) {
+            let mut arena = Arena::new();
+            arena.min_block_size.set(DEFAULT_ARENA_SIZE);
+            b.iter(|| { arena.reset(); do_it(false, &arena) });
+        }
+
+        #[bench]
+        fn rsrv_global_alloc(b: &mut Bencher) {
+            b.iter(|| { do_it(true, GlobalAlloc) });
+        }
+
+        #[bench]
+        fn rsrv_tls_get_temp(b: &mut Bencher) {
+            b.iter(|| { do_it(true, &*ArenaPool::tls_get_temp()) });
+        }
+
+        #[bench]
+        fn rsrv_own_arena(b: &mut Bencher) {
+            let mut arena = Arena::new();
+            arena.min_block_size.set(DEFAULT_ARENA_SIZE);
+            b.iter(|| { arena.reset(); do_it(true, &arena) });
+        }
+    }
+}
+
