@@ -5,7 +5,7 @@ use core::mem::{size_of, align_of};
 
 use crate::static_assert;
 use crate::num::{is_pow2, ceil_to_multiple_pow2, OrdUtils};
-use crate::alloc::{Alloc, GlobalAlloc};
+use crate::alloc::{Alloc, GlobalAlloc, alloc_ptr, alloc_new, alloc_array};
 
 
 /// maximum allocation size.
@@ -114,27 +114,18 @@ impl<A: Alloc> Arena<A> {
 
     #[inline]
     pub fn alloc_ptr<T>(&self) -> NonNull<T> {
-        self.alloc(Layout::new::<T>()).unwrap().cast()
-    }
-
-    #[inline]
-    pub fn alloc_array_ptr<T>(&self, len: usize) -> NonNull<T> {
-        self.alloc(Layout::array::<T>(len).unwrap()).unwrap().cast()
+        alloc_ptr::<T, Self>(self).unwrap()
     }
 
     #[inline]
     pub fn alloc_new<T>(&self, value: T) -> &mut T {
-        let mut ptr = self.alloc_ptr::<T>();
-        unsafe {
-            ptr.as_ptr().write(value);
-            ptr.as_mut()
-        }
+        unsafe { alloc_new(self, value).unwrap().as_mut() }
     }
 
     #[inline]
     pub fn alloc_str<'a>(&'a self, value: &str) -> &'a str {
         unsafe {
-            let bytes = self.alloc_array_ptr(value.len());
+            let bytes = alloc_array(self, value.len()).unwrap();
             core::ptr::copy_nonoverlapping(value.as_ptr(), bytes.as_ptr(), value.len());
             core::str::from_utf8_unchecked(
                 core::slice::from_raw_parts(bytes.as_ptr(), value.len()))

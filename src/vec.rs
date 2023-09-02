@@ -3,7 +3,7 @@ use core::mem::size_of;
 use core::alloc::Layout;
 
 use crate::num::OrdUtils;
-use crate::alloc::*;
+use crate::alloc::{Alloc, AllocError, GlobalAlloc};
 
 
 pub struct Vec<T, A: Alloc = GlobalAlloc> {
@@ -64,12 +64,6 @@ impl<T, A: Alloc> Vec<T, A> {
 }
 
 
-#[derive(Clone, Copy, Debug)]
-pub enum AllocError {
-    CapacityOverflow,
-    OutOfMemory,
-}
-
 impl<T, A: Alloc> Vec<T, A> {
     /// try to set the vector's capacity.
     ///
@@ -87,7 +81,7 @@ impl<T, A: Alloc> Vec<T, A> {
         }
 
         let old_layout = Layout::array::<T>(self.cap).unwrap();
-        let new_layout = Layout::array::<T>(new_cap).map_err(|_| AllocError::CapacityOverflow)?;
+        let new_layout = Layout::array::<T>(new_cap).map_err(|_| AllocError::SizeOverflow)?;
 
         let new_data = unsafe {
             // `self.data` is an allocation iff `self.cap > 0`.
@@ -171,7 +165,7 @@ impl<T, A: Alloc> Vec<T, A> {
     pub fn try_grow_by(&mut self, extra: usize) -> Result<(), AllocError> {
         self.try_reserve(
             self.len.checked_add(extra)
-            .ok_or(AllocError::CapacityOverflow)?)
+            .ok_or(AllocError::SizeOverflow)?)
     }
 
     pub fn grow_by(&mut self, extra: usize) {
