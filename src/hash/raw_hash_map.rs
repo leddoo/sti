@@ -255,50 +255,27 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     pub fn copy_in<A2>(&self, alloc: A2) -> RawHashMap<K, V, S, A2>
     where K: Copy, V: Copy, S: Clone, A2: Alloc
     {
-        // allocate uninitialized hash map with same capacity.
-        let mut result = {
-            let layout = Self::layout(self.num_groups).unwrap();
-            let data = alloc.alloc(layout).expect("allocation failed");
+        let layout = Self::layout(self.num_groups).unwrap();
+        let data = alloc.alloc(layout).expect("allocation failed");
 
-            RawHashMap {
-                seed: self.seed.clone(),
-                alloc,
-
-                groups: data.cast(),
-                num_groups: self.num_groups,
-                empty: self.empty,
-                // `used` is set once data was cloned successfully.
-                // this prevents `drop` from accessing uninit data,
-                // if `K/V::clone` panic.
-                used: 0,
-
-                phantom: PhantomData,
-            }
-        };
-
-        // initialize groups.
         unsafe {
             core::ptr::copy_nonoverlapping(
-                self.groups.as_ptr(),
-                result.groups.as_ptr(),
-                self.num_groups as usize);
+                self.groups.as_ptr() as *const u8,
+                data.as_ptr(),
+                layout.size());
         }
 
-        // clone slots.
-        let src_slots = Self::slots_ptr(self.groups,   self.num_groups);
-        let dst_slots = Self::slots_ptr(result.groups, result.num_groups);
+        RawHashMap {
+            seed: self.seed.clone(),
+            alloc,
 
-        unsafe { 
-            core::ptr::copy_nonoverlapping(
-                src_slots.as_ptr(), 
-                dst_slots.as_ptr(),
-                self.cap()) 
-        };
+            groups: data.cast(),
+            num_groups: self.num_groups,
+            empty: self.empty,
+            used: self.used,
 
-        // finalize.
-        result.used = self.used;
-
-        result
+            phantom: PhantomData,
+        }
     }
 
 
