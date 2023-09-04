@@ -247,8 +247,8 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
     #[inline(always)]
     pub fn copy(&self) -> RawHashMap<K, V, S, A>
-    where K: Copy, V: Copy, S: Clone, A: Copy {
-        self.copy_in(self.alloc)
+    where K: Copy, V: Copy, S: Clone, A: Clone {
+        self.copy_in(self.alloc.clone())
     }
 
 
