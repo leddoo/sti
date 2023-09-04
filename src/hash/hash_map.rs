@@ -214,7 +214,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
 
     #[inline(always)]
     pub fn copy(&self) -> HashMap<K, V, S, A>
-    where K: Copy, V: Copy, S: Clone {
+    where K: Copy, V: Copy, S: Clone, A: Clone {
         HashMap { inner: self.inner.copy() }
         
     }
