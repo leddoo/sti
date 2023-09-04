@@ -211,6 +211,21 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
         self.inner.clear()
     }
 
+
+    #[inline(always)]
+    pub fn copy(&self) -> HashMap<K, V, S, A>
+    where K: Copy, V: Copy, S: Clone, A: Copy {
+        HashMap { inner: self.inner.copy() }
+        
+    }
+
+    
+    #[inline(always)]
+    pub fn copy_in<A2>(&self, alloc: A2) -> HashMap<K, V, S, A2>
+    where K: Copy, V: Copy, S: Clone, A2: Alloc {
+        HashMap { inner: self.inner.copy_in(alloc) }
+    }
+
 }
 
 pub struct Iter<'a, K, V> {
@@ -422,6 +437,34 @@ mod tests {
             let ((k1, v1), (k2, v2)) = iter.next().unwrap();
             assert_eq!(*k1, format!("{i}"));
             assert_eq!(*v1, v);
+            assert_eq!(*k1, *k2);
+            assert_eq!(*v1, *v2);
+        }
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn hm_copy() {
+        let mut hm1: HashMapF<u32, [u32; 4], ConstHash> = HashMap::fnew();
+
+        assert!(hm1.iter().next().is_none());
+
+        for i in 0..2*GROUP_SIZE as u32 {
+            hm1.insert(i, [i, i+1, i+2, i+3]);
+        }
+
+        let hm2 = hm1.clone();
+
+        let iter1 = hm1.iter();
+        let iter2 = hm2.iter();
+        let mut iter = iter1.zip(iter2);
+        for i in 0..2*GROUP_SIZE as u32 {
+            let mut v = Vec::new();
+            for k in 0..i { v.push(k as i8) }
+
+            let ((k1, v1), (k2, v2)) = iter.next().unwrap();
+            assert_eq!(*k1, i);
+            assert_eq!(*v1, [i, i+1, i+2, i+3]);
             assert_eq!(*k1, *k2);
             assert_eq!(*v1, *v2);
         }
