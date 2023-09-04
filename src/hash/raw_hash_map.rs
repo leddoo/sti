@@ -245,6 +245,63 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
+    #[inline(always)]
+    pub fn copy(&self) -> RawHashMap<K, V, S, A>
+    where K: Copy, V: Copy, S: Clone, A: Clone {
+        self.copy_in(self.alloc.clone())
+    }
+
+
+    pub fn copy_in<A2>(&self, alloc: A2) -> RawHashMap<K, V, S, A2>
+    where K: Copy, V: Copy, S: Clone, A2: Alloc
+    {
+        // allocate uninitialized hash map with same capacity.
+        let mut result = {
+            let layout = Self::layout(self.num_groups).unwrap();
+            let data = alloc.alloc(layout).expect("allocation failed");
+
+            RawHashMap {
+                seed: self.seed.clone(),
+                alloc,
+
+                groups: data.cast(),
+                num_groups: self.num_groups,
+                empty: self.empty,
+                // `used` is set once data was cloned successfully.
+                // this prevents `drop` from accessing uninit data,
+                // if `K/V::clone` panic.
+                used: 0,
+
+                phantom: PhantomData,
+            }
+        };
+
+        // initialize groups.
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                self.groups.as_ptr(),
+                result.groups.as_ptr(),
+                self.num_groups as usize);
+        }
+
+        // clone slots.
+        let src_slots = Self::slots_ptr(self.groups,   self.num_groups);
+        let dst_slots = Self::slots_ptr(result.groups, result.num_groups);
+
+        unsafe { 
+            core::ptr::copy_nonoverlapping(
+                src_slots.as_ptr(), 
+                dst_slots.as_ptr(),
+                self.cap()) 
+        };
+
+        // finalize.
+        result.used = self.used;
+
+        result
+    }
+
+
     pub fn probe_length<Q: ?Sized + Eq>(&self, key: &Q) -> (usize, usize)
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         if self.used == 0 {
