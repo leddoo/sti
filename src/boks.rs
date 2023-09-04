@@ -1,14 +1,13 @@
 use core::ptr::NonNull;
 use core::mem::ManuallyDrop;
 
-use crate::alloc::{Alloc, GlobalAlloc, Layout};
+use crate::alloc::{Alloc, GlobalAlloc, alloc_new, drop_and_free};
 
 
 pub struct Box<T: ?Sized, A: Alloc = GlobalAlloc> {
     value: NonNull<T>,
     alloc: A,
 }
-
 
 impl<T> Box<T, GlobalAlloc> {
     #[inline(always)]
@@ -20,10 +19,8 @@ impl<T> Box<T, GlobalAlloc> {
 impl<T, A: Alloc> Box<T, A> {
     #[inline(always)]
     pub fn new_in(value: T, alloc: A) -> Self {
-        let ptr = alloc.alloc(Layout::new::<T>()).unwrap();
-        let ptr = ptr.cast::<T>();
-        unsafe { ptr.as_ptr().write(value) }
-        Self { value: ptr, alloc }
+        let value = alloc_new(&alloc, value).unwrap();
+        Self { value, alloc }
     }
 
 
@@ -62,11 +59,7 @@ impl<T: ?Sized, A: Alloc> core::ops::DerefMut for Box<T, A> {
 impl<T: ?Sized, A: Alloc> Drop for Box<T, A> {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe {
-            let layout = Layout::for_value::<T>(&**self);
-            core::ptr::drop_in_place(self.value.as_ptr());
-            self.alloc.free(self.value.cast(), layout);
-        }
+        unsafe { drop_and_free(&self.alloc, self.value) }
     }
 }
 

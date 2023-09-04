@@ -2,7 +2,7 @@ use core::alloc::Layout;
 use core::ptr::NonNull;
 use core::cell::Cell;
 
-use crate::alloc::*;
+use crate::alloc::{Alloc, AllocError, GlobalAlloc, alloc_ptr};
 
 
 pub struct Rc<T: ?Sized, A: Alloc = GlobalAlloc> {
@@ -25,8 +25,8 @@ impl<T> Rc<T, GlobalAlloc> {
 
 impl<T, A: Alloc> Rc<T, A> {
     #[inline]
-    pub fn try_new_in(value: T, alloc: A) -> Option<Self> {
-        let inner: NonNull<RcInner<T, A>> = alloc.alloc(Layout::new::<RcInner<T, A>>())?.cast();
+    pub fn try_new_in(value: T, alloc: A) -> Result<Self, AllocError> {
+        let inner = alloc_ptr::<RcInner<T, A>, _>(&alloc)?;
         unsafe {
             inner.as_ptr().write(RcInner {
                 alloc,
@@ -34,7 +34,7 @@ impl<T, A: Alloc> Rc<T, A> {
                 data: value,
             });
         }
-        return Some(Rc { inner })
+        return Ok(Rc { inner })
     }
 
     #[track_caller]
@@ -45,12 +45,6 @@ impl<T, A: Alloc> Rc<T, A> {
 }
 
 impl<T: ?Sized, A: Alloc> Rc<T, A> {
-    #[inline(always)]
-    pub fn coe<U: ?Sized, F: Fn(*mut RcInner<T, A>) -> *mut RcInner<U, A>>(self, f: F) -> Rc<U, A> {
-        let this = core::mem::ManuallyDrop::new(self);
-        Rc { inner: unsafe { NonNull::new_unchecked(f(this.inner.as_ptr())) } }
-    }
-
     #[inline]
     pub fn alloc(&self) -> &A {
         unsafe { &self.inner.as_ref().alloc }

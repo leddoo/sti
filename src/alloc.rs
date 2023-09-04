@@ -201,6 +201,53 @@ pub trait Alloc {
 }
 
 
+#[derive(Clone, Copy, Debug)]
+pub enum AllocError {
+    SizeOverflow,
+    OutOfMemory,
+}
+
+#[inline(always)]
+pub fn alloc_ptr<T, A: Alloc>(alloc: &A) -> Result<NonNull<T>, AllocError> {
+    match alloc.alloc(Layout::new::<T>()) {
+        Some(ptr) => Ok(ptr.cast()),
+        None      => Err(AllocError::OutOfMemory),
+    }
+}
+
+#[inline(always)]
+pub fn alloc_array<T, A: Alloc>(alloc: &A, len: usize) -> Result<NonNull<T>, AllocError> {
+    match Layout::array::<T>(len) {
+        Ok(layout) => match alloc.alloc(layout) {
+            Some(ptr) => Ok(ptr.cast()),
+            None      => Err(AllocError::OutOfMemory),
+        },
+        Err(_) => Err(AllocError::SizeOverflow)
+    }
+}
+
+#[inline(always)]
+pub fn alloc_new<T, A: Alloc>(alloc: &A, value: T) -> Result<NonNull<T>, AllocError> {
+    match alloc_ptr::<T, A>(alloc) {
+        Ok(ptr) => {
+            unsafe { core::ptr::write(ptr.as_ptr(), value) }
+            Ok(ptr)
+        }
+        Err(e) => Err(e),
+    }
+}
+
+#[inline(always)]
+pub unsafe fn drop_and_free<T: ?Sized, A: Alloc>(alloc: &A, ptr: NonNull<T>) {
+    unsafe {
+        let layout = Layout::for_value(ptr.as_ref());
+        core::ptr::drop_in_place(ptr.as_ptr());
+        alloc.free(ptr.cast(), layout);
+    }
+}
+
+
+
 #[inline(always)]
 pub fn dangling(layout: Layout) -> NonNull<u8> {
     // this is kinda sketchy.
