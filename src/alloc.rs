@@ -164,40 +164,6 @@ pub trait Alloc {
             return new_ptr;
         }
     }
-
-    
-    #[inline]
-    fn alloc_ptr<T>(&self) -> Option<NonNull<T>> {
-        Some(self.alloc(Layout::new::<T>())?.cast())
-    }
-
-
-    #[inline]
-    fn alloc_array_ptr<T>(&self, len: usize) -> Option<NonNull<T>> {
-        Some(self.alloc(Layout::array::<T>(len).ok()?)?.cast())
-    }
-
-
-    #[inline]
-    fn alloc_new<T>(&self, value: T) -> Option<&mut T> {
-        let mut ptr = self.alloc_ptr::<T>()?;
-        unsafe {
-            ptr.as_ptr().write(value);
-            Some(ptr.as_mut())
-        }
-    }
-
-
-    #[inline]
-    fn alloc_str<'a>(&'a self, value: &str) -> Option<&'a str> {
-        unsafe {
-            let bytes = self.alloc_array_ptr(value.len())?;
-            core::ptr::copy_nonoverlapping(value.as_ptr(), bytes.as_ptr(), value.len());
-            Some(core::str::from_utf8_unchecked(
-                core::slice::from_raw_parts(bytes.as_ptr(), value.len())
-            ))
-        }
-    }
 }
 
 
