@@ -26,12 +26,12 @@ impl<T, const N: usize> StaticVec<T, N> {
 
 
     #[inline(always)]
-    pub fn push(&mut self, value: T) -> Option<&mut T> {
+    pub fn push(&mut self, value: T) -> Result<&mut T, T> {
         if self.len < N {
-            return Some(unsafe { self.push_unck(value) })
+            return Ok(unsafe { self.push_unck(value) })
         }
 
-        None
+        Err(value)
     }
 
 
