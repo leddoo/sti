@@ -35,6 +35,8 @@ impl<T, const N: usize> StaticVec<T, N> {
     }
 
 
+    /// # safety:
+    /// - `self.len() < self.cap()`
     #[inline(always)]
     pub unsafe fn push_unck(&mut self, value: T) -> &mut T {
         debug_assert!(self.len < N);

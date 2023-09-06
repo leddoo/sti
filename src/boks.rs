@@ -22,8 +22,9 @@ impl<T, A: Alloc> Box<T, A> {
         let value = alloc_new(&alloc, value).unwrap();
         Self { value, alloc }
     }
+}
 
-
+impl<T: ?Sized, A: Alloc> Box<T, A> {
     #[inline(always)]
     pub fn inner(&self) -> NonNull<T> { self.value }
 
@@ -34,6 +35,10 @@ impl<T, A: Alloc> Box<T, A> {
         (this.value, alloc)
     }
 
+    /// #safety:
+    /// - `value` must be a live allocation of a `T` in `alloc`.
+    /// - in particular, `Layout::for_value(value.as_ref())`
+    ///   must be the active layout.
     #[inline(always)]
     pub unsafe fn from_raw_parts(value: NonNull<T>, alloc: A) -> Self {
         Self { value, alloc }

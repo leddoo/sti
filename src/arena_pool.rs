@@ -66,6 +66,7 @@ impl ArenaPool {
         PoolArena { arena, slot }
     }
 
+    /// see `tls_get_scoped`.
     #[inline(always)]
     pub unsafe fn get_scoped(&self, conflicts: &[*const Arena]) -> ScopedPoolArena {
         let (arena, slot) = self.get(SlotMode::Scoped, conflicts);
@@ -168,6 +169,36 @@ impl ArenaPool {
         ARENA_POOL.with(|this| { this.get_rec() })
     }
 
+    /// get a scoped arena.
+    ///
+    /// scoped arenas save the arena state on creation
+    /// and restore this saved state on drop.
+    ///
+    /// this is unsafe, because multiple `ScopedPoolArena`s
+    /// can use the same underlying `Arena`.
+    /// the issue is, if an outer scope makes an allocation between
+    /// the save/restore of an inner scope, that allocation
+    /// is freed, when the inner scope ends, not when the
+    /// outer scope ends, as the user of the outer scoped arena
+    /// would expect.
+    /// the borrow checker can't detect this.
+    ///
+    /// scoped arenas are useful for non-leaf and especially
+    /// recursive functions. their safe alternative, `tls_get_rec`,
+    /// also uses shared arenas internally, but doesn't free,
+    /// until all `PoolArena`s using the same arena are dropped.
+    /// in recursive functions, this can delay freeing for a long
+    /// time, which can be problematic, if many allocations are made.
+    /// the scoped arena solves this by resetting immediately upon drop.
+    ///
+    /// #safety:
+    /// - all other scoped arenas in this pool,
+    ///   that may be allocated from,
+    ///   during the lifetime of the returned scoped arena,
+    ///   must be specified in `conflicts`.
+    /// - note: be careful, allocations aren't always explicit.
+    ///   examples: `Vec::push` or calling a closure.
+    ///
     #[inline(always)]
     pub unsafe fn tls_get_scoped(conflicts: &[*const Arena]) -> ScopedPoolArena {
         ARENA_POOL.with(|this| unsafe { this.get_scoped(conflicts) })

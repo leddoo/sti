@@ -218,6 +218,9 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
+    /// #safety:
+    /// - `new_len < self.cap()`.
+    /// - all values in `self[0..new_len]` must be properly initialized.
     #[inline(always)]
     pub unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.cap);

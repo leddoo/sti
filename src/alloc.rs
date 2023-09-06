@@ -80,7 +80,7 @@ pub trait Alloc {
     /// - if the call succeeds, `new_layout` is the active layout,
     ///   otherwise, `old_layout` remains the active layout.
     ///
-    /// # safety
+    /// # safety:
     /// - if `old_layout.size() > 0`:
     ///     - `ptr` must be a live allocation, allocated from this allocator.
     ///     - `old_layout` must be the active layout of the memory block.
@@ -103,7 +103,7 @@ pub trait Alloc {
     /// - if the call succeeds, `new_layout` is the active layout,
     ///   otherwise, `old_layout` remains the active layout.
     ///
-    /// # safety
+    /// # safety:
     /// - `ptr` must be a live allocation, allocated from this allocator.
     /// - `old_layout` must be the active layout of the memory block.
     /// - `old_layout.align() == new_layout.align()`.
@@ -130,7 +130,7 @@ pub trait Alloc {
     ///     - `old_layout` remains the active layout.
     ///     - the memory block referenced by `ptr` remains unchanged.
     ///
-    /// # safety
+    /// # safety:
     /// - if old_layout.size() > 0:
     ///     - `ptr` must be a live allocation, allocated from this allocator.
     ///     - `old_layout` must be the active layout of the memory block.
@@ -203,6 +203,9 @@ pub fn alloc_new<T, A: Alloc>(alloc: &A, value: T) -> Result<NonNull<T>, AllocEr
     }
 }
 
+/// #safety:
+/// - safety requirements of `Alloc::free`.
+/// - `ptr.as_ref()` must be properly initialized.
 #[inline(always)]
 pub unsafe fn drop_and_free<T: ?Sized, A: Alloc>(alloc: &A, ptr: NonNull<T>) {
     unsafe {

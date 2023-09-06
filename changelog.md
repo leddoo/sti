@@ -1,5 +1,8 @@
 0.1.9:
 - `HashMap`: add `clear` and `Debug`.
+- improved `ArenaPool`.
+- add `StaticVec`.
+- add `Box`.
 
 
 0.1.8:
