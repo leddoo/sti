@@ -6,6 +6,8 @@ pub mod hint;
 pub mod simd;
 pub mod float;
 
+pub mod traits;
+
 pub mod alloc;
 pub mod arena;
 pub mod arena_pool;
