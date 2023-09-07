@@ -534,6 +534,37 @@ impl<'a, T, A: Alloc> IntoIterator for &'a mut Vec<T, A> {
 }
 
 
+impl<T> FromIterator<T> for Vec<T, GlobalAlloc> {
+    #[inline]
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        Self::from_in(iter.into_iter(), GlobalAlloc)
+    }
+}
+
+impl<T, A: Alloc, I: Iterator<Item = T>> FromIn<I, A> for Vec<T, A> {
+    #[inline]
+    fn from_in(iter: I, alloc: A) -> Self {
+        let iter = iter.into_iter();
+
+        let (min_len, max_len) = iter.size_hint();
+        let cap = max_len.unwrap_or(min_len);
+
+        let mut result = Vec::with_cap_in(cap, alloc);
+        for v in iter {
+            result.push(v);
+        }
+        return result;
+    }
+}
+
+impl<T, I: Iterator<Item = T>> From<I> for Vec<T, GlobalAlloc> {
+    #[inline]
+    fn from(value: I) -> Self {
+        Self::from_in(value, GlobalAlloc)
+    }
+}
+
+
 impl<T, A: Alloc> core::borrow::Borrow<[T]> for Vec<T, A> {
     #[inline(always)]
     fn borrow(&self) -> &[T] {
@@ -603,6 +634,36 @@ mod tests {
 
             let v = vec_in!("hi".to_string(); 2, &arena);
             assert_eq!(*v, ["hi".to_string(), "hi".to_string()]);
+        }
+        arena.reset();
+    }
+
+    #[test]
+    fn vec_from_iter() {
+        use crate::traits::CopyIt;
+
+        let a = Vec::from(6..9);
+        assert_eq!(a.len(), 3);
+        assert_eq!(a.cap(), 3);
+        assert_eq!(*a, [6, 7, 8]);
+
+        let b = Vec::from(a.copy_map_it(|x| x - 5));
+        assert_eq!(b.len(), 3);
+        assert_eq!(b.cap(), 3);
+        assert_eq!(*b, [1, 2, 3]);
+
+
+        let mut arena = crate::arena::Arena::new();
+        {
+            let aa = Vec::from_in(a.copy_it(), &arena);
+            assert_eq!(aa.len(), 3);
+            assert_eq!(aa.cap(), 3);
+            assert_eq!(*aa, [6, 7, 8]);
+
+            let bb = Vec::from_in(aa.copy_it().rev(), &arena);
+            assert_eq!(bb.len(), 3);
+            assert_eq!(bb.cap(), 3);
+            assert_eq!(*bb, [8, 7, 6]);
         }
         arena.reset();
     }
