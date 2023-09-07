@@ -421,6 +421,15 @@ impl<T, A: Alloc> Vec<T, A> {
 
         new_vec
     }
+
+
+    pub fn extend_from_slice(&mut self, vs: &[T])  where T: Clone {
+        self.grow_by(vs.len());
+
+        for v in vs {
+            self.push(v.clone());
+        }
+    }
 }
 
 
@@ -565,6 +574,22 @@ impl<T, I: Iterator<Item = T>> From<I> for Vec<T, GlobalAlloc> {
 }
 
 
+impl<T, A: Alloc> Extend<T> for Vec<T, A> {
+    #[inline]
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        let iter = iter.into_iter();
+
+        let (min_len, max_len) = iter.size_hint();
+        let cap = max_len.unwrap_or(min_len);
+
+        self.grow_by(cap);
+        for v in iter {
+            self.push(v);
+        }
+    }
+}
+
+
 impl<T, A: Alloc> core::borrow::Borrow<[T]> for Vec<T, A> {
     #[inline(always)]
     fn borrow(&self) -> &[T] {
@@ -616,12 +641,15 @@ mod tests {
     fn vec_macro() {
         let v: Vec<bool> = vec!();
         assert_eq!(*v, []);
+        assert_eq!(v.cap(), 0);
 
         let v = vec!(1, 2, 3);
         assert_eq!(*v, [1, 2, 3]);
+        assert_eq!(v.cap(), 3);
 
         let v = vec!("hi".to_string(); 2);
         assert_eq!(*v, ["hi".to_string(), "hi".to_string()]);
+        assert_eq!(v.cap(), 2);
 
 
         let mut arena = crate::arena::Arena::new();
@@ -666,6 +694,27 @@ mod tests {
             assert_eq!(*bb, [8, 7, 6]);
         }
         arena.reset();
+    }
+
+    #[test]
+    fn vec_extend() {
+        let mut v = vec![1, 2, 3];
+        assert_eq!(*v, [1, 2, 3]);
+
+        v.extend([4, 5]);
+        assert_eq!(*v, [1, 2, 3, 4, 5]);
+        assert_eq!(v.cap(), 2*3);
+
+        let mut v = vec!["hi".to_string(); 6];
+        v.extend_from_slice(&["ho".to_string(), "ha".to_string()]);
+        assert_eq!(v.cap(), 2*6);
+        let mut vs = v.iter();
+        for _ in 0..6 {
+            assert_eq!(vs.next().unwrap(), "hi");
+        }
+        assert_eq!(vs.next().unwrap(), "ho");
+        assert_eq!(vs.next().unwrap(), "ha");
+        assert_eq!(vs.next(), None);
     }
 
     #[test]
