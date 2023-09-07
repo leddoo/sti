@@ -268,6 +268,7 @@ impl<T, A: Alloc> Vec<T, A> {
         self.len = new_len;
     }
 
+    #[track_caller]
     #[inline]
     pub fn truncate(&mut self, new_len: usize) {
         assert!(new_len <= self.len);

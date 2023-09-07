@@ -7,9 +7,6 @@
         - rename `empty` to something less misleading.
         - slot api for ptr eq keys.
     - rw lock.
-    - vec:
-        - `Vec::extend`.
-        - truncate track caller.
     - `String`.
 
 
@@ -17,7 +14,6 @@
 ### backlog:
 
 - string formatting:
-    - infallible write trait.
     - format/in/arena macro.
 
 - utf-8 module:

@@ -3,6 +3,11 @@
 - improved `ArenaPool`.
 - add `StaticVec`.
 - add `Box`.
+- add `FromIn`, `CopyIt`, `MapIt` traits.
+- `Vec`
+    - add `vec/_in` macros.
+    - add `From/In<I: Iterator>`.
+    - add `Extend`.
 
 
 0.1.8:
