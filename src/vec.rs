@@ -1,9 +1,10 @@
 use core::ptr::NonNull;
-use core::mem::size_of;
+use core::mem::{size_of, ManuallyDrop};
 use core::alloc::Layout;
 
 use crate::num::OrdUtils;
 use crate::alloc::{Alloc, AllocError, GlobalAlloc};
+use crate::traits::FromIn;
 
 
 pub struct Vec<T, A: Alloc = GlobalAlloc> {
@@ -23,6 +24,17 @@ impl<T> Vec<T> {
     #[inline(always)]
     pub fn with_cap(cap: usize) -> Self {
         Self::with_cap_in(cap, GlobalAlloc)
+    }
+
+
+    #[inline(always)]
+    pub fn from_value(v: T, len: usize) -> Self  where T: Clone {
+        Self::from_value_in(v, len, GlobalAlloc)
+    }
+
+    #[inline(always)]
+    pub fn from_array<const N: usize>(vs: [T; N]) -> Self {
+        Self::from_array_in(vs, GlobalAlloc)
     }
 }
 
@@ -98,21 +110,26 @@ impl<T, A: Alloc> Vec<T, A> {
 
 
 
-    pub fn try_trim_exact(&mut self) -> Result<(), AllocError>{
+    pub fn try_trim_exact(&mut self) -> Result<(), AllocError> {
         // `new_cap >= self.len`.
         unsafe { self.try_set_cap(self.len) }
     }
 
+    /// # panics:
+    /// - if the allocation fails.
+    #[track_caller]
     pub fn trim_exact(&mut self) {
         self.try_trim_exact().unwrap();
     }
 
+    /*
     // doesn't fail, if the allocation fails.
     pub fn trim(&mut self) {
         // round `self.len` up to pow2.
         // if less than `self.cap`, `set_cap`.
         unimplemented!()
     }
+    */
 
 
     pub fn try_reserve_exact(&mut self, min_cap: usize) -> Result<(), AllocError> {
@@ -168,13 +185,16 @@ impl<T, A: Alloc> Vec<T, A> {
             .ok_or(AllocError::SizeOverflow)?)
     }
 
+    /// reserve space for `extra` more elements.
+    #[track_caller]
     pub fn grow_by(&mut self, extra: usize) {
         self.try_grow_by(extra).unwrap();
     }
 
 
     #[cold]
-    pub fn grow_for_push(&mut self) {
+    #[track_caller]
+    fn grow_for_push(&mut self) {
         self.grow_by(1);
     }
 
@@ -194,14 +214,35 @@ impl<T, A: Alloc> Vec<T, A> {
         }
     }
 
-    #[inline(always)]
-    pub fn push_unique(&mut self, value: T) -> bool  where T: PartialEq {
-        if !self.contains(&value) {
-            self.push(value);
-            return true;
+
+    pub fn from_value_in(v: T, len: usize, alloc: A) -> Self  where T: Clone {
+        let mut result = Vec::with_cap_in(len, alloc);
+        for _ in 1..len {
+            result.push(v.clone());
         }
-        false
+        if len > 0 {
+            result.push(v);
+        }
+        return result;
     }
+
+    pub fn from_array_in<const N: usize>(vs: [T; N], alloc: A) -> Self {
+        let len = vs.len();
+
+        let mut result = Vec::with_cap_in(len, alloc);
+        unsafe {
+            let vs = ManuallyDrop::new(vs);
+            core::ptr::copy_nonoverlapping(
+                vs.as_ptr(),
+                result.as_mut_ptr(),
+                len);
+
+            result.len = len;
+        }
+
+        return result;
+    }
+
 
     #[inline(always)]
     pub fn pop(&mut self) -> Option<T> {
@@ -227,6 +268,7 @@ impl<T, A: Alloc> Vec<T, A> {
         self.len = new_len;
     }
 
+    #[inline]
     pub fn truncate(&mut self, new_len: usize) {
         assert!(new_len <= self.len);
 
@@ -250,6 +292,7 @@ impl<T, A: Alloc> Vec<T, A> {
         self.truncate(0);
     }
 
+    #[track_caller]
     #[inline]
     pub fn free(&mut self) {
         self.truncate(0);
@@ -334,13 +377,15 @@ impl<T, A: Alloc> Vec<T, A> {
     pub fn try_clone_in<B: Alloc>(&self, alloc: B) -> Result<Vec<T, B>, AllocError> where T: Clone {
         let mut result = Vec::try_with_cap_in(self.len, alloc)?;
 
-        for value in self {
+        for value in self.iter() {
             result.push(value.clone());
         }
 
         return Ok(result);
     }
 
+    #[track_caller]
+    #[inline(always)]
     pub fn clone_in<B: Alloc>(&self, alloc: B) -> Vec<T, B> where T: Clone {
         self.try_clone_in(alloc).unwrap()
     }
@@ -383,6 +428,14 @@ unsafe impl<T: Sync, A: Alloc + Sync> Sync for Vec<T, A> {}
 unsafe impl<T: Send, A: Alloc + Send> Send for Vec<T, A> {}
 
 
+impl<T, A: Alloc + Default> Default for Vec<T, A> {
+    #[inline(always)]
+    fn default() -> Self {
+        Self::new_in(A::default())
+    }
+}
+
+
 impl<T: Clone, A: Alloc + Copy> Clone for Vec<T, A> {
     fn clone(&self) -> Self {
         self.clone_in(self.alloc)
@@ -404,8 +457,7 @@ impl<T, A: Alloc> Drop for Vec<T, A> {
                     self.data.as_ptr(), len));
         }
 
-        // @todo-speed: check if this prevents `drop` elision with arenas.
-        let layout = Layout::array::<T>(self.cap).unwrap();
+        let layout = unsafe { Layout::array::<T>(self.cap).unwrap_unchecked() };
 
         // `self.data` is an allocation iff `self.cap > 0`.
         unsafe { self.alloc.free(self.data.cast(), layout) }
@@ -497,10 +549,63 @@ impl<T, A: Alloc> core::borrow::BorrowMut<[T]> for Vec<T, A> {
 }
 
 
+#[macro_export]
+macro_rules! vec_in {
+    ($alloc:expr) => (
+        $crate::vec::Vec::new_in($alloc)
+    );
+    ($elem:expr; $n:expr, $alloc:expr) => (
+        $crate::vec::Vec::from_value_in($elem, $n, $alloc)
+    );
+    ($($x:expr),+ $(,)?; $alloc:expr) => (
+        $crate::vec::Vec::from_array_in([$($x),+], $alloc)
+    );
+}
+
+#[macro_export]
+macro_rules! vec {
+    () => (
+        $crate::vec::Vec::new()
+    );
+    ($elem:expr; $n:expr) => (
+        $crate::vec::Vec::from_value($elem, $n)
+    );
+    ($($x:expr),+ $(,)?) => (
+        $crate::vec::Vec::from_array([$($x),+])
+    );
+}
+
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vec_macro() {
+        let v: Vec<bool> = vec!();
+        assert_eq!(*v, []);
+
+        let v = vec!(1, 2, 3);
+        assert_eq!(*v, [1, 2, 3]);
+
+        let v = vec!("hi".to_string(); 2);
+        assert_eq!(*v, ["hi".to_string(), "hi".to_string()]);
+
+
+        let mut arena = crate::arena::Arena::new();
+        {
+            let v: Vec<bool, _> = vec_in!(&arena);
+            assert_eq!(*v, []);
+
+            let v = vec_in!(1, 2, 3; &arena);
+            assert_eq!(*v, [1, 2, 3]);
+
+            let v = vec_in!("hi".to_string(); 2, &arena);
+            assert_eq!(*v, ["hi".to_string(), "hi".to_string()]);
+        }
+        arena.reset();
+    }
 
     #[test]
     fn vec_drop() {
