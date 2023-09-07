@@ -122,3 +122,9 @@ impl<K: Key, V, A: Alloc> core::ops::DerefMut for KVec<K, V, A> {
     }
 }
 
+impl<K: Key, V, A: Alloc> core::fmt::Debug for KVec<K, V, A>
+where K: core::fmt::Debug, V: core::fmt::Debug {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        self.as_slice().fmt(f)
+    }
+}

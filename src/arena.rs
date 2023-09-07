@@ -442,6 +442,12 @@ impl<A: Alloc> Alloc for Arena<A> {
 }
 
 
+impl core::fmt::Debug for Arena {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        self.stats().fmt(f)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

@@ -420,7 +420,7 @@ impl<T, A: Alloc> Drop for Vec<T, A> {
 
 impl<T: core::fmt::Debug, A: Alloc> core::fmt::Debug for Vec<T, A> {
     #[inline(always)]
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         self.as_slice().fmt(f)
     }
 }
