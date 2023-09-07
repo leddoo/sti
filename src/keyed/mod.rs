@@ -79,20 +79,20 @@ macro_rules! define_key_basic {
             pub const fn new_unck(value: $ty) -> Self { Self(value) }
 
             #[inline(always)]
-            pub const fn new(value: $ty) -> sti::packed_option::PackedOption<Self> {
-                sti::packed_option::PackedOption::from_raw(Self(value))
+            pub const fn new(value: $ty) -> $crate::packed_option::PackedOption<Self> {
+                $crate::packed_option::PackedOption::from_raw(Self(value))
             }
 
             #[inline(always)]
             pub const fn inner(self) -> $ty { self.0 }
 
             #[inline(always)]
-            pub fn some(self) -> sti::packed_option::PackedOption<Self> {
-                sti::packed_option::Reserved::some(self)
+            pub fn some(self) -> $crate::packed_option::PackedOption<Self> {
+                $crate::packed_option::Reserved::some(self)
             }
         }
 
-        impl sti::keyed::Key for $name {
+        impl $crate::keyed::Key for $name {
             const LIMIT_SELF: Self = Self(<$ty>::MAX);
             const LIMIT: usize = <$ty>::MAX as usize;
 
@@ -112,34 +112,6 @@ macro_rules! define_key_basic {
 }
 
 #[macro_export]
-macro_rules! define_key_opt {
-    ($name:ident, $opt_vis:vis, $opt_name:ident) => {
-        $opt_vis type $opt_name = sti::packed_option::PackedOption<$name>;
-    };
-}
-
-#[macro_export]
-macro_rules! define_key_rng {
-    ($name: ident, $rng_vis:vis, $rng_name: ident) => {
-        $rng_vis type $rng_name = sti::keyed::KRange<$name>;
-    };
-}
-
-
-#[macro_export]
-macro_rules! define_key_dsp {
-    ($name: ident, $fmt: expr) => {
-        impl core::fmt::Display for $name {
-            #[inline]
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                write!(f, $fmt, self.0)
-            }
-        }
-    };
-}
-
-
-#[macro_export]
 macro_rules! define_key {
     ($ty:ty,
         $name_vis:vis $name:ident
@@ -147,10 +119,20 @@ macro_rules! define_key {
         $(, rng : $rng_vis:vis $rng_name:ident)?
         $(, dsp : $dsp_name:expr)?
     ) => {
-        sti::define_key_basic!($ty, $name_vis, $name);
-        $( sti::define_key_opt!($name, $opt_vis, $opt_name); )?
-        $( sti::define_key_rng!($name, $rng_vis, $rng_name); )?
-        $( sti::define_key_dsp!($name, $dsp_name); )?
+        $crate::define_key_basic!($ty, $name_vis, $name);
+
+        $( $opt_vis type $opt_name = $crate::packed_option::PackedOption<$name>; )?
+
+        $( $rng_vis type $rng_name = $crate::keyed::KRange<$name>; )?
+
+        $(
+            impl core::fmt::Display for $name {
+                #[inline]
+                fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                    write!(f, $dsp_name, self.0)
+                }
+            }
+        )?
     };
 
     ($all_vis:vis, $ty:ty,
@@ -159,10 +141,20 @@ macro_rules! define_key {
         $(, rng : $rng_name:ident)?
         $(, dsp : $dsp_name:expr)?
     ) => {
-        sti::define_key_basic!($ty, $all_vis, $name);
-        $( sti::define_key_opt!($name, $all_vis, $opt_name); )?
-        $( sti::define_key_rng!($name, $all_vis, $rng_name); )?
-        $( sti::define_key_dsp!($name, $dsp_name); )?
+        $crate::define_key_basic!($ty, $all_vis, $name);
+
+        $( $all_vis type $opt_name = $crate::packed_option::PackedOption<$name>; )?
+
+        $( $all_vis type $rng_name = $crate::keyed::KRange<$name>; )?
+
+        $(
+            impl core::fmt::Display for $name {
+                #[inline]
+                fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                    write!(f, $dsp_name, self.0)
+                }
+            }
+        )?
     };
 }
 
