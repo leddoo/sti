@@ -12,13 +12,13 @@ pub struct Box<T: ?Sized, A: Alloc = GlobalAlloc> {
 impl<T> Box<T, GlobalAlloc> {
     #[inline(always)]
     pub fn new(value: T) -> Self {
-        Box::new_in(value, GlobalAlloc)
+        Box::new_in(GlobalAlloc, value)
     }
 }
 
 impl<T, A: Alloc> Box<T, A> {
     #[inline(always)]
-    pub fn new_in(value: T, alloc: A) -> Self {
+    pub fn new_in(alloc: A, value: T) -> Self {
         let value = alloc_new(&alloc, value).unwrap();
         Self { value, alloc }
     }

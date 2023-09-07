@@ -23,18 +23,18 @@ impl<T> Vec<T> {
 
     #[inline(always)]
     pub fn with_cap(cap: usize) -> Self {
-        Self::with_cap_in(cap, GlobalAlloc)
+        Self::with_cap_in(GlobalAlloc, cap)
     }
 
 
     #[inline(always)]
     pub fn from_value(v: T, len: usize) -> Self  where T: Clone {
-        Self::from_value_in(v, len, GlobalAlloc)
+        Self::from_value_in(GlobalAlloc, v, len)
     }
 
     #[inline(always)]
     pub fn from_array<const N: usize>(vs: [T; N]) -> Self {
-        Self::from_array_in(vs, GlobalAlloc)
+        Self::from_array_in(GlobalAlloc, vs)
     }
 }
 
@@ -56,15 +56,15 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    pub fn try_with_cap_in(cap: usize, alloc: A) -> Result<Vec<T, A>, AllocError> {
+    pub fn try_with_cap_in(alloc: A, cap: usize) -> Result<Vec<T, A>, AllocError> {
         let mut result = Vec::new_in(alloc);
         // `self.len == 0`.
         unsafe { result.try_set_cap(cap)? }
         Ok(result)
     }
 
-    pub fn with_cap_in(cap: usize, alloc: A) -> Vec<T, A> {
-        Self::try_with_cap_in(cap, alloc).unwrap()
+    pub fn with_cap_in(alloc: A, cap: usize) -> Vec<T, A> {
+        Self::try_with_cap_in(alloc, cap).unwrap()
     }
 
 
@@ -215,8 +215,8 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    pub fn from_value_in(v: T, len: usize, alloc: A) -> Self  where T: Clone {
-        let mut result = Vec::with_cap_in(len, alloc);
+    pub fn from_value_in(alloc: A, v: T, len: usize) -> Self  where T: Clone {
+        let mut result = Vec::with_cap_in(alloc, len);
         for _ in 1..len {
             result.push(v.clone());
         }
@@ -226,10 +226,10 @@ impl<T, A: Alloc> Vec<T, A> {
         return result;
     }
 
-    pub fn from_array_in<const N: usize>(vs: [T; N], alloc: A) -> Self {
+    pub fn from_array_in<const N: usize>(alloc: A, vs: [T; N]) -> Self {
         let len = vs.len();
 
-        let mut result = Vec::with_cap_in(len, alloc);
+        let mut result = Vec::with_cap_in(alloc, len);
         unsafe {
             let vs = ManuallyDrop::new(vs);
             core::ptr::copy_nonoverlapping(
@@ -376,7 +376,7 @@ impl<T, A: Alloc> Vec<T, A> {
 
 
     pub fn try_clone_in<B: Alloc>(&self, alloc: B) -> Result<Vec<T, B>, AllocError> where T: Clone {
-        let mut result = Vec::try_with_cap_in(self.len, alloc)?;
+        let mut result = Vec::try_with_cap_in(alloc, self.len)?;
 
         for value in self.iter() {
             result.push(value.clone());
@@ -407,7 +407,7 @@ impl<T, A: Alloc> Vec<T, A> {
     pub fn move_into<B: Alloc>(mut self, new_alloc: B) -> Vec<T, B> {
         let len = self.len;
 
-        let mut new_vec: Vec<T, B> = Vec::with_cap_in(len, new_alloc);
+        let mut new_vec: Vec<T, B> = Vec::with_cap_in(new_alloc, len);
 
         unsafe {
             self.len = 0;
@@ -547,19 +547,19 @@ impl<'a, T, A: Alloc> IntoIterator for &'a mut Vec<T, A> {
 impl<T> FromIterator<T> for Vec<T, GlobalAlloc> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        Self::from_in(iter.into_iter(), GlobalAlloc)
+        Self::from_in(GlobalAlloc, iter.into_iter())
     }
 }
 
 impl<T, A: Alloc, I: Iterator<Item = T>> FromIn<I, A> for Vec<T, A> {
     #[inline]
-    fn from_in(iter: I, alloc: A) -> Self {
+    fn from_in(alloc: A, iter: I) -> Self {
         let iter = iter.into_iter();
 
         let (min_len, max_len) = iter.size_hint();
         let cap = max_len.unwrap_or(min_len);
 
-        let mut result = Vec::with_cap_in(cap, alloc);
+        let mut result = Vec::with_cap_in(alloc, cap);
         for v in iter {
             result.push(v);
         }
@@ -570,7 +570,7 @@ impl<T, A: Alloc, I: Iterator<Item = T>> FromIn<I, A> for Vec<T, A> {
 impl<T, I: Iterator<Item = T>> From<I> for Vec<T, GlobalAlloc> {
     #[inline]
     fn from(value: I) -> Self {
-        Self::from_in(value, GlobalAlloc)
+        Self::from_in(GlobalAlloc, value)
     }
 }
 
@@ -611,11 +611,11 @@ macro_rules! vec_in {
     ($alloc:expr) => (
         $crate::vec::Vec::new_in($alloc)
     );
-    ($elem:expr; $n:expr, $alloc:expr) => (
-        $crate::vec::Vec::from_value_in($elem, $n, $alloc)
+    ($alloc:expr, $elem:expr; $n:expr) => (
+        $crate::vec::Vec::from_value_in($alloc, $elem, $n)
     );
-    ($($x:expr),+ $(,)?; $alloc:expr) => (
-        $crate::vec::Vec::from_array_in([$($x),+], $alloc)
+    ($alloc:expr; $($x:expr),+ $(,)?) => (
+        $crate::vec::Vec::from_array_in($alloc, [$($x),+])
     );
 }
 
@@ -658,10 +658,10 @@ mod tests {
             let v: Vec<bool, _> = vec_in!(&arena);
             assert_eq!(*v, []);
 
-            let v = vec_in!(1, 2, 3; &arena);
+            let v = vec_in!(&arena; 1, 2, 3);
             assert_eq!(*v, [1, 2, 3]);
 
-            let v = vec_in!("hi".to_string(); 2, &arena);
+            let v = vec_in!(&arena, "hi".to_string(); 2);
             assert_eq!(*v, ["hi".to_string(), "hi".to_string()]);
         }
         arena.reset();
@@ -684,12 +684,12 @@ mod tests {
 
         let mut arena = crate::arena::Arena::new();
         {
-            let aa = Vec::from_in(a.copy_it(), &arena);
+            let aa = Vec::from_in(&arena, a.copy_it());
             assert_eq!(aa.len(), 3);
             assert_eq!(aa.cap(), 3);
             assert_eq!(*aa, [6, 7, 8]);
 
-            let bb = Vec::from_in(aa.copy_it().rev(), &arena);
+            let bb = Vec::from_in(&arena, aa.copy_it().rev());
             assert_eq!(bb.len(), 3);
             assert_eq!(bb.cap(), 3);
             assert_eq!(*bb, [8, 7, 6]);

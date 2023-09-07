@@ -44,7 +44,7 @@ impl<K: Hash + Eq, V, A: Alloc> HashMap<K, V, DefaultSeed, A> {
 
     /// construct with capacity, with default seed in `alloc`.
     #[inline(always)]
-    pub fn with_cap_in(cap: usize, alloc: A) -> Self {
+    pub fn with_cap_in(alloc: A, cap: usize) -> Self {
         Self { inner: RawHashMap::with_cap(cap, DefaultSeed::new(), alloc) }
     }
 }
@@ -84,19 +84,19 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
 
     /// construct with capacity, with default seed in `alloc`.
     #[inline(always)]
-    pub fn fwith_cap_in(cap: usize, alloc: A) -> Self where S: Default {
+    pub fn fwith_cap_in(alloc: A, cap: usize) -> Self where S: Default {
         Self { inner: RawHashMap::with_cap(cap, S::default(), alloc) }
     }
 
     /// construct with `seed` in `alloc`.
     #[inline(always)]
-    pub fn with_seed_in(seed: S, alloc: A) -> Self {
+    pub fn with_seed_in(alloc: A, seed: S) -> Self {
         Self { inner: RawHashMap::new(seed, alloc) }
     }
 
     /// construct with capacity, with `seed` in `alloc`.
     #[inline(always)]
-    pub fn with_cap_with_seed_in(cap: usize, seed: S, alloc: A) -> Self {
+    pub fn with_cap_with_seed_in(alloc: A, cap: usize, seed: S) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, alloc) }
     }
 

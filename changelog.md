@@ -8,6 +8,7 @@
     - add `vec/_in` macros.
     - add `From/In<I: Iterator>`.
     - add `Extend`.
+- major breaking change: alloc params go first now.
 
 
 0.1.8:

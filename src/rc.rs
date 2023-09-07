@@ -19,13 +19,13 @@ pub struct RcInner<T: ?Sized, A: Alloc = GlobalAlloc> {
 impl<T> Rc<T, GlobalAlloc> {
     #[inline(always)]
     pub fn new(value: T) -> Self {
-        Rc::new_in(value, GlobalAlloc)
+        Rc::new_in(GlobalAlloc, value)
     }
 }
 
 impl<T, A: Alloc> Rc<T, A> {
     #[inline]
-    pub fn try_new_in(value: T, alloc: A) -> Result<Self, AllocError> {
+    pub fn try_new_in(alloc: A, value: T) -> Result<Self, AllocError> {
         let inner = alloc_ptr::<RcInner<T, A>, _>(&alloc)?;
         unsafe {
             inner.as_ptr().write(RcInner {
@@ -39,8 +39,8 @@ impl<T, A: Alloc> Rc<T, A> {
 
     #[track_caller]
     #[inline]
-    pub fn new_in(value: T, alloc: A) -> Self {
-        Self::try_new_in(value, alloc).unwrap()
+    pub fn new_in(alloc: A, value: T) -> Self {
+        Self::try_new_in(alloc, value).unwrap()
     }
 }
 
@@ -64,7 +64,7 @@ impl<T: ?Sized, A: Alloc> Rc<T, A> {
     #[inline(always)]
     pub fn make_mut(&mut self) -> &mut T  where T: Clone, A: Clone {
         self.make_mut_ex(|this|
-            Rc::new_in(this.as_ref().clone(), this.alloc().clone()))
+            Rc::new_in(this.alloc().clone(), this.as_ref().clone()))
     }
 
     pub fn make_mut_ex<F: FnOnce(&Self) -> Self>(&mut self, clone: F) -> &mut T {

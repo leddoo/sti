@@ -30,8 +30,8 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     }
 
     #[inline(always)]
-    pub fn with_cap_in(cap: usize, alloc: A) -> Self {
-        KVec { inner: Vec::with_cap_in(cap, alloc), phantom: PhantomData }
+    pub fn with_cap_in(alloc: A, cap: usize) -> Self {
+        KVec { inner: Vec::with_cap_in(alloc, cap), phantom: PhantomData }
     }
 
 

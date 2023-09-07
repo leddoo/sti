@@ -319,7 +319,7 @@ mod benches {
         use super::*;
 
         fn do_it<A: Alloc>(alloc: A) -> i32 {
-            let mut v = Vec::with_cap_in(4, alloc);
+            let mut v = Vec::with_cap_in(alloc, 4);
             v.push(1);
             v.push(unsafe { core::ptr::read_volatile(&v[0]) });
             let result = v.iter().sum();
@@ -383,7 +383,7 @@ mod benches {
 
         fn do_it<A: Alloc>(reserve: bool, alloc: A) -> i32 {
             let n = 50;
-            let mut v = Vec::with_cap_in(if reserve { n } else { 0 }, alloc);
+            let mut v = Vec::with_cap_in(alloc, if reserve { n } else { 0 });
             v.push(1);
             for _ in 0..n-1 {
                 let a: i32 = v.iter().sum();

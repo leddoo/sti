@@ -4,7 +4,7 @@ use crate::alloc::Alloc;
 
 
 pub trait FromIn<T, A: Alloc> {
-    fn from_in(value: T, alloc: A) -> Self;
+    fn from_in(alloc: A, value: T) -> Self;
 }
 
 
