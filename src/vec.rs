@@ -36,6 +36,11 @@ impl<T> Vec<T> {
     pub fn from_array<const N: usize>(vs: [T; N]) -> Self {
         Self::from_array_in(GlobalAlloc, vs)
     }
+
+    #[inline(always)]
+    pub fn from_slice(vs: &[T]) -> Self  where T: Clone {
+        Self::from_slice_in(GlobalAlloc, vs)
+    }
 }
 
 impl<T, A: Alloc> Vec<T, A> {
@@ -215,6 +220,7 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
+    #[inline]
     pub fn from_value_in(alloc: A, v: T, len: usize) -> Self  where T: Clone {
         let mut result = Vec::with_cap_in(alloc, len);
         for _ in 1..len {
@@ -226,6 +232,7 @@ impl<T, A: Alloc> Vec<T, A> {
         return result;
     }
 
+    #[inline]
     pub fn from_array_in<const N: usize>(alloc: A, vs: [T; N]) -> Self {
         let len = vs.len();
 
@@ -240,6 +247,15 @@ impl<T, A: Alloc> Vec<T, A> {
             result.len = len;
         }
 
+        return result;
+    }
+
+    #[inline]
+    pub fn from_slice_in(alloc: A, vs: &[T]) -> Self  where T: Clone {
+        let mut result = Vec::with_cap_in(alloc, vs.len());
+        for v in vs {
+            result.push(v.clone());
+        }
         return result;
     }
 
@@ -639,7 +655,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn vec_macro() {
+    fn vec_basics() {
         let v: Vec<bool> = vec!();
         assert_eq!(*v, []);
         assert_eq!(v.cap(), 0);
@@ -650,6 +666,10 @@ mod tests {
 
         let v = vec!("hi".to_string(); 2);
         assert_eq!(*v, ["hi".to_string(), "hi".to_string()]);
+        assert_eq!(v.cap(), 2);
+
+        let v = Vec::from_slice(&["hi".to_string(), "ho".to_string()]);
+        assert_eq!(*v, ["hi".to_string(), "ho".to_string()]);
         assert_eq!(v.cap(), 2);
 
 
@@ -663,6 +683,10 @@ mod tests {
 
             let v = vec_in!(&arena, "hi".to_string(); 2);
             assert_eq!(*v, ["hi".to_string(), "hi".to_string()]);
+
+            let v = Vec::from_slice_in(&arena, &["hi".to_string(), "ho".to_string()]);
+            assert_eq!(*v, ["hi".to_string(), "ho".to_string()]);
+            assert_eq!(v.cap(), 2);
         }
         arena.reset();
     }
