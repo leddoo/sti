@@ -96,7 +96,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
 
     /// construct with capacity, with `seed` in `alloc`.
     #[inline(always)]
-    pub fn with_cap_with_seed_in(alloc: A, cap: usize, seed: S, ) -> Self {
+    pub fn with_cap_with_seed_in(alloc: A, cap: usize, seed: S) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, alloc) }
     }
 
