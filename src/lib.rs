@@ -20,6 +20,7 @@ pub mod static_vec;
 
 pub mod sync;
 
+pub mod utf8;
 pub mod reader;
 
 pub mod packed_option;

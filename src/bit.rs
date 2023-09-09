@@ -72,6 +72,33 @@ macro_rules! bitmask_impl {
                 return None;
             }
         }
+
+        impl core::ops::BitAnd for $name {
+            type Output = Self;
+
+            #[inline(always)]
+            fn bitand(self, rhs: Self) -> Self {
+                Self(self.0 & rhs.0)
+            }
+        }
+
+        impl core::ops::BitOr for $name {
+            type Output = Self;
+
+            #[inline(always)]
+            fn bitor(self, rhs: Self) -> Self {
+                Self(self.0 | rhs.0)
+            }
+        }
+
+        impl core::ops::Not for $name {
+            type Output = Self;
+
+            #[inline(always)]
+            fn not(self) -> Self {
+                Self::not(self)
+            }
+        }
     }
 }
 
