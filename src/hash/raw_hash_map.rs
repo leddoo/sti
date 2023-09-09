@@ -277,8 +277,43 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             phantom: PhantomData,
         }
     }
+    
+    pub fn move_into<A2: Alloc>(self, alloc: A2) -> RawHashMap<K, V, S, A2> {
+        let layout = Self::layout(self.num_groups).unwrap();
+        let data = alloc.alloc(layout).expect("allocation failed");
 
+        let this = core::mem::ManuallyDrop::new(self);
 
+        unsafe {
+            // copy groups/slots to new map.
+            core::ptr::copy_nonoverlapping(
+                this.groups.as_ptr() as *const u8,
+                data.as_ptr(),
+                layout.size());
+        
+            // free old groups/slots.
+            this.alloc.free(this.groups.cast(), layout);
+
+            // drop allocator.
+            drop(core::ptr::read(&this.alloc));
+        }
+
+        // take seed.
+        let seed = unsafe { core::ptr::read(&this.seed) };
+
+        RawHashMap {
+            seed,
+            alloc,
+
+            groups: data.cast(),
+            num_groups: this.num_groups,
+            empty: this.empty,
+            used: this.used,
+
+            phantom: PhantomData,
+        }
+    }
+    
     pub fn probe_length<Q: ?Sized + Eq>(&self, key: &Q) -> (usize, usize)
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         if self.used == 0 {

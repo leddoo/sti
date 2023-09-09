@@ -44,7 +44,7 @@ impl<K: Hash + Eq, V, A: Alloc> HashMap<K, V, DefaultSeed, A> {
 
     /// construct with capacity, with default seed in `alloc`.
     #[inline(always)]
-    pub fn with_cap_in(alloc: A, cap: usize) -> Self {
+    pub fn with_cap_in(cap: usize, alloc: A) -> Self {
         Self { inner: RawHashMap::with_cap(cap, DefaultSeed::new(), alloc) }
     }
 }
@@ -84,19 +84,19 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
 
     /// construct with capacity, with default seed in `alloc`.
     #[inline(always)]
-    pub fn fwith_cap_in(alloc: A, cap: usize) -> Self where S: Default {
+    pub fn fwith_cap_in(cap: usize, alloc: A) -> Self where S: Default {
         Self { inner: RawHashMap::with_cap(cap, S::default(), alloc) }
     }
 
     /// construct with `seed` in `alloc`.
     #[inline(always)]
-    pub fn with_seed_in(alloc: A, seed: S) -> Self {
+    pub fn with_seed_in(seed: S, alloc: A) -> Self {
         Self { inner: RawHashMap::new(seed, alloc) }
     }
 
     /// construct with capacity, with `seed` in `alloc`.
     #[inline(always)]
-    pub fn with_cap_with_seed_in(alloc: A, cap: usize, seed: S) -> Self {
+    pub fn with_cap_with_seed_in(cap: usize, seed: S, alloc: A) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, alloc) }
     }
 
@@ -222,6 +222,12 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     pub fn copy_in<A2>(&self, alloc: A2) -> HashMap<K, V, S, A2>
     where K: Copy, V: Copy, S: Clone, A2: Alloc {
         HashMap { inner: self.inner.copy_in(alloc) }
+    }
+
+
+    #[inline(always)]
+    pub fn move_into<A2: Alloc>(self, alloc: A2) -> HashMap<K, V, S, A2> {
+        HashMap { inner: self.inner.move_into(alloc) }
     }
 }
 
@@ -731,6 +737,39 @@ mod tests {
         assert!(hm.get(&2).is_none());
         assert!(hm.get(&4).is_none());
         assert_eq!(hm.get(&6), Some(&7));
+    }
+
+    #[test]
+    fn hm_move_into() {
+        struct Seed {
+            _dummy: String,
+        }
+
+        impl<K: Hash> HashFnSeed<K> for Seed {
+            type Seed = <DefaultSeed as HashFnSeed<K>>::Seed;
+
+            type Hash = <DefaultSeed as HashFnSeed<K>>::Hash;
+
+            type F = <DefaultSeed as HashFnSeed<K>>::F;
+
+            fn seed(&self) -> Self::Seed {
+                FxHasher32::DEFAULT_SEED
+            }
+        }
+        
+        let mut hm = HashMap::with_seed_in(    
+            Seed { _dummy: "ok".to_string() }, GlobalAlloc
+        );
+
+        hm.insert("5".to_string(), "3".to_string());
+        hm.insert("8".to_string(), "12".to_string());
+        hm.insert("398".to_string(), "128".to_string());
+
+        let hm = hm.move_into(GlobalAlloc);
+
+        assert_eq!(hm.get(&"5".to_string()), Some(&"3".to_string()));
+        assert_eq!(hm.get(&"8".to_string()), Some(&"12".to_string()));
+        assert_eq!(hm.get(&"398".to_string()), Some(&"128".to_string()));
     }
 }
 
