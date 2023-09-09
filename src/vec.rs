@@ -164,7 +164,7 @@ impl<T, A: Alloc> Vec<T, A> {
     pub fn try_reserve(&mut self, min_cap: usize) -> Result<(), AllocError> {
         let new_cap = min_cap;
         if new_cap > self.cap {
-            let new_cap = 
+            let new_cap =
                 if size_of::<T>() > 0 {
                     // can't overflow, cause `self.cap <= isize::MAX/sizeof(T)`.
                     new_cap.at_least(2*self.cap)

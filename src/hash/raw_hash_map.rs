@@ -244,13 +244,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         result
     }
 
-
     #[inline(always)]
     pub fn copy(&self) -> RawHashMap<K, V, S, A>
     where K: Copy, V: Copy, S: Clone, A: Clone {
         self.copy_in(self.alloc.clone())
     }
-
 
     pub fn copy_in<A2>(&self, alloc: A2) -> RawHashMap<K, V, S, A2>
     where K: Copy, V: Copy, S: Clone, A2: Alloc
@@ -277,7 +275,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             phantom: PhantomData,
         }
     }
-    
+
     pub fn move_into<A2: Alloc>(self, alloc: A2) -> RawHashMap<K, V, S, A2> {
         let layout = Self::layout(self.num_groups).unwrap();
         let data = alloc.alloc(layout).expect("allocation failed");
@@ -290,7 +288,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
                 this.groups.as_ptr() as *const u8,
                 data.as_ptr(),
                 layout.size());
-        
+
             // free old groups/slots.
             this.alloc.free(this.groups.cast(), layout);
 
@@ -313,7 +311,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             phantom: PhantomData,
         }
     }
-    
+
     pub fn probe_length<Q: ?Sized + Eq>(&self, key: &Q) -> (usize, usize)
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         if self.used == 0 {
@@ -367,7 +365,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
                     let group = unsafe { *group_ref(self.groups, 0) };
                     group.match_used()
                 }
-                else { Bitmask::none() },
+                else { Bitmask::NONE },
 
             phantom: PhantomData,
         }
@@ -701,13 +699,7 @@ mod group_u64 {
     #[derive(Clone, Copy)]
     pub(super) struct Group(u64);
 
-    #[derive(Clone, Copy)]
-    pub(super) struct Bitmask(u64);
-
-    #[inline(always)]
-    const fn splat(value: u8) -> u64 {
-        u64::from_ne_bytes([value; 8])
-    }
+    pub(super) use crate::bit::Bitmask8 as Bitmask;
 
     impl Group {
         pub const WIDTH: usize = 8;
@@ -719,7 +711,7 @@ mod group_u64 {
 
         #[inline(always)]
         pub const fn empty() -> Group {
-            Self(splat(Self::EMPTY))
+            Self(crate::bit::splat_8(Self::EMPTY))
         }
 
         #[inline(always)]
@@ -727,15 +719,10 @@ mod group_u64 {
             (hash & Self::HASH_MASK) as u8
         }
 
+
         #[inline(always)]
         pub fn match_hash(&self, hash: u32) -> Bitmask {
-            // 0x00 for all matching bytes.
-            let mask = self.0 ^ splat(Self::mask_hash(hash));
-            // https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
-            let zero_or_high = mask.wrapping_sub(splat(1));
-            let not_high = !mask & splat(0x80);
-            let mask = zero_or_high & not_high;
-            Bitmask(mask)
+            Bitmask::find_equal_bytes(self.0, Self::mask_hash(hash))
         }
 
         #[inline(always)]
@@ -743,23 +730,19 @@ mod group_u64 {
             // check high bit and second highest bit set.
             // only empty & tombstone have the high bit.
             // and tombstone only has the high bit.
-            let mask = self.0 & (self.0 << 1);
-            let mask = mask & splat(0x80);
-            Bitmask(mask)
+            Bitmask::find_high_bit_bytes(self.0 & (self.0 << 1))
         }
 
         #[inline(always)]
         pub fn match_free(&self) -> Bitmask {
             // only empty & tombstone have the high bit.
-            let mask = self.0 & splat(0x80);
-            Bitmask(mask)
+            Bitmask::find_high_bit_bytes(self.0)
         }
 
         #[inline(always)]
         pub fn match_used(&self) -> Bitmask {
             // used entries don't have the high bit.
-            let mask = (self.0 & splat(0x80)) ^ splat(0x80);
-            Bitmask(mask)
+            Bitmask::find_high_bit_bytes(self.0).not()
         }
 
 
@@ -789,28 +772,6 @@ mod group_u64 {
                 self.set(idx, Self::TOMBSTONE);
                 return 0;
             }
-        }
-    }
-
-    impl Bitmask {
-        #[inline(always)]
-        pub fn none() -> Self { Bitmask(0) }
-
-        #[inline(always)]
-        pub fn any(&self) -> bool { self.0 != 0 }
-    }
-
-    impl Iterator for Bitmask {
-        type Item = usize;
-
-        #[inline(always)]
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.0 != 0 {
-                let i = self.0.trailing_zeros() / 8;
-                self.0 &= self.0 - 1;
-                return Some(i as usize);
-            }
-            return None;
         }
     }
 }

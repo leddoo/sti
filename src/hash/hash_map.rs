@@ -217,13 +217,12 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     where K: Copy, V: Copy, S: Clone, A: Clone {
         HashMap { inner: self.inner.copy() }
     }
-    
+
     #[inline(always)]
     pub fn copy_in<A2>(&self, alloc: A2) -> HashMap<K, V, S, A2>
     where K: Copy, V: Copy, S: Clone, A2: Alloc {
         HashMap { inner: self.inner.copy_in(alloc) }
     }
-
 
     #[inline(always)]
     pub fn move_into<A2: Alloc>(self, alloc: A2) -> HashMap<K, V, S, A2> {
@@ -253,7 +252,7 @@ where K: Clone, V: Clone, S: Clone, A: Clone {
 
 
 impl<Q, K, V, S, A> core::ops::Index<&Q> for HashMap<K, V, S, A>
-where 
+where
     Q: ?Sized + Eq, K: Eq + Borrow<Q>,
     S: HashFnSeed<K, Hash=u32> + HashFnSeed<Q, Hash=u32>,
     A: Alloc
@@ -268,7 +267,7 @@ where
 }
 
 impl<Q, K, V, S, A> core::ops::IndexMut<&Q> for HashMap<K, V, S, A>
-where 
+where
     Q: ?Sized + Eq, K: Eq + Borrow<Q>,
     S: HashFnSeed<K, Hash=u32> + HashFnSeed<Q, Hash=u32>,
     A: Alloc
@@ -281,7 +280,7 @@ where
 }
 
 
-impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> core::fmt::Debug for HashMap<K, V, S, A> 
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> core::fmt::Debug for HashMap<K, V, S, A>
 where K: core::fmt::Debug, V: core::fmt::Debug {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_map().entries(self.iter()).finish()
@@ -756,10 +755,10 @@ mod tests {
                 FxHasher32::DEFAULT_SEED
             }
         }
-        
-        let mut hm = HashMap::with_seed_in(    
-            Seed { _dummy: "ok".to_string() }, GlobalAlloc
-        );
+
+        let mut hm = HashMap::with_seed_in(
+            GlobalAlloc,
+            Seed { _dummy: "ok".to_string() });
 
         hm.insert("5".to_string(), "3".to_string());
         hm.insert("8".to_string(), "12".to_string());

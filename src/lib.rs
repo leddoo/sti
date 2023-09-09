@@ -5,6 +5,7 @@ pub mod hint;
 
 pub mod simd;
 pub mod float;
+pub mod bit;
 
 pub mod traits;
 
