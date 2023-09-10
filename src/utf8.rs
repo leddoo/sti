@@ -1,5 +1,19 @@
 use crate::bit::*;
 
+
+pub use core::str::from_utf8_unchecked as str_from_slice_unck;
+
+#[inline(always)]
+pub unsafe fn str_from_parts_unck<'a>(ptr: *const u8, len: usize) -> &'a str {
+    unsafe { str_from_slice_unck(core::slice::from_raw_parts(ptr, len)) }
+}
+
+
+
+//
+// utils
+//
+
 /*
     utf-8 encoding:
     #bytes  #bits  code-point  encoding
@@ -15,12 +29,21 @@ use crate::bit::*;
                      U+10FFFF  11110|100 10|001111 10|111111 10|111111
 */
 
-
-pub use core::str::from_utf8_unchecked as str_from_slice_unck;
+#[inline(always)]
+pub fn is_boundary(b: u8) -> bool {
+    //     b <  0b10000000 = 128 ~= -128
+    // ||  b >= 0b11000000 = 196 ~=  -64
+    //
+    //    (b < -128 || b >= -64)
+    // == !(b >= -128 && b < -64)
+    // == !(true && b < -64)
+    // == b >= -64
+    (b as i8) >= -64
+}
 
 #[inline(always)]
-pub unsafe fn str_from_parts_unck<'a>(ptr: *const u8, len: usize) -> &'a str {
-    unsafe { str_from_slice_unck(core::slice::from_raw_parts(ptr, len)) }
+pub fn is_continuation(b: u8) -> bool {
+    !is_boundary(b)
 }
 
 
@@ -40,6 +63,11 @@ pub fn non_ascii_mask_8(word: u64) -> Bitmask8 {
 }
 
 
+
+//
+// validation
+//
+
 pub struct Utf8Error {
     pub valid_until: *const u8,
 }
@@ -48,9 +76,97 @@ pub struct Utf8Error {
 /// - assumes `buffer.len() > 0`.
 /// - on success, returns the remaining buffer after the codepoint.
 #[inline(always)]
-pub fn check_1(buffer: &[u8]) -> Result<&[u8], Utf8Error> {
-    let _ = buffer;
-    unimplemented!()
+pub fn check_1(buffer: &[u8]) -> Result<&[u8], ()> {
+    let b = buffer;
+    match b[0] {
+        // 0|0000000
+        // 0|1111111
+        0b0_0000000 ..= 0b0_1111111 => {
+            Ok(&b[1..])
+        }
+
+        // denormalized ascii.
+        0b1_0000000 ..= 0b110_00001 => {
+            Err(())
+        }
+
+        // 110|00010 10|000000
+        // 110|11111 10|111111
+        0b110_00010 ..= 0b110_11111 => {
+            if b.len() < 2
+            || !is_continuation(b[1]) {
+                return Err(());
+            }
+            Ok(&b[2..])
+        }
+
+        // 1110|0000 10|100000 10|000000
+        // 1110|0000 10|111111 10|111111
+        0b1110_0000 => {
+            if b.len() < 3
+            || !is_continuation(b[1])
+            || b[1] < 0b10_100000
+            || !is_continuation(b[2]) {
+                return Err(());
+            }
+            Ok(&b[3..])
+        }
+
+        // 1110|0001 10|000000 10|000000
+        // 1110|1101 10|011111 10|111111
+        0b1110_0001 ..= 0b1110_1101 => {
+            if b.len() < 3
+            || !is_continuation(b[1])
+            || b[1] > 0b10_011111
+            || !is_continuation(b[2]) {
+                return Err(());
+            }
+            Ok(&b[3..])
+        }
+
+        // 1110|1110 10|000000 10|000000
+        // 1110|1111 10|111111 10|111111
+        0b1110_1110 ..= 0b1110_1111 => {
+            if b.len() < 3
+            || !is_continuation(b[1])
+            || !is_continuation(b[2]) {
+                return Err(());
+            }
+            Ok(&b[3..])
+        }
+
+        // 11110|000 10|010000 10|000000 10|000000
+        // 11110|000 10|111111 10|111111 10|111111
+        0b11110_000 => {
+            if b.len() < 4
+            || !is_continuation(b[1])
+            || b[1] < 0b10_010000
+            || !is_continuation(b[2])
+            || !is_continuation(b[3]) {
+                return Err(());
+            }
+            Ok(&b[4..])
+        }
+
+        // 11110|001 10|000000 10|000000 10|000000
+        // 11110|100 10|001111 10|111111 10|111111
+        0b11110_001 ..= 0b11110_100 => {
+            if b.len() < 4
+            || !is_continuation(b[1])
+            || b[1] > 0b10_001111
+            || !is_continuation(b[2])
+            || !is_continuation(b[3]) {
+                return Err(());
+            }
+            Ok(&b[4..])
+        }
+
+        // 11110|101 *
+        // 11111 111 *
+        0b11110_101 ..= 0b11111_111 => {
+            Err(())
+        }
+    }
 }
 
 
@@ -87,7 +203,7 @@ pub fn validate_inline(buffer: &[u8]) -> Result<&str, Utf8Error> {
         else {
             rem = match check_1(rem) {
                 Ok(rem) => rem,
-                Err(e) => return Err(e),
+                Err(_) => return Err(Utf8Error { valid_until: rem.as_ptr() }),
             };
         }
     }
@@ -122,17 +238,17 @@ pub fn validate_string_inline(string: &[u8]) -> Result<(&str, bool), Utf8Error> 
             }
             rem = &rem[1..];
 
-            while rem.len() >= 4 {
-                let word = unsafe { core::ptr::read_unaligned(rem.as_ptr() as *const u32) };
-                let word = u32::from_le(word);
+            while rem.len() >= 8 {
+                let word = unsafe { core::ptr::read_unaligned(rem.as_ptr() as *const u64) };
+                let word = u64::from_le(word);
 
-                let mut non_ascii = non_ascii_mask_4(word);
+                let mut non_ascii = non_ascii_mask_8(word);
                 let mut stoppers =
-                      Bitmask4::find_equal_bytes(word, b'"')
-                    | Bitmask4::find_equal_bytes(word, b'\\');
+                      Bitmask8::find_equal_bytes(word, b'"')
+                    | Bitmask8::find_equal_bytes(word, b'\\');
 
                 if (non_ascii | stoppers).none() {
-                    rem = &rem[4..];
+                    rem = &rem[8..];
                 }
                 else {
                     let non_ascii = non_ascii.next();
@@ -164,7 +280,7 @@ pub fn validate_string_inline(string: &[u8]) -> Result<(&str, bool), Utf8Error> 
         else {
             rem = match check_1(rem) {
                 Ok(rem) => rem,
-                Err(e) => return Err(e),
+                Err(_) => return Err(Utf8Error { valid_until: rem.as_ptr() }),
             };
         }
     }
@@ -179,24 +295,4 @@ pub fn validate_string_inline(string: &[u8]) -> Result<(&str, bool), Utf8Error> 
 pub fn validate_string(string: &[u8]) -> Result<(&str, bool), Utf8Error> {
     validate_string_inline(string)
 }
-
-
-#[inline(always)]
-pub fn is_boundary(b: u8) -> bool {
-    //     b <  0b10000000 = 128 ~= -128
-    // ||  b >= 0b11000000 = 196 ~=  -64
-    //
-    //    (b < -128 || b >= -64)
-    // == !(b >= -128 && b < -64)
-    // == !(true && b < -64)
-    // == b >= -64
-    (b as i8) >= -64
-}
-
-#[inline(always)]
-pub fn is_continuation(b: u8) -> bool {
-    !is_boundary(b)
-}
-
-
 
