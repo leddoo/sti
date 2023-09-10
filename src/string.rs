@@ -37,6 +37,9 @@ impl<A: Alloc> String<A> {
     #[inline(always)]
     pub fn cap(&self) -> usize { self.buffer.cap() }
 
+    #[inline(always)]
+    pub fn alloc(&self) -> &A { self.buffer.alloc() }
+
 
     #[inline(always)]
     pub fn reserve(&mut self, min_cap: usize) {
@@ -67,10 +70,43 @@ impl<A: Alloc> String<A> {
 
 
     #[inline(always)]
+    pub fn clone_in<A2: Alloc>(&self, alloc: A2) -> String<A2> {
+        String { buffer: self.buffer.clone_in(alloc) }
+    }
+
+    #[inline(always)]
+    pub fn leak<'a>(self) -> &'a str  where A: 'a {
+        unsafe { utf8::str_unck(self.buffer.leak()) }
+    }
+
+
+    #[inline(always)]
     pub fn as_str(&self) -> &str {
         unsafe { utf8::str_unck(self.buffer.as_slice()) }
     }
 }
+
+
+impl<A: Alloc + Clone> Clone for String<A> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        self.clone_in(self.buffer.alloc().clone())
+    }
+}
+
+
+impl<A: Alloc> core::fmt::Debug for String<A> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+impl<A: Alloc> core::fmt::Display for String<A> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
 
 impl<A: Alloc> core::borrow::Borrow<str> for String<A> {
     #[inline(always)]
