@@ -6,6 +6,7 @@ pub mod hint;
 pub mod simd;
 pub mod float;
 pub mod bit;
+pub mod reader;
 
 pub mod traits;
 
@@ -21,7 +22,7 @@ pub mod static_vec;
 pub mod sync;
 
 pub mod utf8;
-pub mod reader;
+pub mod string;
 
 pub mod packed_option;
 pub mod keyed;

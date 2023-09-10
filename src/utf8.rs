@@ -1,11 +1,11 @@
 use crate::bit::*;
 
 
-pub use core::str::from_utf8_unchecked as str_from_slice_unck;
+pub use core::str::from_utf8_unchecked as str_unck;
 
 #[inline(always)]
 pub unsafe fn str_from_parts_unck<'a>(ptr: *const u8, len: usize) -> &'a str {
-    unsafe { str_from_slice_unck(core::slice::from_raw_parts(ptr, len)) }
+    unsafe { str_unck(core::slice::from_raw_parts(ptr, len)) }
 }
 
 
@@ -208,7 +208,7 @@ pub fn validate_inline(buffer: &[u8]) -> Result<&str, Utf8Error> {
         }
     }
 
-    return Ok(unsafe { str_from_slice_unck(buffer) });
+    return Ok(unsafe { str_unck(buffer) });
 }
 
 /// validate entire buffer as utf-8.
@@ -286,7 +286,7 @@ pub fn validate_string_inline(string: &[u8]) -> Result<(&str, bool), Utf8Error> 
     }
 
     // didn't encounter '"' or '\' or error.
-    return Ok((unsafe { str_from_slice_unck(string) }, false));
+    return Ok((unsafe { str_unck(string) }, false));
 }
 
 /// utf-8 validation for string parsing.
