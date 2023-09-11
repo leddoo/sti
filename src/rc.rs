@@ -1,6 +1,7 @@
 use core::alloc::Layout;
 use core::ptr::NonNull;
 use core::cell::Cell;
+use core::mem::ManuallyDrop;
 
 use crate::alloc::{Alloc, AllocError, GlobalAlloc, alloc_ptr};
 
@@ -78,9 +79,10 @@ impl<T: ?Sized, A: Alloc> Rc<T, A> {
 
 
     #[inline(always)]
-    pub unsafe fn cast<U, F>(self, f: F) -> Rc<U, A>
-    where F: FnOnce(NonNull<RcInner<T, A>>) -> NonNull<RcInner<U, A>> {
-        Rc { inner: f(self.inner) }
+    pub unsafe fn cast<U: ?Sized, F>(self, f: F) -> Rc<U, A>
+    where F: FnOnce(*mut RcInner<T, A>) -> *mut RcInner<U, A> {
+        let this = ManuallyDrop::new(self);
+        Rc { inner: unsafe { NonNull::new_unchecked(f(this.inner.as_ptr())) } }
     }
 }
 

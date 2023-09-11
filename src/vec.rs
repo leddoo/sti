@@ -583,13 +583,6 @@ impl<T, A: Alloc, I: Iterator<Item = T>> FromIn<I, A> for Vec<T, A> {
     }
 }
 
-impl<T, I: Iterator<Item = T>> From<I> for Vec<T, GlobalAlloc> {
-    #[inline]
-    fn from(value: I) -> Self {
-        Self::from_in(GlobalAlloc, value)
-    }
-}
-
 
 impl<T, A: Alloc> Extend<T> for Vec<T, A> {
     #[inline]
@@ -618,6 +611,14 @@ impl<T, A: Alloc> core::borrow::BorrowMut<[T]> for Vec<T, A> {
     #[inline(always)]
     fn borrow_mut(&mut self) -> &mut [T] {
         self.as_slice_mut()
+    }
+}
+
+
+impl<T: Clone> From<&[T]> for Vec<T, GlobalAlloc> {
+    #[inline(always)]
+    fn from(value: &[T]) -> Self {
+        Self::from_slice(value)
     }
 }
 
@@ -695,12 +696,12 @@ mod tests {
     fn vec_from_iter() {
         use crate::traits::CopyIt;
 
-        let a = Vec::from(6..9);
+        let a = Vec::from_iter(6..9);
         assert_eq!(a.len(), 3);
         assert_eq!(a.cap(), 3);
         assert_eq!(*a, [6, 7, 8]);
 
-        let b = Vec::from(a.copy_map_it(|x| x - 5));
+        let b = Vec::from_iter(a.copy_map_it(|x| x - 5));
         assert_eq!(b.len(), 3);
         assert_eq!(b.cap(), 3);
         assert_eq!(*b, [1, 2, 3]);

@@ -17,6 +17,12 @@ impl String<GlobalAlloc> {
     pub fn with_cap(cap: usize) -> Self {
         String::with_cap_in(GlobalAlloc, cap)
     }
+
+
+    #[inline(always)]
+    pub fn from_str(value: &str) -> Self {
+        String::from_str_in(GlobalAlloc, value)
+    }
 }
 
 impl<A: Alloc> String<A> {
@@ -28,6 +34,12 @@ impl<A: Alloc> String<A> {
     #[inline(always)]
     pub fn with_cap_in(alloc: A, cap: usize) -> Self {
         Self { buffer: Vec::with_cap_in(alloc, cap) }
+    }
+
+
+    #[inline(always)]
+    pub fn from_str_in(alloc: A, value: &str) -> Self {
+        Self { buffer: Vec::from_slice_in(alloc, value.as_bytes()) }
     }
 
 
@@ -142,6 +154,14 @@ impl<A: Alloc> core::fmt::Write for String<A> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         self.push(s);
         Ok(())
+    }
+}
+
+
+impl From<&str> for String<GlobalAlloc> {
+    #[inline(always)]
+    fn from(value: &str) -> Self {
+        Self::from_str(value)
     }
 }
 

@@ -139,6 +139,13 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
         self.inner.remove(key)
     }
 
+    /// remove a key/value pair, returning only the value.
+    #[inline(always)]
+    pub fn remove_value<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<V>
+    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        self.inner.remove(key).map(|(_k, v)| v)
+    }
+
 
     pub fn get_or_insert<'q, Q: ?Sized + Eq>(&mut self, key: &'q Q, default: V) -> &mut V
     where K: From<&'q Q> + Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
