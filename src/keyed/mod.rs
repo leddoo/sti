@@ -13,21 +13,22 @@ pub trait Key: Copy + PartialEq {
     const LIMIT_SELF: Self;
     const LIMIT:      usize;
 
+    const ZERO: Self;
     const MAX: Self;
 
 
-    unsafe fn from_usize_unck(value: usize) -> Self;
+    fn from_usize_unck(value: usize) -> Self;
 
     fn usize(self) -> usize;
 
 
     #[inline(always)]
     fn from_usize(value: usize) -> Option<Self> {
-        (value < Self::LIMIT).then(|| unsafe { Self::from_usize_unck(value) })
+        (value < Self::LIMIT).then(|| Self::from_usize_unck(value))
     }
 
     #[inline(always)]
-    unsafe fn sub_unck(self, other: Self) -> usize {
+    fn sub_unck(self, other: Self) -> usize {
         self.usize() - other.usize()
     }
 
@@ -37,8 +38,8 @@ pub trait Key: Copy + PartialEq {
     }
 
     #[inline(always)]
-    unsafe fn add_unck(self, offset: usize) -> Self {
-        unsafe { Self::from_usize_unck(self.usize() + offset) }
+    fn add_unck(self, offset: usize) -> Self {
+        Self::from_usize_unck(self.usize() + offset)
     }
 
     #[inline(always)]
@@ -75,6 +76,9 @@ macro_rules! define_key_basic {
         $name_vis struct $name($ty);
 
         impl $name {
+            pub const ZERO: Self = Self(0);
+            pub const MAX:  Self = Self(<$ty>::MAX - 1);
+
             #[inline(always)]
             pub const fn new_unck(value: $ty) -> Self { Self(value) }
 
@@ -87,6 +91,9 @@ macro_rules! define_key_basic {
             pub const fn inner(self) -> $ty { self.0 }
 
             #[inline(always)]
+            pub fn inner_mut_unck(&mut self) -> &mut $ty { &mut self.0 }
+
+            #[inline(always)]
             pub fn some(self) -> $crate::packed_option::PackedOption<Self> {
                 $crate::packed_option::Reserved::some(self)
             }
@@ -96,10 +103,11 @@ macro_rules! define_key_basic {
             const LIMIT_SELF: Self = Self(<$ty>::MAX);
             const LIMIT: usize = <$ty>::MAX as usize;
 
-            const MAX: Self = Self(<$ty>::MAX - 1);
+            const ZERO: Self = Self::ZERO;
+            const MAX:  Self = Self::MAX;
 
             #[inline(always)]
-            unsafe fn from_usize_unck(value: usize) -> Self {
+            fn from_usize_unck(value: usize) -> Self {
                 Self(value as $ty)
             }
 

@@ -86,7 +86,7 @@ impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.len {
-            let k = unsafe { K::from_usize_unck(self.idx) };
+            let k = K::from_usize_unck(self.idx);
             let v = unsafe { &*self.ptr.as_ptr().add(self.idx) };
             self.idx += 1;
             return Some((k, v));
@@ -99,7 +99,7 @@ impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
         if i < self.len - self.idx {
             self.idx += i;
 
-            let k = unsafe { K::from_usize_unck(self.idx) };
+            let k = K::from_usize_unck(self.idx);
             let v = unsafe { &*self.ptr.as_ptr().add(self.idx) };
             self.idx += 1;
             return Some((k, v));
@@ -111,7 +111,7 @@ impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
     fn last(self) -> Option<Self::Item> {
         if self.idx < self.len {
             let idx = self.len - 1;
-            let k = unsafe { K::from_usize_unck(idx) };
+            let k = K::from_usize_unck(idx);
             let v = unsafe { &*self.ptr.as_ptr().add(idx) };
             return Some((k, v));
         }

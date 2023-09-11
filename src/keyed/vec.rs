@@ -41,7 +41,7 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     }
 
     #[inline(always)]
-    pub unsafe fn inner_mut(&mut self) -> &mut Vec<V, A> {
+    pub fn inner_mut_unck(&mut self) -> &mut Vec<V, A> {
         &mut self.inner
     }
 
@@ -58,21 +58,21 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
 
     #[inline(always)]
     pub fn range(&self) -> KRange<K> {
-        unsafe { KRange::new(
+        KRange::new(
             K::from_usize_unck(0),
-            K::from_usize_unck(self.inner.len())) }
+            K::from_usize_unck(self.inner.len()))
     }
 
     #[inline(always)]
     pub fn next_key(&self) -> K {
-        unsafe { K::from_usize_unck(self.len()) }
+        K::from_usize_unck(self.len())
     }
 
 
     #[inline(always)]
     pub fn try_push(&mut self, value: V) -> Result<K, ()> {
         if self.len() + 1 < K::LIMIT {
-            let result = unsafe { K::from_usize_unck(self.len()) };
+            let result = K::from_usize_unck(self.len());
             self.inner.push(value);
             return Ok(result);
         }
@@ -82,15 +82,6 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     #[inline(always)]
     pub fn push(&mut self, value: V) -> K {
         self.try_push(value).unwrap()
-    }
-
-    #[inline(always)]
-    pub fn push_f<F: FnOnce(&mut Self)>(&mut self, f: F) -> KRange<K> {
-        let begin = unsafe { K::from_usize_unck(self.len()) };
-        f(self);
-        let end = unsafe { K::from_usize_unck(self.len()) };
-
-        return KRange::new(begin, end);
     }
 
 

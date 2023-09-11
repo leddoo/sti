@@ -8,8 +8,11 @@ pub struct KRange<K: Key> {
 }
 
 impl<K: Key> KRange<K> {
+    pub const ZERO: Self = Self { begin: K::ZERO, end: K::ZERO };
+
     #[inline(always)]
-    pub unsafe fn new_unck(begin: K, end: K) -> KRange<K> {
+    pub fn new_unck(begin: K, end: K) -> KRange<K> {
+        debug_assert!(begin.usize() <= end.usize());
         KRange { begin, end }
     }
 
@@ -20,6 +23,18 @@ impl<K: Key> KRange<K> {
             end: end.max(begin),
         }
     }
+
+    #[inline(always)]
+    pub fn collapsed(k: K) -> KRange<K> {
+        KRange { begin: k, end: k }
+    }
+
+    #[inline(always)]
+    pub fn from_key(k: K) -> KRange<K> {
+        debug_assert!(K::from_usize(k.usize() + 1).is_some());
+        KRange { begin: k, end: K::from_usize_unck(k.usize() + 1) }
+    }
+
 
     #[inline(always)]
     pub fn begin(self) -> K {
@@ -46,14 +61,14 @@ impl<K: Key> KRange<K> {
 
     #[inline(always)]
     pub fn len(self) -> usize {
-        unsafe { self.end.sub_unck(self.begin) }
+        self.end.sub_unck(self.begin)
     }
 
 
     #[inline(always)]
     pub fn try_idx(self, i: usize) -> Option<K> {
         if i < self.len() {
-            return Some(unsafe { self.begin.add_unck(i) });
+            return Some(self.begin.add_unck(i));
         }
         None
     }
@@ -78,7 +93,7 @@ impl<K: Key> KRange<K> {
     pub fn try_rev(self, i: usize) -> Option<K> {
         if i < self.len() {
             let r = (self.len() - 1) - i;
-            return Some(unsafe { self.begin.add_unck(r) });
+            return Some(self.begin.add_unck(r));
         }
         None
     }
@@ -114,7 +129,7 @@ impl<K: Key> Iterator for KRange<K> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.len() > 0 {
             let result = self.begin;
-            self.begin = unsafe { self.begin.add_unck(1) };
+            self.begin = self.begin.add_unck(1);
             return Some(result);
         }
         None
@@ -123,8 +138,8 @@ impl<K: Key> Iterator for KRange<K> {
     #[inline(always)]
     fn nth(&mut self, i: usize) -> Option<Self::Item> {
         if i < self.len() {
-            let result = unsafe { self.begin.add_unck(i) };
-            self.begin = unsafe { result.add_unck(1) };
+            let result = self.begin.add_unck(i);
+            self.begin = result.add_unck(1);
             return Some(result);
         }
         None
