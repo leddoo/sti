@@ -71,7 +71,7 @@ impl<K: Key> crate::packed_option::Reserved for K {
 #[macro_export]
 macro_rules! define_key_basic {
     ($ty:ty, $name_vis:vis, $name:ident) => {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         #[repr(transparent)]
         $name_vis struct $name($ty);
 
@@ -114,6 +114,12 @@ macro_rules! define_key_basic {
             #[inline(always)]
             fn usize(self) -> usize {
                 self.0 as usize
+            }
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "{}({})", core::stringify!($name), self.0)
             }
         }
     };
