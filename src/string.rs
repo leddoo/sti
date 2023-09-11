@@ -121,6 +121,23 @@ impl<A: Alloc> core::ops::Deref for String<A> {
 }
 
 
+impl<A: Alloc> core::hash::Hash for String<A> {
+    #[inline(always)]
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.as_str().hash(state)
+    }
+}
+
+impl<A: Alloc> PartialEq for String<A> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str().eq(other.as_str())
+    }
+}
+
+impl<A: Alloc> Eq for String<A> {}
+
+
 impl<A: Alloc> core::fmt::Write for String<A> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         self.push(s);
