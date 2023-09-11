@@ -61,18 +61,26 @@ impl<T: ?Sized, A: Alloc> Rc<T, A> {
             unsafe { &mut self.inner.as_mut().data })
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn make_mut(&mut self) -> &mut T  where T: Clone, A: Clone {
         self.make_mut_ex(|this|
             Rc::new_in(this.alloc().clone(), this.as_ref().clone()))
     }
 
+    #[inline(always)]
     pub fn make_mut_ex<F: FnOnce(&Self) -> Self>(&mut self, clone: F) -> &mut T {
         if self.ref_count() != 1 {
             *self = clone(self);
         }
         assert_eq!(self.ref_count(), 1);
         unsafe { &mut self.inner.as_mut().data }
+    }
+
+
+    #[inline(always)]
+    pub unsafe fn cast<U, F>(self, f: F) -> Rc<U, A>
+    where F: FnOnce(NonNull<RcInner<T, A>>) -> NonNull<RcInner<U, A>> {
+        Rc { inner: f(self.inner) }
     }
 }
 
