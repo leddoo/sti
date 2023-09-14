@@ -421,23 +421,27 @@ impl<A: Alloc> Alloc for Arena<A> {
         let old_size = old_layout.size();
         let new_size = new_layout.size();
 
-        let block = self.block.get().as_ptr() as usize;
-        let block_end = block + self.cap.get();
-        let used_end  = block + self.used.get();
-
         let ptr = ptr.as_ptr() as usize;
+        let block = self.block.get().as_ptr() as usize;
+
         let alloc_end = ptr + old_size;
+        let used_end  = block + self.used.get();
+        if alloc_end != used_end {
+            return Err(())
+        }
 
+        let block_end = block + self.cap.get();
         let block_rem = block_end - ptr;
+        if new_size > block_rem {
+            return Err(())
+        }
 
-        if alloc_end == used_end && new_size <= block_rem {
-            self.used.set(self.used.get() - old_size + new_size);
+        self.used.set(self.used.get() - old_size + new_size);
 
-            debug_assert!(self.used.get() <= self.cap.get());
-            self.debug_integrity_check();
+        debug_assert!(self.used.get() <= self.cap.get());
+        self.debug_integrity_check();
 
-            Ok(())
-        } else { Err(()) }
+        return Ok(());
     }
 }
 
@@ -632,6 +636,53 @@ mod tests {
         let layout_cant = Layout::from_size_align(1, 1).unwrap();
         let err = unsafe { arena.try_realloc(ptr, layout_3, layout_cant) };
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn arena_realloc_edge_cases() {
+        let backing = Arena::new();
+        backing.min_block_size.set(1024);
+
+        let arena = Arena::new();
+        arena.min_block_size.set(128);
+        arena.max_block_size.set(128);
+
+        let layout_1 = Layout::from_size_align(1, 1).unwrap(); // must be 1,1.
+        let layout_8 = Layout::from_size_align(8, 1).unwrap();
+
+        // no block.
+        assert_eq!(arena.stats().total_allocated, 0);
+        let err = unsafe { arena.try_realloc(NonNull::new(&mut 1u8).unwrap(), layout_1, layout_8) };
+        assert!(err.is_err());
+
+        let before = backing.alloc_ptr::<[u8; 128]>().cast::<u8>();
+
+        // with block.
+        let ptr = arena.alloc_ptr::<u8>();
+        let stats = arena.stats();
+        assert_eq!(stats.total_allocated, 128);
+        assert_eq!(stats.num_blocks, 1);
+
+        let after = backing.alloc_ptr::<[u8; 128]>().cast::<u8>();
+        assert_eq!(after.as_ptr() as usize - before.as_ptr() as usize, 128);
+
+        // out of bounds pointers.
+        let err = unsafe { arena.try_realloc(before, layout_1, layout_8) };
+        assert!(err.is_err());
+        let err = unsafe { arena.try_realloc(after, layout_1, layout_8) };
+        assert!(err.is_err());
+        let err = unsafe { arena.try_realloc(NonNull::new(after.as_ptr().add(128)).unwrap(), layout_1, layout_8) };
+        assert!(err.is_err());
+
+        // can't resize beyond end of block.
+        let layout_too_full = Layout::from_size_align(128 - HEADER_SIZE + 1, 1).unwrap();
+        let err = unsafe { arena.try_realloc(ptr, layout_1, layout_too_full) };
+        assert!(err.is_err());
+
+        // can resize to end of block.
+        let layout_full = Layout::from_size_align(128 - HEADER_SIZE, 1).unwrap();
+        let ok = unsafe { arena.try_realloc(ptr, layout_1, layout_full) };
+        assert!(ok.is_ok());
     }
 
     #[test]

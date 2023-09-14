@@ -9,7 +9,7 @@ pub use vec::*;
 pub use free_vec::*;
 
 
-pub trait Key: Copy + PartialEq {
+pub trait Key: Copy + PartialEq + PartialOrd {
     const LIMIT_SELF: Self;
     const LIMIT:      usize;
 

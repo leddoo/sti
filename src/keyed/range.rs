@@ -112,6 +112,12 @@ impl<K: Key> KRange<K> {
     pub fn last(self) -> K {
         self.rev(0)
     }
+
+
+    #[inline(always)]
+    pub fn contains(self, k: K) -> bool {
+        k >= self.begin && k < self.end
+    }
 }
 
 
