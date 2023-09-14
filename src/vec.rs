@@ -41,6 +41,11 @@ impl<T> Vec<T> {
     pub fn from_slice(vs: &[T]) -> Self  where T: Clone {
         Self::from_slice_in(GlobalAlloc, vs)
     }
+
+    #[inline(always)]
+    pub fn from_fn(f: impl FnMut() -> T, len: usize) -> Self {
+        Self::from_fn_in(GlobalAlloc, f, len)
+    }
 }
 
 impl<T, A: Alloc> Vec<T, A> {
@@ -255,6 +260,15 @@ impl<T, A: Alloc> Vec<T, A> {
         let mut result = Vec::with_cap_in(alloc, vs.len());
         for v in vs {
             result.push(v.clone());
+        }
+        return result;
+    }
+
+    #[inline]
+    pub fn from_fn_in(alloc: A, mut f: impl FnMut() -> T, len: usize) -> Self {
+        let mut result = Vec::with_cap_in(alloc, len);
+        for _ in 0..len {
+            result.push(f());
         }
         return result;
     }
