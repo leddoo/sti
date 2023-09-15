@@ -476,9 +476,9 @@ impl<T, A: Alloc + Default> Default for Vec<T, A> {
 }
 
 
-impl<T: Clone, A: Alloc + Copy> Clone for Vec<T, A> {
+impl<T: Clone, A: Alloc + Clone> Clone for Vec<T, A> {
     fn clone(&self) -> Self {
-        self.clone_in(self.alloc)
+        self.clone_in(self.alloc.clone())
     }
 }
 

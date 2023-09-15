@@ -6,6 +6,7 @@ use crate::alloc::{Alloc, GlobalAlloc};
 use crate::vec::Vec;
 
 
+#[derive(Clone)]
 pub struct KVec<K: Key, V, A: Alloc = GlobalAlloc> {
     inner:   Vec<V, A>, // .len() < K::LIMIT
     phantom: PhantomData<K>,
@@ -55,6 +56,19 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     pub fn len(&self) -> usize {
         self.inner.len()
     }
+
+
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+
+    #[inline(always)]
+    pub fn truncate(&mut self, new_len: usize) {
+        self.inner.truncate(new_len)
+    }
+    
 
     #[inline(always)]
     pub fn range(&self) -> KRange<K> {
