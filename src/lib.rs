@@ -57,7 +57,21 @@ macro_rules! static_assert_ne {
 #[macro_export]
 macro_rules! write {
     ($dst:expr, $($arg:tt)*) => {
-        { let _ = core::write!($dst, $($arg)*); }
+        { let _ = ::core::write!($dst, $($arg)*); }
     };
+}
+
+#[macro_export]
+macro_rules! format {
+    ($($arg:tt)*) => {
+        $crate::string::format(::core::format_args!($($arg)*))
+    }
+}
+
+#[macro_export]
+macro_rules! format_in {
+    ($alloc:expr, $($arg:tt)*) => {
+        $crate::string::format_in($alloc, ::core::format_args!($($arg)*))
+    }
 }
 
