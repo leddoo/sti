@@ -80,6 +80,12 @@ impl<A: Alloc> String<A> {
             c.encode_utf8(&mut [0; 4]).as_bytes())
     }
 
+    
+    #[inline(always)]
+    pub fn clear(&mut self) {
+        self.buffer.clear();
+    }
+
 
     #[inline(always)]
     pub fn clone_in<A2: Alloc>(&self, alloc: A2) -> String<A2> {
@@ -174,4 +180,19 @@ impl From<&str> for String<GlobalAlloc> {
         Self::from_str(value)
     }
 }
+
+#[inline]
+pub fn format_in<A: Alloc>(alloc: A, args: core::fmt::Arguments) -> String<A> {
+    use core::fmt::Write;
+
+    let mut result = String::new_in(alloc);
+    _ = result.write_fmt(args);
+    return result;
+}
+
+#[inline]
+pub fn format(args: core::fmt::Arguments) -> String {
+    format_in(GlobalAlloc, args)
+}
+
 
