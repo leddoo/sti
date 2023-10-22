@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use super::{Key, KRange, KSlice};
 
+use crate::traits::FromIn;
 use crate::alloc::{Alloc, GlobalAlloc};
 use crate::vec::Vec;
 
@@ -35,6 +36,17 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
         KVec { inner: Vec::with_cap_in(alloc, cap), phantom: PhantomData }
     }
 
+    #[inline(always)]
+    pub fn from_inner(inner: Vec<V, A>) -> Self {
+        assert!(inner.len() < K::LIMIT);
+        KVec { inner, phantom: PhantomData }
+    }
+
+    #[inline(always)]
+    pub fn from_inner_unck(inner: Vec<V, A>) -> Self {
+        KVec { inner, phantom: PhantomData }
+    }
+
 
     #[inline(always)]
     pub fn inner(&self) -> &Vec<V, A> {
@@ -53,9 +65,13 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
 
 
     #[inline(always)]
-    pub fn len(&self) -> usize {
-        self.inner.len()
-    }
+    pub fn alloc(&self) -> &A { self.inner.alloc() }
+
+    #[inline(always)]
+    pub fn cap(&self) -> usize { self.inner.cap() }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize { self.inner.len() }
 
 
     #[inline(always)]
@@ -120,6 +136,16 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
         KSlice::new_mut_unck(&mut self.inner)
     }
 
+
+    #[inline(always)]
+    pub fn map_in<V2, A2: Alloc, F: FnMut((K, &V)) -> V2>(&self, alloc: A2, f: F) -> KVec<K, V2, A2> {
+        KVec { inner: Vec::from_in(alloc, self.iter().map(f)), phantom: PhantomData }
+    }
+
+    #[inline(always)]
+    pub fn map<V2, F: FnMut((K, &V)) -> V2>(&self, f: F) -> KVec<K, V2, A>  where A: Clone {
+        self.map_in(self.alloc().clone(), f)
+    }
 
     #[inline(always)]
     pub fn clone_in<B: Alloc>(&self, alloc: B) -> KVec<K, V, B> where V: Clone {
