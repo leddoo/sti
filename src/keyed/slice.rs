@@ -12,7 +12,7 @@ pub struct KSlice<K: Key, V> {
 
 impl<K: Key, V> KSlice<K, V> {
     #[inline(always)]
-    pub fn new_unck<'a>(slice: &'a [V]) -> &'a Self {
+    pub const fn new_unck<'a>(slice: &'a [V]) -> &'a Self {
         unsafe { &*(slice as *const [V] as *const Self) }
     }
 
@@ -22,14 +22,21 @@ impl<K: Key, V> KSlice<K, V> {
     }
 
     #[inline(always)]
-    pub fn inner(&self) -> &[V] {
-        &self.inner
-    }
+    pub const fn empty<'a>() -> &'a Self { Self::new_unck(&[]) }
 
     #[inline(always)]
-    pub fn len(&self) -> usize {
-        self.inner.len()
-    }
+    pub fn empty_mut<'a>() -> &'a mut Self { Self::new_mut_unck(&mut []) }
+
+
+    #[inline(always)]
+    pub const fn inner(&self) -> &[V] { &self.inner }
+
+    #[inline(always)]
+    pub fn inner_mut(&mut self) -> &mut [V] { &mut self.inner }
+
+    #[inline(always)]
+    pub const fn len(&self) -> usize { self.inner.len() }
+
 
     #[inline(always)]
     pub fn iter(&self) -> KIter<K, V> {
