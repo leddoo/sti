@@ -80,7 +80,7 @@ impl<A: Alloc> String<A> {
             c.encode_utf8(&mut [0; 4]).as_bytes())
     }
 
-    
+
     #[inline(always)]
     pub fn clear(&mut self) {
         self.buffer.clear();
@@ -99,19 +99,22 @@ impl<A: Alloc> String<A> {
 
 
     #[inline(always)]
+    pub fn as_bytes(&self) -> &[u8] { &self.buffer }
+
+    #[inline(always)]
     pub fn as_str(&self) -> &str {
         unsafe { utf8::str_unck(self.buffer.as_slice()) }
     }
 
 
     #[inline(always)]
-    pub fn into_inner(self) -> Vec<u8, A> { self.buffer }
-
-    #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8] { &self.buffer }
+    pub fn inner(&self) -> &Vec<u8, A> { &self.buffer }
 
     #[inline(always)]
     pub unsafe fn inner_mut(&mut self) -> &mut Vec<u8, A> { &mut self.buffer }
+
+    #[inline(always)]
+    pub fn into_inner(self) -> Vec<u8, A> { self.buffer }
 }
 
 

@@ -584,8 +584,6 @@ impl<T> FromIterator<T> for Vec<T, GlobalAlloc> {
 impl<T, A: Alloc, I: Iterator<Item = T>> FromIn<I, A> for Vec<T, A> {
     #[inline]
     fn from_in(alloc: A, iter: I) -> Self {
-        let iter = iter.into_iter();
-
         let (min_len, max_len) = iter.size_hint();
         let cap = max_len.unwrap_or(min_len);
 

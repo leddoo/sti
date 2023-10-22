@@ -41,6 +41,16 @@ impl<K: Key, V> KSlice<K, V> {
         }
     }
 
+    #[inline(always)]
+    pub fn iter_mut(&mut self) -> KIterMut<K, V> {
+        KIterMut {
+            ptr: unsafe { NonNull::new_unchecked(self.inner.as_ptr() as *mut V) },
+            len: self.inner.len(),
+            idx: 0,
+            phantom: PhantomData,
+        }
+    }
+
 
     #[inline(always)]
     pub fn get(&self, index: K) -> Option<&V> {
@@ -73,6 +83,7 @@ impl<K: Key, V> core::ops::IndexMut<K> for KSlice<K, V> {
 
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
+#[derive(Clone)]
 pub struct KIter<'a, K: Key, V> {
     ptr: NonNull<V>,
     len: usize,
@@ -113,6 +124,60 @@ impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
             let idx = self.len - 1;
             let k = K::from_usize_unck(idx);
             let v = unsafe { &*self.ptr.as_ptr().add(idx) };
+            return Some((k, v));
+        }
+        None
+    }
+
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len - self.idx;
+        (len, Some(len))
+    }
+}
+
+
+#[must_use = "iterators are lazy and do nothing unless consumed"]
+pub struct KIterMut<'a, K: Key, V> {
+    ptr: NonNull<V>,
+    len: usize,
+    idx: usize, // <= len
+    phantom: PhantomData<(K, &'a mut V)>,
+}
+
+impl<'a, K: Key, V> Iterator for KIterMut<'a, K, V> {
+    type Item = (K, &'a mut V);
+
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.len {
+            let k = K::from_usize_unck(self.idx);
+            let v = unsafe { &mut *self.ptr.as_ptr().add(self.idx) };
+            self.idx += 1;
+            return Some((k, v));
+        }
+        None
+    }
+
+    #[inline(always)]
+    fn nth(&mut self, i: usize) -> Option<Self::Item> {
+        if i < self.len - self.idx {
+            self.idx += i;
+
+            let k = K::from_usize_unck(self.idx);
+            let v = unsafe { &mut *self.ptr.as_ptr().add(self.idx) };
+            self.idx += 1;
+            return Some((k, v));
+        }
+        None
+    }
+
+    #[inline(always)]
+    fn last(self) -> Option<Self::Item> {
+        if self.idx < self.len {
+            let idx = self.len - 1;
+            let k = K::from_usize_unck(idx);
+            let v = unsafe { &mut *self.ptr.as_ptr().add(idx) };
             return Some((k, v));
         }
         None

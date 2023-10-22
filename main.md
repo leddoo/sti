@@ -7,14 +7,10 @@
         - rename `empty` to something less misleading.
         - slot api for ptr eq keys.
     - rw lock.
-    - `String`.
 
 
 
 ### backlog:
-
-- string formatting:
-    - format/in/arena macro.
 
 - utf-8 module:
     - ceil/floor.

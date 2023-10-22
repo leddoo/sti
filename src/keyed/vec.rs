@@ -62,17 +62,11 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-
-
-    #[inline(always)]
-    pub fn truncate(&mut self, new_len: usize) {
-        self.inner.truncate(new_len)
-    }
     
 
     #[inline(always)]
     pub fn range(&self) -> KRange<K> {
-        KRange::new(
+        KRange::new_unck(
             K::from_usize_unck(0),
             K::from_usize_unck(self.inner.len()))
     }
@@ -100,6 +94,17 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
 
 
     #[inline(always)]
+    pub fn truncate(&mut self, new_len: usize) {
+        self.inner.truncate(new_len)
+    }
+
+    #[inline(always)]
+    pub fn clear(&mut self) {
+        self.inner.clear();
+    }
+
+
+    #[inline(always)]
     pub fn as_slice(&self) -> &KSlice<K, V> {
         KSlice::new_unck(&self.inner)
     }
@@ -107,6 +112,17 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     #[inline(always)]
     pub fn as_slice_mut(&mut self) -> &mut KSlice<K, V> {
         KSlice::new_mut_unck(&mut self.inner)
+    }
+
+
+    #[inline(always)]
+    pub fn clone_in<B: Alloc>(&self, alloc: B) -> KVec<K, V, B> where V: Clone {
+        KVec { inner: self.inner.clone_in(alloc), phantom: PhantomData }
+    }
+
+    #[inline(always)]
+    pub fn leak<'a>(self) -> &'a mut KSlice<K, V>  where A: 'a {
+        KSlice::new_mut_unck(self.inner.leak())
     }
 }
 
