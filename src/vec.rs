@@ -323,11 +323,24 @@ impl<T, A: Alloc> Vec<T, A> {
         self.truncate(0);
     }
 
-    #[track_caller]
-    #[inline]
-    pub fn free(&mut self) {
-        self.truncate(0);
-        unsafe { self.try_set_cap(0).unwrap() };
+    #[inline(always)]
+    pub fn resize(&mut self, new_len: usize, value: T)  where T: Clone {
+        if new_len <= self.len {
+            self.truncate(new_len);
+        }
+        else {
+            self.reserve(new_len);
+            debug_assert!(new_len <= self.cap);
+
+            // we don't wanna stress llvm too much.
+            // if you're using this function to clone expensive things,
+            // you may wanna reconsider your life choices.
+            for i in self.len..new_len {
+                unsafe { self.data.as_ptr().add(i).write(value.clone()) };
+            }
+
+            self.len = new_len;
+        }
     }
 
 
@@ -753,6 +766,17 @@ mod tests {
         assert_eq!(vs.next().unwrap(), "ho");
         assert_eq!(vs.next().unwrap(), "ha");
         assert_eq!(vs.next(), None);
+    }
+
+    #[test]
+    fn vec_resize() {
+        let mut v = vec![1, 2, 3];
+
+        v.resize(2, 69);
+        assert_eq!(*v, [1, 2]);
+
+        v.resize(7, 69);
+        assert_eq!(*v, [1, 2, 69, 69, 69, 69, 69]);
     }
 
     #[test]

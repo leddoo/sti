@@ -44,7 +44,7 @@ impl<K: Key, V> KSlice<K, V> {
     #[inline(always)]
     pub fn iter_mut(&mut self) -> KIterMut<K, V> {
         KIterMut {
-            ptr: unsafe { NonNull::new_unchecked(self.inner.as_ptr() as *mut V) },
+            ptr: unsafe { NonNull::new_unchecked(self.inner.as_mut_ptr() as *mut V) },
             len: self.inner.len(),
             idx: 0,
             phantom: PhantomData,

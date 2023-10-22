@@ -103,6 +103,12 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
         self.inner.clear();
     }
 
+    #[inline(always)]
+    pub fn resize(&mut self, new_len: usize, value: V)  where V: Clone {
+        assert!(new_len < K::LIMIT);
+        self.inner.resize(new_len, value);
+    }
+
 
     #[inline(always)]
     pub fn as_slice(&self) -> &KSlice<K, V> {
