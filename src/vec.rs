@@ -405,16 +405,18 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
+    #[track_caller]
     #[inline(always)]
     pub fn rev(&self, index: usize) -> &T {
-        let last = self.len - 1;
-        &self.as_slice()[last - index]
+        assert!(index < self.len, "rev index {index} out of bounds ({})", self.len);
+        unsafe { &*self.data.as_ptr().add(self.len-1 - index) }
     }
 
+    #[track_caller]
     #[inline(always)]
     pub fn rev_mut(&mut self, index: usize) -> &mut T {
-        let last = self.len - 1;
-        &mut self.as_slice_mut()[last - index]
+        assert!(index < self.len, "rev index {index} out of bounds ({})", self.len);
+        unsafe { &mut *self.data.as_ptr().add(self.len-1 - index) }
     }
 
 
