@@ -1,3 +1,7 @@
+0.1.10:
+- `Arena: (Ref)UnwindSafe`.
+
+
 0.1.9:
 - `HashMap`: add `clear` and `Debug`.
 - improved `ArenaPool`.

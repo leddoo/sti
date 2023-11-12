@@ -57,6 +57,11 @@ pub struct Arena<A: Alloc = GlobalAlloc> {
 
 unsafe impl<A: Alloc + Send> Send for Arena<A> {}
 
+// @todo: verify this is also true for panics raised in the impl.
+impl<A: Alloc> core::panic::RefUnwindSafe for Arena<A> {}
+impl<A: Alloc> core::panic::UnwindSafe for Arena<A> {}
+
+
 impl<A: Alloc> Arena<A> {
     fn _integrity_check(&self) {
         let cap = self.cap.get();
