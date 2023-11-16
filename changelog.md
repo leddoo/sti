@@ -1,5 +1,6 @@
 0.1.10:
 - `Arena: (Ref)UnwindSafe`.
+- add `RwSpinLock`.
 
 
 0.1.9:

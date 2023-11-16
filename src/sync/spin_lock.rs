@@ -7,6 +7,11 @@ pub struct SpinLock<T> {
     value: UnsafeCell<T>,
 }
 
+pub struct SpinGuard<'a, T> {
+    lock: &'a SpinLock<T>,
+}
+
+
 impl<T> SpinLock<T> {
     #[inline(always)]
     pub const fn new(value: T) -> Self {
@@ -22,26 +27,27 @@ impl<T> SpinLock<T> {
             core::hint::spin_loop();
         }
 
-        SpinGuard { lock: self }
+        return SpinGuard { lock: self };
     }
 
     #[inline(always)]
     pub fn try_lock(&self) -> Option<SpinGuard<T>> {
-        if !self.locked.swap(true, Ordering::Acquire) {
-            return Some(SpinGuard { lock: self });
+        if self.locked.swap(true, Ordering::Acquire) {
+            return None;
         }
-        None
+
+        return Some(SpinGuard { lock: self });
     }
 
     #[inline(always)]
     pub fn get(&mut self) -> &mut T {
-        unsafe { &mut *self.value.get() }
+        return unsafe { &mut *self.value.get() };
     }
 
     #[inline(always)]
     pub fn with_lock<R, F: FnOnce(&mut T) -> R>(&self, f: F) -> R {
         let mut guard = self.lock();
-        f(&mut guard)
+        return f(&mut guard);
     }
 }
 
@@ -49,10 +55,6 @@ unsafe impl<T: Send> Sync for SpinLock<T> {}
 unsafe impl<T: Send> Send for SpinLock<T> {}
 
 
-
-pub struct SpinGuard<'a, T> {
-    lock: &'a SpinLock<T>,
-}
 
 impl<'a, T> core::ops::Deref for SpinGuard<'a, T> {
     type Target = T;
@@ -73,7 +75,7 @@ impl<'a, T> core::ops::DerefMut for SpinGuard<'a, T> {
 impl<'a, T> Drop for SpinGuard<'a, T> {
     #[inline]
     fn drop(&mut self) {
-        self.lock.locked.store(false, Ordering::Release)
+        self.lock.locked.store(false, Ordering::Release);
     }
 }
 
