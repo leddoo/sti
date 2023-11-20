@@ -9,10 +9,13 @@ use crate::traits::FromIn;
 
 pub struct Vec<T, A: Alloc = GlobalAlloc> {
     alloc: A,
-    data: NonNull<T>, // is a live allocation iff `cap > 0`.
-                      // objects in `0..self.len` are live.
+
     cap: usize, // valid for use in `Layout::array::<T>(cap)`.
     len: usize, // <= cap
+
+    // is a live allocation iff `cap > 0`.
+    // objects in `0..self.len` are initialized.
+    data: NonNull<T>, 
 }
 
 impl<T> Vec<T> {
@@ -60,12 +63,6 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    #[inline(always)]
-    pub fn alloc(&self) -> &A {
-        &self.alloc
-    }
-
-
     pub fn try_with_cap_in(alloc: A, cap: usize) -> Result<Vec<T, A>, AllocError> {
         let mut result = Vec::new_in(alloc);
         // `self.len == 0`.
@@ -77,6 +74,9 @@ impl<T, A: Alloc> Vec<T, A> {
         Self::try_with_cap_in(alloc, cap).unwrap()
     }
 
+
+    #[inline(always)]
+    pub fn alloc(&self) -> &A { &self.alloc }
 
     #[inline(always)]
     pub fn cap(&self) -> usize { self.cap }
@@ -501,9 +501,7 @@ impl<T: Clone, A: Alloc + Clone> Clone for Vec<T, A> {
 impl<T, A: Alloc> Drop for Vec<T, A> {
     fn drop(&mut self) {
         let len = self.len;
-        #[cfg(debug_assertions)] {
-            self.len = 0;
-        }
+        #[cfg(debug_assertions)] { self.len = 0; }
 
         // drop values.
         unsafe {
@@ -512,7 +510,7 @@ impl<T, A: Alloc> Drop for Vec<T, A> {
                     self.data.as_ptr(), len));
         }
 
-        let layout = unsafe { Layout::array::<T>(self.cap).unwrap_unchecked() };
+        let layout = Layout::array::<T>(self.cap).unwrap();
 
         // `self.data` is an allocation iff `self.cap > 0`.
         unsafe { self.alloc.free(self.data.cast(), layout) }

@@ -5,6 +5,7 @@
     - now returns values on free.
     - add `retain`.
 - `impl PartialEq, Eq for Vec, KVec, KSlice`.
+- add `VecDeque`.
 
 
 0.1.9:

@@ -16,6 +16,7 @@ pub mod arena_pool;
 pub mod boks;
 pub mod rc;
 pub mod vec;
+pub mod vec_deque;
 pub mod hash;
 pub mod static_vec;
 
