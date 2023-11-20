@@ -1,72 +1,80 @@
 use crate::alloc::{Alloc, GlobalAlloc};
 use crate::packed_option::PackedOption;
 
-use super::{Key, KVec};
+use super::{Key, KVec, KRange};
 
 
 pub struct KFreeVec<K: Key, V, A: Alloc = GlobalAlloc> {
-    vec: KVec<K, Entry<K, V>, A>,
+    entries: KVec<K, Entry<K, V>, A>,
     first_free: PackedOption<K>,
 }
 
-struct Entry<K: Key, V> {
-    value: V,
-
-    // points to self for last entry in free list.
-    // -> is some for all free entries.
-    next_free: PackedOption<K>,
+enum Entry<K: Key, V> {
+    Free { next_free: K },
+    Used(V),
 }
 
 
 impl<K: Key, V> KFreeVec<K, V, GlobalAlloc> {
     #[inline(always)]
     pub fn new() -> Self {
-        KFreeVec { vec: KVec::new(), first_free: None.into() }
+        KFreeVec { entries: KVec::new(), first_free: None.into() }
     }
 
 }
 
 impl<K: Key, V, A: Alloc> KFreeVec<K, V, A> {
-    #[inline]
-    pub fn try_alloc(&mut self, v: V) -> Result<K, ()> {
-        let _ = v;
-        unimplemented!()
-    }
+    #[inline(always)]
+    pub fn len(&self) -> usize { self.entries.len() }
+
+    #[inline(always)]
+    pub fn range(&self) -> KRange<K> { self.entries.range() }
+
 
     #[inline]
     pub fn alloc(&mut self, v: V) -> K {
         if let Some(k) = self.first_free.take() {
-            let e = &mut self.vec[k];
+            let e = &mut self.entries[k];
 
-            let next = e.next_free.take().unwrap();
-            if next != k {
-                self.first_free = Some(next).into();
+            let Entry::Free { next_free } = *e else { unreachable!() };
+            if next_free != k {
+                self.first_free = Some(next_free).into();
             }
 
-            e.value = v;
+            *e = Entry::Used(v);
 
             return k;
         }
         else {
-            return self.vec.push(Entry { value: v, next_free: None.into() });
+            return self.entries.push(Entry::Used(v));
         }
     }
 
+    #[track_caller]
     #[inline]
-    pub fn alloc_gen<Gen, Inc: Fn(Option<&V>) -> Gen>(&mut self, v: V) -> K {
-        let _ = v;
-        unimplemented!()
+    pub fn free(&mut self, k: K) -> V {
+        let e = &mut self.entries[k];
+
+        let next_free = self.first_free.to_option().unwrap_or(k);
+        self.first_free = Some(k).into();
+
+        let v = core::mem::replace(e, Entry::Free { next_free });
+        let Entry::Used(v) = v else { unreachable!() };
+        return v;
     }
 
+
     #[inline]
-    pub fn free(&mut self, k: K) {
-        let e = &mut self.vec[k];
-        assert!(e.next_free.is_none());
-
-        let prev_head = self.first_free.to_option();
-        e.next_free = Some(prev_head.unwrap_or(k)).into();
-
-        self.first_free = Some(k).into();
+    pub fn retain(&mut self, mut f: impl FnMut(K, &V) -> bool) {
+        for (id, entry) in self.entries.iter_mut() {
+            if let Entry::Used(v) = entry {
+                if !f(id, v) {
+                    let next_free = self.first_free.to_option().unwrap_or(id);
+                    *entry = Entry::Free { next_free };
+                    self.first_free = Some(id).into();
+                }
+            }
+        }
     }
 }
 
@@ -75,20 +83,22 @@ impl<K: Key, V, A: Alloc> KFreeVec<K, V, A> {
 impl<K: Key, V, A: Alloc> core::ops::Index<K> for KFreeVec<K, V, A> {
     type Output = V;
 
+    #[track_caller]
     #[inline(always)]
     fn index(&self, index: K) -> &Self::Output {
-        let e = &self.vec[index];
-        debug_assert!(e.next_free.is_none());
-        return &e.value;
+        let e = &self.entries[index];
+        let Entry::Used(v) = e else { unreachable!() };
+        return v;
     }
 }
 
 impl<K: Key, V, A: Alloc> core::ops::IndexMut<K> for KFreeVec<K, V, A> {
+    #[track_caller]
     #[inline(always)]
     fn index_mut(&mut self, index: K) -> &mut Self::Output {
-        let e = &mut self.vec[index];
-        debug_assert!(e.next_free.is_none());
-        return &mut e.value;
+        let e = &mut self.entries[index];
+        let Entry::Used(v) = e else { unreachable!() };
+        return v;
     }
 }
 

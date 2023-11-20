@@ -34,8 +34,6 @@ mod f32x; pub use f32x::*;
 //  - the trait implemented by each platform.
 //
 
-use b32x::B32;
-
 pub trait SimdLanes<const N: usize> {
     type Repr: Copy;
 
