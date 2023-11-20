@@ -1,9 +1,10 @@
 0.1.10:
 - `Arena: (Ref)UnwindSafe`.
 - add `RwSpinLock`.
-- `KFreeVec`
+- `KFreeVec`:
     - now returns values on free.
     - add `retain`.
+- `impl PartialEq, Eq for Vec, KVec, KSlice`.
 
 
 0.1.9:
@@ -12,7 +13,7 @@
 - add `StaticVec`.
 - add `Box`.
 - add `FromIn`, `CopyIt`, `MapIt` traits.
-- `Vec`
+- `Vec`:
     - add `vec/_in` macros.
     - add `From/In<I: Iterator>`.
     - add `Extend`.

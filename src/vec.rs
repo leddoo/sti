@@ -525,6 +525,16 @@ impl<T, A: Alloc> Drop for Vec<T, A> {
 }
 
 
+impl<T: PartialEq, A: Alloc> PartialEq for Vec<T, A> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl<T: Eq, A: Alloc> Eq for Vec<T, A> {}
+
+
 impl<T: core::fmt::Debug, A: Alloc> core::fmt::Debug for Vec<T, A> {
     #[inline(always)]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {

@@ -88,6 +88,16 @@ impl<K: Key, V> core::ops::IndexMut<K> for KSlice<K, V> {
 }
 
 
+impl<K: Key, V: PartialEq> PartialEq for KSlice<K, V> {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner() == other.inner()
+    }
+}
+
+impl<K: Key, V: Eq> Eq for KSlice<K, V> {}
+
+
 
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 #[derive(Clone)]
