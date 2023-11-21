@@ -6,7 +6,10 @@
     - add `retain`.
 - `impl PartialEq, Eq for Vec, KVec, KSlice`.
 - add `VecDeque`.
-- add `HashMap::retain`.
+- `HashMap`:
+    - add `retain`.
+    - rename `remove` -> `remove_with_key`.
+    - rename `remove_value` -> `remove`.
 
 
 0.1.9:

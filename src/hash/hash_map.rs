@@ -132,18 +132,18 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
         self.inner.insert(key, value)
     }
 
-    /// remove a key/value pair.
-    #[inline(always)]
-    pub fn remove<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<(K, V)>
-    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
-        self.inner.remove(key)
-    }
-
     /// remove a key/value pair, returning only the value.
     #[inline(always)]
-    pub fn remove_value<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<V>
+    pub fn remove<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<V>
     where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.remove(key).map(|(_k, v)| v)
+    }
+
+    /// remove a key/value pair.
+    #[inline(always)]
+    pub fn remove_with_key<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<(K, V)>
+    where K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
+        self.inner.remove(key)
     }
 
 
@@ -342,7 +342,7 @@ mod tests {
         assert_eq!(hm["ho"], 19);
         assert_eq!((hm.size(), hm.cap(), hm.resident(), hm.len()), (size, cap, 2, 2));
 
-        let (hi_k, hi_v) = hm.remove("hi").unwrap();
+        let (hi_k, hi_v) = hm.remove_with_key("hi").unwrap();
         assert_eq!(hi_k, "hi");
         assert_eq!(hi_v, 17);
         assert!(hm.get("hi").is_none());
