@@ -6,6 +6,7 @@
     - add `retain`.
 - `impl PartialEq, Eq for Vec, KVec, KSlice`.
 - add `VecDeque`.
+- add `HashMap::retain`.
 
 
 0.1.9:

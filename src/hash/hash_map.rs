@@ -147,27 +147,38 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     }
 
 
+    #[inline]
     pub fn get_or_insert<'q, Q: ?Sized + Eq>(&mut self, key: &'q Q, default: V) -> &mut V
     where K: From<&'q Q> + Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.get_or_insert(key, |_| (key.into(), default))
     }
 
+    #[inline]
     pub fn get_or_insert_with<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
     where F: FnOnce() -> V, K: From<&'q Q> + Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.get_or_insert(key, |_| (key.into(), f()))
     }
 
+    #[inline]
     pub fn get_or_insert_with_key<'q, Q: ?Sized + Eq, F>(&mut self, key: &'q Q, f: F) -> &mut V
     where F: FnOnce(&'q Q) -> (K, V), K: Borrow<Q>, S: HashFnSeed<Q, Hash=u32> {
         self.inner.get_or_insert(key, f)
     }
 
+    #[inline]
     pub fn kget_or_insert(&mut self, key: K, default: V) -> &mut V {
         self.inner.kget_or_insert(key, || default)
     }
 
+    #[inline]
     pub fn kget_or_insert_with<F: FnOnce() -> V>(&mut self, key: K, f: F) -> &mut V {
         self.inner.kget_or_insert(key, f)
+    }
+
+
+    #[inline]
+    pub fn retain(&mut self, f: impl FnMut(&K, &V) -> bool) {
+        self.inner.retain(f);
     }
 
 
@@ -452,6 +463,33 @@ mod tests {
             assert_eq!(*v1, *v2);
         }
         assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn hm_retain() {
+        let mut hm: HashMapF<String, Vec<i8>, ConstHash> = HashMap::fnew();
+        hm.insert("a".to_string(), vec![1]);
+        hm.insert("b".to_string(), vec![1, 2]);
+        hm.insert("d".to_string(), vec![1, 2, 3, 4]);
+        hm.insert("c".to_string(), vec![1, 2, 3]);
+        assert_eq!(hm.len(), 4);
+        assert_eq!(hm.resident(), 4);
+
+        let mut iter = hm.iter();
+        assert_eq!(iter.next(), Some((&"a".to_string(), &vec![1])));
+        assert_eq!(iter.next(), Some((&"b".to_string(), &vec![1, 2])));
+        assert_eq!(iter.next(), Some((&"d".to_string(), &vec![1, 2, 3, 4])));
+        assert_eq!(iter.next(), Some((&"c".to_string(), &vec![1, 2, 3])));
+        assert_eq!(iter.next(), None);
+
+        hm.retain(|_, v| v.len() % 2 == 0);
+        assert_eq!(hm.len(), 2);
+        assert_eq!(hm.resident(), 2);
+
+        let mut iter = hm.iter();
+        assert_eq!(iter.next(), Some((&"b".to_string(), &vec![1, 2])));
+        assert_eq!(iter.next(), Some((&"d".to_string(), &vec![1, 2, 3, 4])));
+        assert_eq!(iter.next(), None);
     }
 
     #[test]

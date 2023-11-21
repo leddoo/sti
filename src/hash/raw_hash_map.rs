@@ -188,6 +188,29 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
+    pub fn retain(&mut self, mut f: impl FnMut(&K, &V) -> bool) {
+        if self.used == 0 {
+            return;
+        }
+
+        let slots = Self::slots_ptr(self.groups, self.num_groups);
+
+        for group_idx in 0..self.num_groups as usize {
+            let group = unsafe { group_ref(self.groups, group_idx) };
+
+            for i in group.match_used() { unsafe {
+                let slot = slot_ptr(slots, group_idx, i);
+
+                if !f(&(*slot).key, &(*slot).value) {
+                    self.empty += group.free_entry(i);
+                    self.used  -= 1;
+                    core::ptr::drop_in_place(slot);
+                }
+            }}
+        }
+    }
+
+
     pub fn clone_in<A2>(&self, alloc: A2) -> RawHashMap<K, V, S, A2>
     where K: Clone, V: Clone, S: Clone, A2: Alloc
     {
