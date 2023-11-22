@@ -10,6 +10,8 @@
     - add `retain`.
     - rename `remove` -> `remove_with_key`.
     - rename `remove_value` -> `remove`.
+- `Vec`:
+    - add `remove_swap`.
 
 
 0.1.9:

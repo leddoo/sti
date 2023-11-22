@@ -289,6 +289,23 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
+    #[track_caller]
+    #[inline(always)]
+    pub fn remove_swap(&mut self, index: usize) -> T {
+        assert!(index < self.len, "index {index} out of bounds ({})", self.len);
+
+        let last = unsafe { self.data.as_ptr().add(self.len - 1).read() };
+        self.len -= 1;
+
+        if index == self.len {
+            return last;
+        }
+        else {
+            return unsafe { self.data.as_ptr().add(index).replace(last) };
+        }
+    }
+
+
     /// #safety:
     /// - `new_len < self.cap()`.
     /// - all values in `self[0..new_len]` must be properly initialized.
@@ -707,6 +724,13 @@ mod tests {
         let v = Vec::from_slice(&["hi".to_string(), "ho".to_string()]);
         assert_eq!(*v, ["hi".to_string(), "ho".to_string()]);
         assert_eq!(v.cap(), 2);
+
+
+        let mut v = vec![1, 2, 3, 4];
+        assert_eq!(v.remove_swap(1), 2);
+        assert_eq!(*v, [1, 4, 3]);
+        assert_eq!(v.remove_swap(2), 3);
+        assert_eq!(*v, [1, 4]);
 
 
         let mut arena = crate::arena::Arena::new();
