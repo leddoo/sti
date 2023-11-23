@@ -1,10 +1,12 @@
 0.1.10:
 - `Arena: (Ref)UnwindSafe`.
 - add `RwSpinLock`.
+- add `KVec::push_with`.
 - `KFreeVec`:
     - now returns values on free.
     - add `retain`.
     - add `next_key`, `alloc_with`.
+    - add `get`, `get_mut`.
 - `impl PartialEq, Eq for Vec, KVec, KSlice`.
 - add `VecDeque`.
 - `HashMap`:

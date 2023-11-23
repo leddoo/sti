@@ -92,6 +92,24 @@ impl<K: Key, V, A: Alloc> KFreeVec<K, V, A> {
             }
         }
     }
+
+    #[inline(always)]
+    pub fn get(&self, k: K) -> Option<&V> {
+        self.entries.get(k)
+        .and_then(|e| match e {
+            Entry::Free{..} => None,
+            Entry::Used(v)  => Some(v)
+        })
+    }
+
+    #[inline(always)]
+    pub fn get_mut(&mut self, k: K) -> Option<&mut V> {
+        self.entries.get_mut(k)
+        .and_then(|e| match e {
+            Entry::Free{..} => None,
+            Entry::Used(v)  => Some(v)
+        })
+    }
 }
 
 

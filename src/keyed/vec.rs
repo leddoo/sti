@@ -109,6 +109,16 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     }
 
 
+    #[inline]
+    pub fn push_with(&mut self, f: impl FnOnce(&mut Self, K) -> V) -> K {
+        let k = self.next_key();
+        let v = f(self, k);
+        let k2 = self.push(v);
+        assert!(k == k2);
+        return k;
+    }
+
+
     #[inline(always)]
     pub fn truncate(&mut self, new_len: usize) {
         self.inner.truncate(new_len)
