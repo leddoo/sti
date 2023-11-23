@@ -4,6 +4,7 @@
 - `KFreeVec`:
     - now returns values on free.
     - add `retain`.
+    - add `next_key`, `alloc_with`.
 - `impl PartialEq, Eq for Vec, KVec, KSlice`.
 - add `VecDeque`.
 - `HashMap`:

@@ -65,6 +65,22 @@ impl<K: Key, V, A: Alloc> KFreeVec<K, V, A> {
 
 
     #[inline]
+    pub fn next_key(&self) -> K {
+        self.first_free.to_option()
+        .unwrap_or_else(|| self.entries.next_key())
+    }
+
+    #[inline]
+    pub fn alloc_with(&mut self, f: impl FnOnce(&mut Self, K) -> V) -> K {
+        let k = self.next_key();
+        let v = f(self, k);
+        let k2 = self.alloc(v);
+        assert!(k == k2);
+        return k;
+    }
+
+
+    #[inline]
     pub fn retain(&mut self, mut f: impl FnMut(K, &V) -> bool) {
         for (id, entry) in self.entries.iter_mut() {
             if let Entry::Used(v) = entry {
