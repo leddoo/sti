@@ -5,9 +5,10 @@ use crate::alloc::{Alloc, GlobalAlloc};
 use crate::hash::{HashFnSeed, DefaultHashFnSeed};
 use crate::hash::fxhash::FxHasher32;
 
-use super::raw_hash_map::{RawHashMap, RawIter};
+use super::raw_hash_map::{RawHashMap, RawIter, RawIterMut};
 
 
+#[derive(Clone, Default)]
 pub struct HashMap<K: Eq, V,
     S: HashFnSeed<K, Hash=u32> = DefaultSeed,
     A: Alloc = GlobalAlloc>
@@ -125,6 +126,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     pub fn len(&self) -> usize { self.inner.len() }
 
 
+    /// reserve.
+    #[inline(always)]
+    pub fn reserve(&mut self, min_cap: usize) { self.inner.reserve(min_cap) }
+
+
     /// insert a key/value pair.
     /// - returns old value, if present.
     #[inline(always)]
@@ -222,6 +228,13 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
         Iter { inner: self.inner.iter() }
     }
 
+    /// iterate key/value pairs.
+    /// - iteration order is not specified.
+    #[inline(always)]
+    pub fn iter_mut(&mut self) -> IterMut<K, V> {
+        IterMut { inner: self.inner.iter_mut() }
+    }
+
 
     /// remove all key/value pairs.
     #[inline(always)]
@@ -248,6 +261,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     }
 }
 
+
 pub struct Iter<'a, K, V> {
     inner: RawIter<'a, K, V>,
 }
@@ -260,12 +274,15 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
 }
 
 
-impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Clone for HashMap<K, V, S, A>
-where K: Clone, V: Clone, S: Clone, A: Clone {
+pub struct IterMut<'a, K, V> {
+    inner: RawIterMut<'a, K, V>,
+}
+
+impl<'a, K, V> Iterator for IterMut<'a, K, V> {
+    type Item = (&'a K, &'a mut V);
+
     #[inline(always)]
-    fn clone(&self) -> Self {
-        Self { inner: self.inner.clone() }
-    }
+    fn next(&mut self) -> Option<Self::Item> { self.inner.next() }
 }
 
 
@@ -428,6 +445,19 @@ mod tests {
             let (k, v) = iter.next().unwrap();
             assert_eq!(*k, i);
             assert_eq!(*v, i as i8 + 1);
+        }
+        assert!(iter.next().is_none());
+
+
+        for (k, v) in hm.iter_mut() {
+            *v += *k as i8;
+        }
+
+        let mut iter = hm.iter();
+        for i in 0..2*GROUP_SIZE as u32 {
+            let (k, v) = iter.next().unwrap();
+            assert_eq!(*k, i);
+            assert_eq!(*v, i as i8 + 1 + i as i8);
         }
         assert!(iter.next().is_none());
     }

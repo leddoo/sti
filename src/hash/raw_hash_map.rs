@@ -43,8 +43,9 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     #[inline(always)]
     pub fn with_cap(cap: usize, seed: S, alloc: A) -> Self {
         let mut this = Self::new(seed, alloc);
-        this.resize(load::num_groups_for_cap(
-            cap.try_into().expect("capacity overflow")).expect("capacity overflow"));
+        let cap = cap.try_into().expect("capacity overflow");
+        let num_groups = load::num_groups_for_cap(cap).expect("capacity overflow");
+        unsafe { this.resize(num_groups) };
         return this;
     }
 
@@ -70,6 +71,15 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     #[inline(always)]
     pub fn len(&self) -> usize {
         self.used as usize
+    }
+
+
+    pub fn reserve(&mut self, min_cap: usize) {
+        let cap = min_cap.try_into().expect("capacity overflow");
+        let num_groups = load::num_groups_for_cap(cap).expect("capacity overflow");
+        if num_groups > self.num_groups {
+            unsafe { self.resize(num_groups) };
+        }
     }
 
 
@@ -394,6 +404,28 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         }
     }
 
+    #[inline(always)]
+    pub fn iter_mut(&mut self) -> RawIterMut<K, V> {
+        RawIterMut {
+            groups: self.groups,
+            slots:  Self::slots_ptr(self.groups, self.num_groups),
+            num_groups: self.num_groups,
+
+            group_idx:
+                if self.used > 0 { 0 }
+                else { self.num_groups as usize },
+
+            bitmask:
+                if self.num_groups > 0 {
+                    let group = unsafe { *group_ref(self.groups, 0) };
+                    group.match_used()
+                }
+                else { Bitmask::NONE },
+
+            phantom: PhantomData,
+        }
+    }
+
 
     pub fn clear(&mut self) {
         if self.used == 0 {
@@ -418,7 +450,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
-    fn resize(&mut self, new_num_groups: u32) {
+    unsafe fn resize(&mut self, new_num_groups: u32) {
         let layout = Self::layout(new_num_groups).expect("capacity overflow");
         let data = self.alloc.alloc(layout).expect("allocation failed");
 
@@ -477,9 +509,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
     #[inline]
     fn grow(&mut self) {
-        self.resize(
-            self.num_groups.checked_mul(2).expect("capacity overflow")
-            .at_least(1));
+        let new_num_groups = 
+            self.num_groups
+            .checked_mul(2).expect("capacity overflow")
+            .at_least(1);
+        unsafe { self.resize(new_num_groups) };
         assert!(self.empty > 0);
     }
 
@@ -542,6 +576,23 @@ unsafe impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc>
     Send for RawHashMap<K, V, S, A> where K: Send, V: Send, S: Send, A: Send {}
 
 
+
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default, A: Alloc + Default> Default for RawHashMap<K, V, S, A> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            seed: S::default(),
+            alloc: A::default(),
+            groups: NonNull::dangling(),
+            num_groups: 0,
+            empty: 0,
+            used: 0,
+            phantom: PhantomData,
+        }
+    }
+}
+
+
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Drop for RawHashMap<K, V, S, A> {
     fn drop(&mut self) {
         if self.num_groups != 0 {
@@ -582,7 +633,7 @@ pub struct RawIter<'a, K, V> {
     group_idx: usize,
     bitmask: Bitmask,
 
-    phantom: PhantomData<&'a Slot<K, V>>,
+    phantom: PhantomData<(&'a K, &'a V)>,
 }
 
 impl<'a, K, V> Iterator for RawIter<'a, K, V> {
@@ -594,6 +645,42 @@ impl<'a, K, V> Iterator for RawIter<'a, K, V> {
             if let Some(i) = self.bitmask.next() {
                 let slot = unsafe { &*slot_ptr(self.slots, self.group_idx, i) };
                 return Some((&slot.key, &slot.value));
+            }
+
+            self.group_idx += 1;
+
+            if self.group_idx < self.num_groups as usize {
+                let group = unsafe { *group_ref(self.groups, self.group_idx) };
+                self.bitmask = group.match_used();
+            }
+            else {
+                return None;
+            }
+        }
+    }
+}
+
+
+pub struct RawIterMut<'a, K, V> {
+    groups: NonNull<Group>,
+    slots:  NonNull<Slot<K, V>>,
+    num_groups: u32,
+
+    group_idx: usize,
+    bitmask: Bitmask,
+
+    phantom: PhantomData<(&'a K, &'a mut V)>,
+}
+
+impl<'a, K, V> Iterator for RawIterMut<'a, K, V> {
+    type Item = (&'a K, &'a mut V);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(i) = self.bitmask.next() {
+                let slot = unsafe { &mut *slot_ptr(self.slots, self.group_idx, i) };
+                return Some((&slot.key, &mut slot.value));
             }
 
             self.group_idx += 1;
@@ -709,7 +796,7 @@ fn group_next(i: &mut usize, num_groups: u32) {
     debug_assert!(*i < num_groups as usize);
 
     *i += 1;
-    if *i >= num_groups as usize {
+    if *i == num_groups as usize {
         *i = 0;
     }
 
