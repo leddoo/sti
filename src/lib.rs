@@ -76,3 +76,12 @@ macro_rules! format_in {
     }
 }
 
+#[macro_export]
+macro_rules! assume {
+    ($cond: expr) => {
+        if !($cond) {
+            core::hint::unreachable_unchecked();
+        }
+    };
+}
+

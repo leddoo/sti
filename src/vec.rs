@@ -210,17 +210,69 @@ impl<T, A: Alloc> Vec<T, A> {
 
     #[inline(always)]
     pub fn push(&mut self, value: T) {
-        debug_assert!(self.len <= self.cap);
         if self.len == self.cap {
             self.grow_for_push();
         }
-        debug_assert!(self.len < self.cap);
+        unsafe { crate::assume!(self.len < self.cap) }
 
         unsafe {
             // can't overflow cause `len < cap`.
             // is a valid write, cause `cap > 0` -> `data` is a live allocation.
             self.data.as_ptr().add(self.len).write(value);
             self.len += 1;
+        }
+    }
+
+    pub fn extend_from_slice(&mut self, values: &[T])  where T: Clone {
+        self.grow_by(values.len());
+        unsafe { crate::assume!(self.len + values.len() <= self.cap) }
+
+        unsafe {
+            let ptr = self.data.as_ptr().add(self.len);
+            for i in 0..values.len() {
+                core::ptr::write(ptr.add(i), values[i].clone());
+            }
+            self.len += values.len();
+        }
+    }
+
+    pub fn insert(&mut self, index: usize, value: T) {
+        assert!(index <= self.len, "insert index {index} out of bounds (len: {})", self.len);
+
+        if self.len == self.cap {
+            self.grow_for_push();
+        }
+        unsafe { crate::assume!(self.len < self.cap) }
+
+        unsafe {
+            let ptr = self.data.as_ptr().add(index);
+            if index < self.len {
+                core::ptr::copy(ptr, ptr.add(1), self.len - index);
+            }
+
+            core::ptr::write(ptr, value);
+            self.len += 1;
+        }
+    }
+
+    pub fn insert_from_slice(&mut self, index: usize, values: &[T])  where T: Clone {
+        assert!(index <= self.len, "insert index {index} out of bounds (len: {})", self.len);
+
+        if self.len + values.len() > self.cap {
+            self.grow_by(values.len())
+        }
+        unsafe { crate::assume!(self.len + values.len() <= self.cap) }
+
+        unsafe {
+            let ptr = self.data.as_ptr().add(index);
+            if index < self.len {
+                core::ptr::copy(ptr, ptr.add(values.len()), self.len - index);
+            }
+
+            for i in 0..values.len() {
+                core::ptr::write(ptr.add(i), values[i].clone());
+            }
+            self.len += values.len();
         }
     }
 
@@ -292,7 +344,7 @@ impl<T, A: Alloc> Vec<T, A> {
     #[track_caller]
     #[inline(always)]
     pub fn remove_swap(&mut self, index: usize) -> T {
-        assert!(index < self.len, "index {index} out of bounds ({})", self.len);
+        assert!(index < self.len, "index {index} out of bounds (len: {})", self.len);
 
         let last = unsafe { self.data.as_ptr().add(self.len - 1).read() };
         self.len -= 1;
@@ -425,14 +477,14 @@ impl<T, A: Alloc> Vec<T, A> {
     #[track_caller]
     #[inline(always)]
     pub fn rev(&self, index: usize) -> &T {
-        assert!(index < self.len, "rev index {index} out of bounds ({})", self.len);
+        assert!(index < self.len, "rev index {index} out of bounds (len: {})", self.len);
         unsafe { &*self.data.as_ptr().add(self.len-1 - index) }
     }
 
     #[track_caller]
     #[inline(always)]
     pub fn rev_mut(&mut self, index: usize) -> &mut T {
-        assert!(index < self.len, "rev index {index} out of bounds ({})", self.len);
+        assert!(index < self.len, "rev index {index} out of bounds (len: {})", self.len);
         unsafe { &mut *self.data.as_ptr().add(self.len-1 - index) }
     }
 
@@ -483,72 +535,6 @@ impl<T, A: Alloc> Vec<T, A> {
         }
 
         new_vec
-    }
-
-
-    pub fn extend_from_slice(&mut self, vs: &[T])  where T: Clone {
-        self.grow_by(vs.len());
-
-        for v in vs {
-            self.push(v.clone());
-        }
-    }
-
-    pub fn insert(&mut self, index: usize, value: T) {
-        #[cold]
-        #[inline(never)]
-        fn assert_failed(index: usize, len: usize) {
-            panic!("insertion index ({}) should be <= len ({})", index, len);
-        }
-
-        let len = self.len();
-
-        if len == self.cap() {
-            self.grow_for_push();
-        }
-
-        let ptr = unsafe { self.as_mut_ptr().add(index) };
-        if index < len {
-            // shift elements to the right
-            // value at `index` exists in 2 places temporarily
-            unsafe { core::ptr::copy(ptr, ptr.add(1), len - index) };
-        } else if index == len {
-            // no shifting needed
-        } else {
-            assert_failed(index, len)
-        }
-
-        unsafe { core::ptr::write(ptr, value) }
-        unsafe { self.set_len(len + 1) };
-    }
-
-
-    pub fn insert_from_slice(&mut self, index: usize, values: &[T]) where T: Copy {
-        #[cold]
-        #[inline(never)]
-        fn assert_failed(index: usize, len: usize) {
-            panic!("insertion index ({}) should be <= len ({})", index, len);
-        }
-
-        let len = self.len();
-
-        if len + values.len() >= self.cap() {
-            self.grow_by(values.len())
-        }
-
-        let ptr = unsafe { self.as_mut_ptr().add(index) };
-        if index < len {
-            // shift elements to the right
-            // value at `index` exists in 2 places temporarily
-            unsafe { core::ptr::copy(ptr, ptr.add(values.len()), len - index) };
-        } else if index == len {
-            // no shifting needed
-        } else {
-            assert_failed(index, len)
-        }
-
-        unsafe { core::ptr::copy(values.as_ptr(), ptr, values.len()) }
-        unsafe { self.set_len(len + values.len()) };
     }
 }
 
@@ -919,18 +905,18 @@ mod tests {
         v.push(420);
         v.push(31298);
         v.insert(0, 0);
+        assert_eq!(&*v, [0, 69, 420, 31298]);
         v.insert(1, 1);
+        assert_eq!(&*v, [0, 1, 69, 420, 31298]);
         v.push(4389);
         v.insert(2, 2);
+        assert_eq!(&*v, [0, 1, 2, 69, 420, 31298, 4389]);
         v.insert(3, 3);
+        assert_eq!(&*v, [0, 1, 2, 3, 69, 420, 31298, 4389]);
         v.push(574);
         v.push(12398);
-        v.insert(4, 4);
-
-        assert_eq!(v[0], 0);
-        assert_eq!(v[1], 1);
-        assert_eq!(v[2], 2);
-        assert_eq!(v[3], 3);
+        v.insert(v.len(), 4);
+        assert_eq!(&*v, [0, 1, 2, 3, 69, 420, 31298, 4389, 574, 12398, 4]);
     }
 
 
@@ -941,13 +927,15 @@ mod tests {
         v.push(31298);
         v.push(4389);
         v.insert_from_slice(0, &[0, 1, 2, 3]);
+        assert_eq!(&*v, [0, 1, 2, 3, 69, 31298, 4389]);
         v.push(574);
         v.push(12398);
-
-        assert_eq!(v[0], 0);
-        assert_eq!(v[1], 1);
-        assert_eq!(v[2], 2);
-        assert_eq!(v[3], 3);
+        v.insert_from_slice(v.len(), &[6, 7, 8]);
+        assert_eq!(&*v, [0, 1, 2, 3, 69, 31298, 4389, 574, 12398, 6, 7, 8]);
+        v.push(9);
+        v.push(10);
+        v.insert_from_slice(4, &[4, 5]);
+        assert_eq!(&*v, [0, 1, 2, 3, 4, 5, 69, 31298, 4389, 574, 12398, 6, 7, 8, 9, 10]);
     }
 }
 
