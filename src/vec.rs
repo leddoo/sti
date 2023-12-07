@@ -493,7 +493,65 @@ impl<T, A: Alloc> Vec<T, A> {
             self.push(v.clone());
         }
     }
+
+    pub fn insert(&mut self, index: usize, value: T) {
+        #[cold]
+        #[inline(never)]
+        fn assert_failed(index: usize, len: usize) {
+            panic!("insertion index ({}) should be <= len ({})", index, len);
+        }
+
+        let len = self.len();
+
+        if len == self.cap() {
+            self.grow_for_push();
+        }
+
+        let ptr = unsafe { self.as_mut_ptr().add(index) };
+        if index < len {
+            // shift elements to the right
+            // value at `index` exists in 2 places temporarily
+            unsafe { core::ptr::copy(ptr, ptr.add(1), len - index) };
+        } else if index == len {
+            // no shifting needed
+        } else {
+            assert_failed(index, len)
+        }
+
+        unsafe { core::ptr::write(ptr, value) }
+        unsafe { self.set_len(len + 1) };
+    }
+
+
+    pub fn insert_from_slice(&mut self, index: usize, values: &[T]) where T: Copy {
+        #[cold]
+        #[inline(never)]
+        fn assert_failed(index: usize, len: usize) {
+            panic!("insertion index ({}) should be <= len ({})", index, len);
+        }
+
+        let len = self.len();
+
+        if len + values.len() >= self.cap() {
+            self.grow_by(values.len())
+        }
+
+        let ptr = unsafe { self.as_mut_ptr().add(index) };
+        if index < len {
+            // shift elements to the right
+            // value at `index` exists in 2 places temporarily
+            unsafe { core::ptr::copy(ptr, ptr.add(values.len()), len - index) };
+        } else if index == len {
+            // no shifting needed
+        } else {
+            assert_failed(index, len)
+        }
+
+        unsafe { core::ptr::copy(values.as_ptr(), ptr, values.len()) }
+        unsafe { self.set_len(len + values.len()) };
+    }
 }
+
 
 
 unsafe impl<T: Sync, A: Alloc + Sync> Sync for Vec<T, A> {}
@@ -851,6 +909,45 @@ mod tests {
         v.truncate(1);
         drop(v);
         assert_eq!(counter.get(), 3);
+    }
+
+
+    #[test]
+    fn vec_insert() {
+        let mut v = Vec::new();
+        v.push(69);
+        v.push(420);
+        v.push(31298);
+        v.insert(0, 0);
+        v.insert(1, 1);
+        v.push(4389);
+        v.insert(2, 2);
+        v.insert(3, 3);
+        v.push(574);
+        v.push(12398);
+        v.insert(4, 4);
+
+        assert_eq!(v[0], 0);
+        assert_eq!(v[1], 1);
+        assert_eq!(v[2], 2);
+        assert_eq!(v[3], 3);
+    }
+
+
+    #[test]
+    fn vec_insert_from_slice() {
+        let mut v = Vec::new();
+        v.push(69);
+        v.push(31298);
+        v.push(4389);
+        v.insert_from_slice(0, &[0, 1, 2, 3]);
+        v.push(574);
+        v.push(12398);
+
+        assert_eq!(v[0], 0);
+        assert_eq!(v[1], 1);
+        assert_eq!(v[2], 2);
+        assert_eq!(v[3], 3);
     }
 }
 
