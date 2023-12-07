@@ -18,6 +18,9 @@
     - add `iter_mut`.
 - `Vec`:
     - add `remove_swap`.
+    - add `insert/_from_slice`.
+    - rename `grow_by` -> `reserve_extra`.
+    - remove oom fallible methods.
 
 
 0.1.9:

@@ -63,15 +63,11 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    pub fn try_with_cap_in(alloc: A, cap: usize) -> Result<Vec<T, A>, AllocError> {
+    pub fn with_cap_in(alloc: A, cap: usize) -> Vec<T, A> {
         let mut result = Vec::new_in(alloc);
         // `self.len == 0`.
-        unsafe { result.try_set_cap(cap)? }
-        Ok(result)
-    }
-
-    pub fn with_cap_in(alloc: A, cap: usize) -> Vec<T, A> {
-        Self::try_with_cap_in(alloc, cap).unwrap()
+        unsafe { result.set_cap(cap) }
+        return result;
     }
 
 
@@ -95,63 +91,38 @@ impl<T, A: Alloc> Vec<T, A> {
     /// # safety:
     /// - `self.len <= new_cap`.
     ///
-    unsafe fn try_set_cap(&mut self, new_cap: usize) -> Result<(), AllocError> {
+    unsafe fn set_cap(&mut self, new_cap: usize) {
         debug_assert!(self.len <= new_cap);
 
         if new_cap == self.cap {
-            return Ok(());
+            return;
         }
 
         let old_layout = Layout::array::<T>(self.cap).unwrap();
-        let new_layout = Layout::array::<T>(new_cap).map_err(|_| AllocError::SizeOverflow)?;
+        let new_layout = Layout::array::<T>(new_cap).map_err(|_| AllocError::SizeOverflow).unwrap();
 
         let new_data = unsafe {
             // `self.data` is an allocation iff `self.cap > 0`.
             // align is equal.
             self.alloc.realloc(self.data.cast(), old_layout, new_layout)
-            .ok_or(AllocError::OutOfMemory)?
+            .ok_or(AllocError::OutOfMemory).unwrap()
             .cast()
         };
         self.data = new_data;
         self.cap  = new_cap;
-
-        return Ok(());
     }
 
-
-
-    pub fn try_trim_exact(&mut self) -> Result<(), AllocError> {
-        // `new_cap >= self.len`.
-        unsafe { self.try_set_cap(self.len) }
-    }
-
-    /// # panics:
-    /// - if the allocation fails.
-    #[track_caller]
     pub fn trim_exact(&mut self) {
-        self.try_trim_exact().unwrap();
+        // `new_cap >= self.len`.
+        unsafe { self.set_cap(self.len) }
     }
 
-    /*
-    // doesn't fail, if the allocation fails.
-    pub fn trim(&mut self) {
-        // round `self.len` up to pow2.
-        // if less than `self.cap`, `set_cap`.
-        unimplemented!()
-    }
-    */
-
-
-    pub fn try_reserve_exact(&mut self, min_cap: usize) -> Result<(), AllocError> {
-        if min_cap > self.cap {
-            // `min_cap > self.cap >= self.len`.
-            return unsafe { self.try_set_cap(min_cap) };
-        }
-        return Ok(());
-    }
 
     pub fn reserve_exact(&mut self, min_cap: usize) {
-        self.try_reserve_exact(min_cap).unwrap();
+        if min_cap > self.cap {
+            // `min_cap > self.cap >= self.len`.
+            unsafe { self.set_cap(min_cap) };
+        }
     }
 
 
@@ -166,7 +137,7 @@ impl<T, A: Alloc> Vec<T, A> {
         else { 1 };
 
 
-    pub fn try_reserve(&mut self, min_cap: usize) -> Result<(), AllocError> {
+    pub fn reserve(&mut self, min_cap: usize) {
         let new_cap = min_cap;
         if new_cap > self.cap {
             let new_cap =
@@ -179,39 +150,29 @@ impl<T, A: Alloc> Vec<T, A> {
             let new_cap = new_cap.at_least(Self::GROW_MIN_CAP);
 
             // `new_cap > self.cap >= self.len`.
-            return unsafe { self.try_set_cap(new_cap) };
+            unsafe { self.set_cap(new_cap) };
         }
-        return Ok(());
-    }
-
-    pub fn reserve(&mut self, min_cap: usize) {
-        self.try_reserve(min_cap).unwrap();
-    }
-
-
-    pub fn try_grow_by(&mut self, extra: usize) -> Result<(), AllocError> {
-        self.try_reserve(
-            self.len.checked_add(extra)
-            .ok_or(AllocError::SizeOverflow)?)
     }
 
     /// reserve space for `extra` more elements.
+    #[inline]
     #[track_caller]
-    pub fn grow_by(&mut self, extra: usize) {
-        self.try_grow_by(extra).unwrap();
+    pub fn reserve_extra(&mut self, extra: usize) {
+        self.reserve(
+            self.len.checked_add(extra)
+            .ok_or(AllocError::SizeOverflow).unwrap())
     }
-
 
     #[cold]
-    #[track_caller]
-    fn grow_for_push(&mut self) {
-        self.grow_by(1);
+    fn reserve_one_extra(&mut self) {
+        self.reserve_extra(1);
     }
+
 
     #[inline(always)]
     pub fn push(&mut self, value: T) {
         if self.len == self.cap {
-            self.grow_for_push();
+            self.reserve_one_extra();
         }
         unsafe { crate::assume!(self.len < self.cap) }
 
@@ -224,7 +185,7 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
     pub fn extend_from_slice(&mut self, values: &[T])  where T: Clone {
-        self.grow_by(values.len());
+        self.reserve_extra(values.len());
         unsafe { crate::assume!(self.len + values.len() <= self.cap) }
 
         unsafe {
@@ -240,7 +201,7 @@ impl<T, A: Alloc> Vec<T, A> {
         assert!(index <= self.len, "insert index {index} out of bounds (len: {})", self.len);
 
         if self.len == self.cap {
-            self.grow_for_push();
+            self.reserve_one_extra();
         }
         unsafe { crate::assume!(self.len < self.cap) }
 
@@ -259,7 +220,7 @@ impl<T, A: Alloc> Vec<T, A> {
         assert!(index <= self.len, "insert index {index} out of bounds (len: {})", self.len);
 
         if self.len + values.len() > self.cap {
-            self.grow_by(values.len())
+            self.reserve_extra(values.len())
         }
         unsafe { crate::assume!(self.len + values.len() <= self.cap) }
 
@@ -489,20 +450,10 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    pub fn try_clone_in<B: Alloc>(&self, alloc: B) -> Result<Vec<T, B>, AllocError> where T: Clone {
-        let mut result = Vec::try_with_cap_in(alloc, self.len)?;
-
-        for value in self.iter() {
-            result.push(value.clone());
-        }
-
-        return Ok(result);
-    }
-
-    #[track_caller]
-    #[inline(always)]
-    pub fn clone_in<B: Alloc>(&self, alloc: B) -> Vec<T, B> where T: Clone {
-        self.try_clone_in(alloc).unwrap()
+    pub fn clone_in<B: Alloc>(&self, alloc: B) -> Vec<T, B>  where T: Clone {
+        let mut result = Vec::new_in(alloc);
+        result.extend_from_slice(&self);
+        return result;
     }
 
 
@@ -688,7 +639,7 @@ impl<T, A: Alloc> Extend<T> for Vec<T, A> {
         let (min_len, max_len) = iter.size_hint();
         let cap = max_len.unwrap_or(min_len);
 
-        self.grow_by(cap);
+        self.reserve_extra(cap);
         for v in iter {
             self.push(v);
         }

@@ -65,7 +65,7 @@ impl<A: Alloc> String<A> {
 
     #[inline(always)]
     pub fn grow_by(&mut self, extra: usize) {
-        self.buffer.grow_by(extra);
+        self.buffer.reserve_extra(extra);
     }
 
 
