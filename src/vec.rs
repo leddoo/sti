@@ -724,6 +724,13 @@ macro_rules! vec_extend {
         $crate::vec_extend!(vec; $($($rest)*)?)
     }};
 
+    ($vec:expr; ..= $x:expr $(; $($rest:tt)*)?) => {{
+        #[allow(unused_mut)]
+        let mut vec = $vec;
+        vec.extend_from_slice($x);
+        $crate::vec_extend!(vec; $($($rest)*)?)
+    }};
+
     ($vec:expr; $($x:expr),+ $(; $($rest:tt)*)?) => {{
         #[allow(unused_mut)]
         let mut vec = $vec;
@@ -928,12 +935,12 @@ mod tests {
 
     #[test]
     fn vec_extend_macro() {
-        let v = vec_extend!(Vec::new(); 1, 2; .. 3..=4; 5; 6);
-        assert_eq!(&*v, &[1, 2, 3, 4, 5, 6]);
+        let v = vec_extend!(Vec::new(); 1, 2; .. 3..=4; 5; ..= &[6, 7]; 8);
+        assert_eq!(&*v, &[1, 2, 3, 4, 5, 6, 7, 8]);
 
         let mut v = v;
         vec_extend!(&mut v; .. 7..8; 8; 9);
-        assert_eq!(&*v, &[1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        assert_eq!(&*v, &[1, 2, 3, 4, 5, 6, 7, 8, 7, 8, 9]);
     }
 }
 
