@@ -21,6 +21,7 @@
     - add `insert/_from_slice`.
     - rename `grow_by` -> `reserve_extra`.
     - remove oom fallible methods.
+    - add `vec_extend` macro.
 
 
 0.1.9:

@@ -184,6 +184,23 @@ impl<T, A: Alloc> Vec<T, A> {
         }
     }
 
+    #[inline]
+    pub fn extend_from_array<const N: usize>(&mut self, values: [T; N]) {
+        if self.len + values.len() > self.cap {
+            self.reserve_extra(values.len());
+        }
+
+        unsafe {
+            let vs = ManuallyDrop::new(values);
+            core::ptr::copy_nonoverlapping(
+                vs.as_ptr(),
+                self.data.as_ptr().add(self.len),
+                vs.len());
+
+            self.len += vs.len();
+        }
+    }
+
     pub fn extend_from_slice(&mut self, values: &[T])  where T: Clone {
         self.reserve_extra(values.len());
         unsafe { crate::assume!(self.len + values.len() <= self.cap) }
@@ -696,6 +713,25 @@ macro_rules! vec {
     );
 }
 
+#[macro_export]
+macro_rules! vec_extend {
+    ($vec:expr;) => ($vec);
+
+    ($vec:expr; .. $x:expr $(; $($rest:tt)*)?) => {{
+        #[allow(unused_mut)]
+        let mut vec = $vec;
+        vec.extend($x);
+        $crate::vec_extend!(vec; $($($rest)*)?)
+    }};
+
+    ($vec:expr; $($x:expr),+ $(; $($rest:tt)*)?) => {{
+        #[allow(unused_mut)]
+        let mut vec = $vec;
+        vec.extend_from_array([$($x),+]);
+        $crate::vec_extend!(vec; $($($rest)*)?)
+    }};
+}
+
 
 
 #[cfg(test)]
@@ -887,6 +923,17 @@ mod tests {
         v.push(10);
         v.insert_from_slice(4, &[4, 5]);
         assert_eq!(&*v, [0, 1, 2, 3, 4, 5, 69, 31298, 4389, 574, 12398, 6, 7, 8, 9, 10]);
+    }
+
+
+    #[test]
+    fn vec_extend_macro() {
+        let v = vec_extend!(Vec::new(); 1, 2; .. 3..=4; 5; 6);
+        assert_eq!(&*v, &[1, 2, 3, 4, 5, 6]);
+
+        let mut v = v;
+        vec_extend!(&mut v; .. 7..8; 8; 9);
+        assert_eq!(&*v, &[1, 2, 3, 4, 5, 6, 7, 8, 9]);
     }
 }
 
