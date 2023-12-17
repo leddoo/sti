@@ -8,7 +8,7 @@ use crate::hash::fxhash::FxHasher32;
 use super::raw_hash_map::{RawHashMap, RawIter, RawIterMut};
 
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct HashMap<K: Eq, V,
     S: HashFnSeed<K, Hash=u32> = DefaultSeed,
     A: Alloc = GlobalAlloc>
@@ -244,6 +244,12 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
 
 
     #[inline(always)]
+    pub fn take(&mut self) -> Self  where A: Clone, S: Default {
+        core::mem::replace(self, Self::fnew_in(self.alloc().clone()))
+    }
+
+
+    #[inline(always)]
     pub fn copy(&self) -> HashMap<K, V, S, A>
     where K: Copy, V: Copy, S: Clone, A: Clone {
         HashMap { inner: self.inner.copy() }
@@ -259,6 +265,13 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     pub fn move_into<A2: Alloc>(self, alloc: A2) -> HashMap<K, V, S, A2> {
         HashMap { inner: self.inner.move_into(alloc) }
     }
+}
+
+
+
+impl<K: Eq, V, S: HashFnSeed<K, Hash=u32> + Default, A: Alloc + Default> Default for HashMap<K, V, S, A> {
+    #[inline]
+    fn default() -> Self { Self { inner: Default::default() } }
 }
 
 
