@@ -664,8 +664,9 @@ impl<'a, T, A: Alloc> IntoIterator for &'a Vec<T, A> {
 
 impl<T, A: Alloc> Drop for IntoIter<T, A> {
     fn drop(&mut self) {
-	if self.cursor == self.end { return }
-        let len_left = unsafe { self.end.as_ptr().offset_from(self.cursor.as_ptr()) } as usize;
+        let len_left = 
+            if self.cursor == self.end { 0 }
+            else { unsafe { self.end.as_ptr().offset_from(self.cursor.as_ptr()) } } as usize;
 
         // drop values
         unsafe {
@@ -1053,18 +1054,20 @@ mod tests {
         assert_eq!(counter.get(), 3);
 
         drop(iter);
+        assert_eq!(counter.get(), 6);
 
 
         // no item
-        let v : Vec<()> = Vec::new();
+        let v : Vec<Dropper> = Vec::new();
         assert!(v.into_iter().next().is_none());
 
         // one item
-        let mut v : Vec<()> = Vec::new();
-        v.push(());
-        assert!(v.into_iter().next().is_none());
+        let mut v : Vec<i32> = Vec::new();
+        v.push(69);
 
-        assert_eq!(counter.get(), 6);
+        let mut iter = v.into_iter();
+        assert_eq!(iter.next(), Some(69));
+        assert_eq!(iter.next(), None);
     }
 
 }
