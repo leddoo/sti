@@ -132,6 +132,33 @@ impl<T, A: Alloc> ManualVec<T, A> {
         return Ok(())
     }
 
+    #[inline]
+    pub fn reserve_extra(&mut self, extra: usize) -> Result<(), ()> {
+        self.reserve(self.len.checked_add(extra).ok_or(())?)
+    }
+
+    #[cold]
+    fn reserve_one_extra(&mut self) -> Result<(), ()> {
+        self.reserve_extra(1)
+    }
+
+
+    #[inline(always)]
+    pub fn push_or_alloc(&mut self, value: T) -> Result<(), ()> {
+        if self.len == self.cap {
+            self.reserve_one_extra()?;
+        }
+        unsafe { crate::assume!(self.len < self.cap) }
+
+        unsafe {
+            // can't overflow cause `len < cap`.
+            // is a valid write, cause `cap > 0` -> `data` is a live allocation.
+            self.data.as_ptr().add(self.len).write(value);
+            self.len += 1;
+        }
+
+        return Ok(());
+    }
 
     #[inline(always)]
     pub fn push(&mut self, value: T) -> Result<(), ()> {
