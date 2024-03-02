@@ -15,7 +15,7 @@ pub struct Vec<T, A: Alloc = GlobalAlloc> {
 
     // is a live allocation iff `cap > 0`.
     // objects in `0..self.len` are initialized.
-    data: NonNull<T>, 
+    data: NonNull<T>,
 }
 
 impl<T> Vec<T> {
@@ -603,6 +603,52 @@ impl<T, A: Alloc, I: core::slice::SliceIndex<[T]>> core::ops::IndexMut<I> for Ve
 }
 
 
+impl <T, A: Alloc> IntoIterator for Vec<T, A> {
+    type Item = <Self::IntoIter as Iterator>::Item;
+    type IntoIter = IntoIter<T, A>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let vec = ManuallyDrop::new(self);
+        let iter = Self::IntoIter {
+            cursor: vec.data,
+            end: unsafe { NonNull::new_unchecked(vec.data.as_ptr().add(vec.len)) },
+            initial: vec.data,
+            cap: vec.cap,
+            alloc: unsafe { core::ptr::read(&vec.alloc) },
+        };
+
+        iter
+    }
+}
+
+
+pub struct IntoIter<T, A: Alloc> {
+    // used for reading
+    cursor: NonNull<T>,
+    // used for bounds
+    end: NonNull<T>,
+    // used for freeing
+    initial: NonNull<T>,
+    cap: usize,
+    alloc: A,
+}
+
+
+impl<T, A: Alloc> Iterator for IntoIter<T, A> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.end > self.cursor {
+            let value = unsafe { core::ptr::read(self.cursor.as_ptr()) };
+            self.cursor = unsafe { NonNull::new_unchecked(self.cursor.as_ptr().add(1)) };
+
+            return Some(value)
+        }
+
+        None
+    }
+}
+
 
 impl<'a, T, A: Alloc> IntoIterator for &'a Vec<T, A> {
     type Item = &'a T;
@@ -613,6 +659,34 @@ impl<'a, T, A: Alloc> IntoIterator for &'a Vec<T, A> {
         self.iter()
     }
 }
+
+
+impl<T, A: Alloc> Drop for IntoIter<T, A> {
+    fn drop(&mut self) {
+        let len_left =
+            if self.cursor == self.end { 0 }
+            else { unsafe { self.end.as_ptr().offset_from(self.cursor.as_ptr()) } } as usize;
+
+        // drop values
+        unsafe {
+            core::ptr::drop_in_place(
+                core::slice::from_raw_parts_mut(
+                    self.cursor.as_ptr(), len_left));
+        }
+
+        let layout = Layout::array::<T>(self.cap).unwrap();
+
+        unsafe { self.alloc.free(self.initial.cast(), layout); };
+
+        #[cfg(debug_assertions)] {
+            self.initial = NonNull::dangling();
+            self.cursor = NonNull::dangling();
+            self.end = NonNull::dangling();
+            self.cap = 0;
+        }
+    }
+}
+
 
 impl<'a, T, A: Alloc> IntoIterator for &'a mut Vec<T, A> {
     type Item = &'a mut T;
@@ -941,5 +1015,59 @@ mod tests {
         vec_extend!(&mut v; .. 7..8; 8; 9);
         assert_eq!(&*v, &[1, 2, 3, 4, 5, 6, 7, 8, 7, 8, 9]);
     }
+
+    #[test]
+    fn vec_into_iter() {
+        use core::cell::Cell;
+
+        struct Dropper<'a> {
+            ticket: u32,
+            counter: &'a Cell<u32>
+        }
+
+        impl<'a> Drop for Dropper<'a> {
+            fn drop(&mut self) {
+                assert_eq!(self.counter.get(), self.ticket);
+                self.counter.set(self.counter.get() + 1);
+            }
+        }
+
+        let counter = Cell::new(0);
+        let d = |ticket: u32| {
+            Dropper { ticket, counter: &counter }
+        };
+
+        let mut v = Vec::new();
+        v.push(d(0));
+        v.push(d(1));
+        v.push(d(2));
+        v.push(d(3));
+        v.push(d(4));
+        v.push(d(5));
+
+
+        let mut iter = v.into_iter();
+        iter.next().unwrap();
+        iter.next().unwrap();
+        iter.next().unwrap();
+        assert_eq!(counter.get(), 3);
+
+        drop(iter);
+        assert_eq!(counter.get(), 6);
+
+
+        // no item
+        let v : Vec<Dropper> = Vec::new();
+        assert!(v.into_iter().next().is_none());
+
+        // one item
+        let mut v : Vec<i32> = Vec::new();
+        v.push(69);
+
+        let mut iter = v.into_iter();
+        assert_eq!(iter.next(), Some(69));
+        assert_eq!(iter.next(), None);
+    }
+
 }
 

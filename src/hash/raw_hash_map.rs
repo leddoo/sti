@@ -509,7 +509,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
     #[inline]
     fn grow(&mut self) {
-        let new_num_groups = 
+        let new_num_groups =
             self.num_groups
             .checked_mul(2).expect("capacity overflow")
             .at_least(1);

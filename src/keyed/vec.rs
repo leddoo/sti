@@ -78,7 +78,7 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-    
+
 
     #[inline(always)]
     pub fn range(&self) -> KRange<K> {

@@ -14,7 +14,7 @@ pub struct ManualVec<T, A: Alloc = GlobalAlloc> {
 
     // is a live allocation iff `cap > 0`.
     // objects in `0..self.len` are initialized.
-    data: NonNull<T>, 
+    data: NonNull<T>,
 }
 
 
