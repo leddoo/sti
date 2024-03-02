@@ -167,39 +167,33 @@ pub trait Alloc {
 }
 
 
-#[derive(Clone, Copy, Debug)]
-pub enum AllocError {
-    SizeOverflow,
-    OutOfMemory,
-}
-
 #[inline(always)]
-pub fn alloc_ptr<T, A: Alloc>(alloc: &A) -> Result<NonNull<T>, AllocError> {
+pub fn alloc_ptr<T, A: Alloc>(alloc: &A) -> Option<NonNull<T>> {
     match alloc.alloc(Layout::new::<T>()) {
-        Some(ptr) => Ok(ptr.cast()),
-        None      => Err(AllocError::OutOfMemory),
+        Some(ptr) => Some(ptr.cast()),
+        None      => None,
     }
 }
 
 #[inline(always)]
-pub fn alloc_array<T, A: Alloc>(alloc: &A, len: usize) -> Result<NonNull<T>, AllocError> {
+pub fn alloc_array<T, A: Alloc>(alloc: &A, len: usize) -> Option<NonNull<T>> {
     match Layout::array::<T>(len) {
         Ok(layout) => match alloc.alloc(layout) {
-            Some(ptr) => Ok(ptr.cast()),
-            None      => Err(AllocError::OutOfMemory),
+            Some(ptr) => Some(ptr.cast()),
+            None      => None,
         },
-        Err(_) => Err(AllocError::SizeOverflow)
+        Err(_) => None,
     }
 }
 
 #[inline(always)]
-pub fn alloc_new<T, A: Alloc>(alloc: &A, value: T) -> Result<NonNull<T>, AllocError> {
+pub fn alloc_new<T, A: Alloc>(alloc: &A, value: T) -> Option<NonNull<T>> {
     match alloc_ptr::<T, A>(alloc) {
-        Ok(ptr) => {
+        Some(ptr) => {
             unsafe { core::ptr::write(ptr.as_ptr(), value) }
-            Ok(ptr)
+            Some(ptr)
         }
-        Err(e) => Err(e),
+        None => None,
     }
 }
 

@@ -3,7 +3,7 @@ use core::mem::{size_of, ManuallyDrop};
 use core::alloc::Layout;
 
 use crate::num::OrdUtils;
-use crate::alloc::{Alloc, AllocError, GlobalAlloc};
+use crate::alloc::{Alloc, GlobalAlloc};
 use crate::traits::FromIn;
 
 
@@ -83,10 +83,7 @@ impl<T, A: Alloc> Vec<T, A> {
 
 
 impl<T, A: Alloc> Vec<T, A> {
-    /// try to set the vector's capacity.
-    ///
-    /// - if the call succeeds, `self.cap == new_cap`.
-    /// - if the call fails, `self.cap` remains unchanged.
+    /// set the vector's capacity.
     ///
     /// # safety:
     /// - `self.len <= new_cap`.
@@ -98,16 +95,20 @@ impl<T, A: Alloc> Vec<T, A> {
             return;
         }
 
-        let old_layout = Layout::array::<T>(self.cap).unwrap();
-        let new_layout = Layout::array::<T>(new_cap).map_err(|_| AllocError::SizeOverflow).unwrap();
-
         let new_data = unsafe {
+            // `self.cap` is always valid for `Layout::array`.
+            let old_layout = Layout::array::<T>(self.cap).unwrap_unchecked();
+
+            // ensure new layout is valid.
+            let new_layout = Layout::array::<T>(new_cap).unwrap();
+
             // `self.data` is an allocation iff `self.cap > 0`.
             // align is equal.
             self.alloc.realloc(self.data.cast(), old_layout, new_layout)
-            .ok_or(AllocError::OutOfMemory).unwrap()
+            .unwrap()
             .cast()
         };
+
         self.data = new_data;
         self.cap  = new_cap;
     }
@@ -118,7 +119,7 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    pub fn reserve_exact(&mut self, min_cap: usize) {
+    pub fn reserve_exactly(&mut self, min_cap: usize) {
         if min_cap > self.cap {
             // `min_cap > self.cap >= self.len`.
             unsafe { self.set_cap(min_cap) };
@@ -158,9 +159,7 @@ impl<T, A: Alloc> Vec<T, A> {
     #[inline]
     #[track_caller]
     pub fn reserve_extra(&mut self, extra: usize) {
-        self.reserve(
-            self.len.checked_add(extra)
-            .ok_or(AllocError::SizeOverflow).unwrap())
+        self.reserve(self.len.checked_add(extra).unwrap())
     }
 
     #[cold]

@@ -59,12 +59,12 @@ impl<A: Alloc> String<A> {
     }
 
     #[inline(always)]
-    pub fn reserve_exact(&mut self, min_cap: usize) {
-        self.buffer.reserve_exact(min_cap);
+    pub fn reserve_exactly(&mut self, min_cap: usize) {
+        self.buffer.reserve_exactly(min_cap);
     }
 
     #[inline(always)]
-    pub fn grow_by(&mut self, extra: usize) {
+    pub fn reserve_extra(&mut self, extra: usize) {
         self.buffer.reserve_extra(extra);
     }
 

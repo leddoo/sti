@@ -3,7 +3,7 @@ use core::ptr::NonNull;
 use core::cell::Cell;
 use core::mem::ManuallyDrop;
 
-use crate::alloc::{Alloc, AllocError, GlobalAlloc, alloc_ptr};
+use crate::alloc::{Alloc, GlobalAlloc, alloc_ptr};
 
 
 pub struct Rc<T: ?Sized, A: Alloc = GlobalAlloc> {
@@ -26,7 +26,7 @@ impl<T> Rc<T, GlobalAlloc> {
 
 impl<T, A: Alloc> Rc<T, A> {
     #[inline]
-    pub fn try_new_in(alloc: A, value: T) -> Result<Self, AllocError> {
+    pub fn try_new_in(alloc: A, value: T) -> Option<Self> {
         let inner = alloc_ptr::<RcInner<T, A>, _>(&alloc)?;
         unsafe {
             inner.as_ptr().write(RcInner {
@@ -35,7 +35,7 @@ impl<T, A: Alloc> Rc<T, A> {
                 data: value,
             });
         }
-        return Ok(Rc { inner })
+        return Some(Rc { inner })
     }
 
     #[track_caller]

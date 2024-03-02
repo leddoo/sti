@@ -1,3 +1,9 @@
+0.1.11:
+- add `UnwrapDebug`.
+- add `ManualVec`.
+- remove `AllocError`.
+- rename `reserve_exact` -> `reserve_exactly` (to disambiguate from `reserve_extra`).
+
 0.1.10:
 - `Arena: (Ref)UnwindSafe`.
 - add `RwSpinLock`.

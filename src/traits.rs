@@ -35,3 +35,27 @@ impl<'a, T: 'a + Copy, I: IntoIterator<Item = &'a T>> CopyIt<'a, T> for I {
     }
 }
 
+
+pub trait UnwrapDebug {
+    fn unwrap_debug(self);
+}
+
+impl<T> UnwrapDebug for Option<T> {
+    #[track_caller]
+    #[inline(always)]
+    fn unwrap_debug(self) {
+        #[cfg(debug_assertions)]
+        self.unwrap();
+    }
+}
+
+impl<T, E: core::fmt::Debug> UnwrapDebug for Result<T, E> {
+    #[track_caller]
+    #[inline(always)]
+    fn unwrap_debug(self) {
+        #[cfg(debug_assertions)]
+        self.unwrap();
+    }
+}
+
+
