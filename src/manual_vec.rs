@@ -177,6 +177,21 @@ impl<T, A: Alloc> ManualVec<T, A> {
         return Ok(());
     }
 
+    pub fn extend_from_slice_or_alloc(&mut self, values: &[T]) -> Result<(), ()>  where T: Clone {
+        self.reserve_extra(values.len())?;
+        unsafe { crate::assume!(self.len + values.len() <= self.cap) }
+
+        unsafe {
+            let ptr = self.data.as_ptr().add(self.len);
+            for i in 0..values.len() {
+                core::ptr::write(ptr.add(i), values[i].clone());
+            }
+            self.len += values.len();
+        }
+
+        return Ok(());
+    }
+
 
     #[inline(always)]
     pub fn pop(&mut self) -> Option<T> {
