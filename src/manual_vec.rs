@@ -177,6 +177,7 @@ impl<T, A: Alloc> ManualVec<T, A> {
         return Ok(());
     }
 
+    #[inline]
     pub fn extend_from_slice_or_alloc(&mut self, values: &[T]) -> Result<(), ()>  where T: Clone {
         self.reserve_extra(values.len())?;
         unsafe { crate::assume!(self.len + values.len() <= self.cap) }

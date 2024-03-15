@@ -5,7 +5,7 @@ pub const fn is_pow2(n: usize) -> bool {
 }
 
 #[inline(always)]
-pub fn ceil_to_multiple_pow2(x: usize, n: usize) -> usize {
+pub const fn ceil_to_multiple_pow2(x: usize, n: usize) -> usize {
     debug_assert!(is_pow2(n));
     (x + (n-1)) & !(n-1)
 }

@@ -1,12 +1,6 @@
 
 - todo:
-    - hash map.
-        - test non-allocation for non-inserting funcs.
-            - full test for `get_or_insert`, fn to test both versions (k/not).
-        - test key mutation.
-        - rename `empty` to something less misleading.
-        - slot api for ptr eq keys.
-    - rw lock.
+    - mimalloc.
 
 
 
@@ -32,6 +26,13 @@
     - make simd opt-in on x86 and warn if not enabled sse4.
     - simd `x8` vectors using `x4`.
         - should get use avx, if available.
+
+- hash map.
+    - test non-allocation for non-inserting funcs.
+        - full test for `get_or_insert`, fn to test both versions (k/not).
+    - test key mutation.
+    - rename `empty` to something less misleading.
+    - slot api for ptr eq keys.
 
 - stuff:
     - `no_std` support.

@@ -133,7 +133,7 @@ impl ArenaPool {
             // add to slots, if we have space left.
             if self.len.get() < self.max_arenas {
                 // @temp.
-                println!("allocated arena number {}", self.len.get() + 1);
+                //println!("allocated arena number {}", self.len.get() + 1);
                 let slot = unsafe {
                     let ptr = self.slot_ptr(self.len.get());
                     ptr.write(slot);
@@ -145,7 +145,7 @@ impl ArenaPool {
             // give as owned to user.
             else {
                 // @temp.
-                println!("allocated arena, but oh no, we'll need to drop it :L");
+                //println!("allocated arena, but oh no, we'll need to drop it :L");
                 let _ = ManuallyDrop::new(slot.arena);
                 (arena_ptr, None)
             }
