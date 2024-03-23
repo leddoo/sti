@@ -2,11 +2,13 @@ mod range;
 mod slice;
 mod vec;
 mod free_vec;
+mod gen_vec;
 
 pub use range::*;
 pub use slice::*;
 pub use vec::*;
 pub use free_vec::*;
+pub use gen_vec::*;
 
 
 pub trait Key: Copy + PartialEq + PartialOrd {

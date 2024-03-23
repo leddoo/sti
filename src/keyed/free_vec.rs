@@ -33,7 +33,7 @@ impl<K: Key, V, A: Alloc> KFreeVec<K, V, A> {
 
     #[inline]
     pub fn alloc(&mut self, v: V) -> K {
-        if let Some(k) = self.first_free.take() {
+        if let Some(k) = self.first_free.take().to_option() {
             let e = &mut self.entries[k];
 
             let Entry::Free { next_free } = *e else { unreachable!() };

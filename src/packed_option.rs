@@ -52,10 +52,8 @@ impl<T: Reserved> PackedOption<T> {
     }
 
     #[inline(always)]
-    pub fn take(&mut self) -> Option<T> {
-        let result = self.to_option();
-        self.value = T::RESERVED;
-        return result;
+    pub fn take(&mut self) -> Self {
+        core::mem::replace(self, Self::NONE)
     }
 }
 

@@ -3,6 +3,8 @@
 - add `ManualVec`.
 - remove `AllocError`.
 - rename `reserve_exact` -> `reserve_exactly` (to disambiguate from `reserve_extra`).
+- `PackedOption::take` now returns `PackedOption` instead of `Option`.
+- add `KGenVec`.
 
 0.1.10:
 - `Arena: (Ref)UnwindSafe`.
