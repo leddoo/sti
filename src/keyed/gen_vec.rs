@@ -47,6 +47,13 @@ impl<K: Key, G: Gen, V, A: Alloc> KGenVec<K, G, V, A> {
     }
 
 
+    #[inline(always)]
+    pub fn alloc(&self) -> &A { self.inner.alloc() }
+
+    #[inline]
+    pub fn cap(&self) -> usize { self.inner.cap() }
+
+
     #[track_caller]
     #[inline]
     pub fn insert(&mut self, v: V) -> (K, G) {
