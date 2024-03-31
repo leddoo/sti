@@ -495,8 +495,8 @@ macro_rules! binop4_m {
 
 
 #[derive(Clone, Copy)]
-#[repr(align(16))]
-pub struct Vec4([u32; 4]);
+#[repr(transparent)]
+pub struct Vec4 { _inner: u128 }
 
 impl SimdLanes<4> for () {
     type Repr = Vec4;

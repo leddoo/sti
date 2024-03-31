@@ -1,7 +1,7 @@
 
 - todo:
+    - into impls into from impls.
     - simd:
-        - fix `Vec4` unused thing.
         - try make `new` & constants const.
         - inf const.
         - impl default.
