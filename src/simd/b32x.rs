@@ -32,17 +32,17 @@ impl core::fmt::Debug for B32 {
     }
 }
 
-impl Into<bool> for B32 {
+impl From<B32> for bool {
     #[inline(always)]
-    fn into(self) -> bool {
-        self.to_bool()
+    fn from(value: B32) -> Self {
+        value.to_bool()
     }
 }
 
-impl Into<B32> for bool {
+impl From<bool> for B32 {
     #[inline(always)]
-    fn into(self) -> B32 {
-        B32::new(self)
+    fn from(value: bool) -> Self {
+        B32::new(value)
     }
 }
 

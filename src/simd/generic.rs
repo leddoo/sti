@@ -49,10 +49,10 @@ impl<T: SimdElement> Simd<T, 4> {
     pub fn w(self) -> T { self[3] }
 }
 
-impl<T: SimdElement, const N: usize> Into<Simd<T, N>> for [T; N] where (): SimdLanes<N> {
+impl<T: SimdElement, const N: usize> From<[T; N]> for Simd<T, N> where (): SimdLanes<N> {
     #[inline(always)]
-    fn into(self) -> Simd<T, N> {
-        Simd::from_array(self)
+    fn from(value: [T; N]) -> Simd<T, N> {
+        Simd::from_array(value)
     }
 }
 

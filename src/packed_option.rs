@@ -70,10 +70,10 @@ impl<T: Reserved> From<Option<T>> for PackedOption<T> {
     }
 }
 
-impl<T: Reserved> Into<Option<T>> for PackedOption<T> {
+impl<T: Reserved> From<PackedOption<T>> for Option<T> {
     #[inline(always)]
-    fn into(self) -> Option<T> {
-        self.to_option()
+    fn from(value: PackedOption<T>) -> Self {
+        value.to_option()
     }
 }
 

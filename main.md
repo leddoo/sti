@@ -1,6 +1,5 @@
 
 - todo:
-    - into impls into from impls.
     - simd:
         - try make `new` & constants const.
         - inf const.
