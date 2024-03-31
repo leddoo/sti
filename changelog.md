@@ -6,6 +6,7 @@
 - turn `Into` impls into `From` impls.
 - simd `INF` & `NAN` consts.
 - simd `Default` impls.
+- add `erase`, `inc`, `enclose` macros.
 
 0.1.11:
 - add `UnwrapDebug`.

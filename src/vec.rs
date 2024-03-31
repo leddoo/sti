@@ -451,6 +451,20 @@ impl<T, A: Alloc> Vec<T, A> {
 
     #[track_caller]
     #[inline(always)]
+    pub fn idx(&self, index: usize) -> &T {
+        assert!(index < self.len, "index {index} out of bounds (len: {})", self.len);
+        unsafe { &*self.data.as_ptr().add(index) }
+    }
+
+    #[track_caller]
+    #[inline(always)]
+    pub fn idx_mut(&mut self, index: usize) -> &mut T {
+        assert!(index < self.len, "index {index} out of bounds (len: {})", self.len);
+        unsafe { &mut *self.data.as_ptr().add(index) }
+    }
+
+    #[track_caller]
+    #[inline(always)]
     pub fn rev(&self, index: usize) -> &T {
         assert!(index < self.len, "rev index {index} out of bounds (len: {})", self.len);
         unsafe { &*self.data.as_ptr().add(self.len-1 - index) }
