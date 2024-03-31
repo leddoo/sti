@@ -2,6 +2,7 @@
 
 pub mod num;
 pub mod hint;
+pub mod mem;
 
 pub mod simd;
 pub mod float;

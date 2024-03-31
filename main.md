@@ -1,6 +1,5 @@
 
 - todo:
-    - `mem::AlignN` types.
     - simd:
         - fix `Vec4` unused thing.
         - try make `new` & constants const.
