@@ -286,10 +286,8 @@ impl<T, A: Alloc> Vec<T, A> {
 
     #[inline]
     pub fn from_slice_in(alloc: A, vs: &[T]) -> Self  where T: Clone {
-        let mut result = Vec::with_cap_in(alloc, vs.len());
-        for v in vs {
-            result.push(v.clone());
-        }
+        let mut result = Vec::new_in(alloc);
+        result.extend_from_slice(vs);
         return result;
     }
 
