@@ -31,8 +31,13 @@ impl<T> Vec<T> {
 
 
     #[inline(always)]
-    pub fn from_value(v: T, len: usize) -> Self  where T: Clone {
-        Self::from_value_in(GlobalAlloc, v, len)
+    pub fn from_value(len: usize, v: T) -> Self  where T: Clone {
+        Self::from_value_in(GlobalAlloc, len, v)
+    }
+
+    #[inline(always)]
+    pub fn from_fn(len: usize, f: impl FnMut() -> T) -> Self {
+        Self::from_fn_in(GlobalAlloc, len, f)
     }
 
     #[inline(always)]
@@ -43,11 +48,6 @@ impl<T> Vec<T> {
     #[inline(always)]
     pub fn from_slice(vs: &[T]) -> Self  where T: Clone {
         Self::from_slice_in(GlobalAlloc, vs)
-    }
-
-    #[inline(always)]
-    pub fn from_fn(f: impl FnMut() -> T, len: usize) -> Self {
-        Self::from_fn_in(GlobalAlloc, f, len)
     }
 }
 
@@ -255,13 +255,22 @@ impl<T, A: Alloc> Vec<T, A> {
 
 
     #[inline]
-    pub fn from_value_in(alloc: A, v: T, len: usize) -> Self  where T: Clone {
+    pub fn from_value_in(alloc: A, len: usize, v: T) -> Self  where T: Clone {
         let mut result = Vec::with_cap_in(alloc, len);
         for _ in 1..len {
             result.push(v.clone());
         }
         if len > 0 {
             result.push(v);
+        }
+        return result;
+    }
+
+    #[inline]
+    pub fn from_fn_in(alloc: A, len: usize, mut f: impl FnMut() -> T) -> Self {
+        let mut result = Vec::with_cap_in(alloc, len);
+        for _ in 0..len {
+            result.push(f());
         }
         return result;
     }
@@ -286,17 +295,8 @@ impl<T, A: Alloc> Vec<T, A> {
 
     #[inline]
     pub fn from_slice_in(alloc: A, vs: &[T]) -> Self  where T: Clone {
-        let mut result = Vec::new_in(alloc);
+        let mut result = Vec::with_cap_in(alloc, vs.len());
         result.extend_from_slice(vs);
-        return result;
-    }
-
-    #[inline]
-    pub fn from_fn_in(alloc: A, mut f: impl FnMut() -> T, len: usize) -> Self {
-        let mut result = Vec::with_cap_in(alloc, len);
-        for _ in 0..len {
-            result.push(f());
-        }
         return result;
     }
 
@@ -764,7 +764,7 @@ macro_rules! vec_in {
         $crate::vec::Vec::new_in($alloc)
     );
     ($alloc:expr, $elem:expr; $n:expr) => (
-        $crate::vec::Vec::from_value_in($alloc, $elem, $n)
+        $crate::vec::Vec::from_value_in($alloc, $n, $elem)
     );
     ($alloc:expr; $($x:expr),+ $(,)?) => (
         $crate::vec::Vec::from_array_in($alloc, [$($x),+])
@@ -777,7 +777,7 @@ macro_rules! vec {
         $crate::vec::Vec::new()
     );
     ($elem:expr; $n:expr) => (
-        $crate::vec::Vec::from_value($elem, $n)
+        $crate::vec::Vec::from_value($n, $elem)
     );
     ($($x:expr),+ $(,)?) => (
         $crate::vec::Vec::from_array([$($x),+])

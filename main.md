@@ -1,6 +1,5 @@
 
 - todo:
-    - vec from value/fn: put len first.
     - `mem::AlignN` types.
     - simd:
         - fix `Vec4` unused thing.

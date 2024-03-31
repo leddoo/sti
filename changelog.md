@@ -1,6 +1,7 @@
 0.2.1:
 - now bumping minor for features & changes, patch for fixes.
 - `trait Alloc` is now unsafe (`Clone` requirement).
+- breaking change: `Vec::from_{value, fn}` now take the `len` before the value/fn.
 
 0.1.11:
 - add `UnwrapDebug`.
