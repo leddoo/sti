@@ -15,6 +15,13 @@ pub type F32x<const N: usize> = Simd<f32, N>;
 pub type F32x2 = Simd<f32, 2>;
 pub type F32x4 = Simd<f32, 4>;
 
+impl<const N: usize> Default for F32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn default() -> Self {
+        Self::splat(Default::default())
+    }
+}
+
 impl<const N: usize> F32x<N> where (): SimdLanes<N> {
     #[allow(non_snake_case)]
     #[inline(always)]
@@ -31,6 +38,14 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
     #[allow(non_snake_case)]
     #[inline(always)]
     pub fn MAX() -> F32x<N> { F32x::splat(f32::MAX) }
+
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn INF() -> F32x<N> { F32x::splat(f32::INFINITY) }
+
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn NAN() -> F32x<N> { F32x::splat(f32::NAN) }
 
 
     #[inline(always)]

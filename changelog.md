@@ -4,6 +4,8 @@
 - breaking change: `Vec::from_{value, fn}` now take the `len` before the value/fn.
 - add `mem::Align{1, 2, 4, 8, 16, 32, 64}`.
 - turn `Into` impls into `From` impls.
+- simd `INF` & `NAN` consts.
+- simd `Default` impls.
 
 0.1.11:
 - add `UnwrapDebug`.

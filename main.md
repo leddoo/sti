@@ -1,9 +1,5 @@
 
 - todo:
-    - simd:
-        - try make `new` & constants const.
-        - inf const.
-        - impl default.
     - macros:
         - `retain!`.
         - `erase!`.

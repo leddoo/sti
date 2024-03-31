@@ -14,6 +14,13 @@ pub type U32x<const N: usize> = Simd<u32, N>;
 pub type U32x2 = Simd<u32, 2>;
 pub type U32x4 = Simd<u32, 4>;
 
+impl<const N: usize> Default for U32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn default() -> Self {
+        Self::splat(Default::default())
+    }
+}
+
 impl<const N: usize> U32x<N> where (): SimdLanes<N> {
     #[allow(non_snake_case)]
     #[inline(always)]

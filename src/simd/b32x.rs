@@ -26,6 +26,13 @@ impl B32 {
     }
 }
 
+impl Default for B32 {
+    #[inline(always)]
+    fn default() -> Self {
+        Self::FALSE
+    }
+}
+
 impl core::fmt::Debug for B32 {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         self.to_bool().fmt(f)
@@ -99,6 +106,13 @@ impl B32x4 {
     #[inline(always)]
     pub fn new_b(v0: bool, v1: bool, v2: bool, v3: bool) -> Self {
         Self::from_array_b([v0, v1, v2, v3])
+    }
+}
+
+impl<const N: usize> Default for B32x<N> where (): SimdLanes<N> {
+    #[inline(always)]
+    fn default() -> Self {
+        Self::splat(Default::default())
     }
 }
 
