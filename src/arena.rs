@@ -362,7 +362,8 @@ impl<A: Alloc> Drop for Arena<A> {
 }
 
 
-impl<A: Alloc> Alloc for Arena<A> {
+// safe: `Arena` is not `Clone`.
+unsafe impl<A: Alloc> Alloc for Arena<A> {
     /// # safety:
     /// - `layout.size() > 0`.
     #[inline]

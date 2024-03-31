@@ -1,3 +1,7 @@
+0.2.1:
+- now bumping minor for features & changes, patch for fixes.
+- `trait Alloc` is now unsafe (`Clone` requirement).
+
 0.1.11:
 - add `UnwrapDebug`.
 - add `ManualVec`.

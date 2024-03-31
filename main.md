@@ -1,5 +1,16 @@
 
 - todo:
+    - vec from value/fn: put len first.
+    - `mem::AlignN` types.
+    - simd:
+        - fix `Vec4` unused thing.
+        - try make `new` & constants const.
+        - inf const.
+        - impl default.
+    - macros:
+        - `retain!`.
+        - `erase!`.
+        - `inc!`.
     - mimalloc.
 
 

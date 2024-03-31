@@ -7,7 +7,9 @@ use crate::num::ceil_to_multiple_pow2;
 pub use core::alloc::Layout;
 
 
-pub trait Alloc {
+/// # safety:
+/// - if `T: Alloc + Clone`, `realloc` and `free` must be valid on all clones.
+pub unsafe trait Alloc {
     /// allocates a block of memory.
     ///
     /// - if the call succeeds:
@@ -270,7 +272,8 @@ pub struct GlobalAlloc;
 unsafe impl Sync for GlobalAlloc {}
 unsafe impl Send for GlobalAlloc {}
 
-impl Alloc for GlobalAlloc {
+/// safe: GlobalAlloc is zst.
+unsafe impl Alloc for GlobalAlloc {
     /// # safety (same as `Alloc::alloc_impl`).
     /// - `layout.size() > 0`.
     unsafe fn alloc_nonzero(&self, layout: Layout) -> Option<NonNull<u8>> {
@@ -321,7 +324,8 @@ impl Alloc for GlobalAlloc {
 }
 
 
-impl<A: Alloc + ?Sized> Alloc for &A {
+// safe: a clone of `&A` refers to the same `A`.
+unsafe impl<A: Alloc + ?Sized> Alloc for &A {
     #[inline(always)]
     fn alloc(&self, layout: Layout) -> Option<NonNull<u8>> {
         (**self).alloc(layout)
