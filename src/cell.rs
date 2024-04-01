@@ -62,3 +62,45 @@ impl<T: ?Sized> RefCell<T> {
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic() {
+        let r = RefCell::new((1, 2));
+        assert!(r.try_borrow().is_some());
+        assert!(r.try_borrow_mut().is_some());
+        assert_eq!(*r.borrow(), (1, 2));
+        assert_eq!(*r.borrow_mut(), (1, 2));
+
+        let v = (r.borrow().1, r.borrow().0 + r.borrow().1);
+        *r.borrow_mut() = v;
+        assert_eq!(*r.borrow(), (2, 3));
+    }
+
+    #[test]
+    fn shared_nand_mut() {
+        let r = RefCell::new((1, 2));
+
+        let s1 = r.borrow();
+        let s2 = r.borrow();
+        let s3 = s2.clone();
+        assert!(r.try_borrow().is_some());
+        assert!(r.try_borrow_mut().is_none());
+
+        drop((s1, s2, s3));
+        assert!(r.try_borrow().is_some());
+        assert!(r.try_borrow_mut().is_some());
+
+        let m1 = r.borrow_mut();
+        assert!(r.try_borrow().is_none());
+        assert!(r.try_borrow_mut().is_none());
+
+        drop(m1);
+        assert!(r.try_borrow().is_some());
+        assert!(r.try_borrow_mut().is_some());
+    }
+}
+
+

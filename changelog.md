@@ -1,4 +1,4 @@
-0.3.1:
+0.3.0:
 - add `borrow::{BorrowFlag, BorrowRef, BorrowRefMut, Ref, RefMut}`.
 - add `cell::RefCell` & `unck::cell::RefCellUnck`.
 
