@@ -8,24 +8,61 @@ pub struct BorrowFlag {
 }
 
 impl BorrowFlag {
-    #[inline]
+    #[inline(always)]
     pub fn new() -> Self {
         Self { value: Cell::new(0) }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_idle(&self) -> bool {
         self.value.get() == 0
     }
 
-    #[inline]
+    #[inline(always)]
+    pub fn is_borrowed(&self) -> bool {
+        self.value.get() != 0
+    }
+
+    #[inline(always)]
     pub fn is_reading(&self) -> bool {
         self.value.get() > 0
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_writing(&self) -> bool {
         self.value.get() < 0
+    }
+
+
+    #[inline]
+    pub fn try_borrow(&self) -> Option<BorrowRef> {
+        if !self.is_writing() {
+            self.value.set(self.value.get().checked_add(1).expect("too many borrows"));
+            Some(BorrowRef { flag: self })
+        }
+        else { None }
+    }
+
+    #[track_caller]
+    #[inline(always)]
+    pub fn borrow(&self) -> BorrowRef {
+        self.try_borrow().expect("already mutably borrowed")
+    }
+
+
+    #[inline]
+    pub fn try_borrow_mut(&self) -> Option<BorrowRefMut> {
+        if self.is_idle() {
+            self.value.set(-1);
+            Some(BorrowRefMut { flag: self })
+        }
+        else { None }
+    }
+
+    #[track_caller]
+    #[inline(always)]
+    pub fn borrow_mut(&self) -> BorrowRefMut {
+        self.try_borrow_mut().expect("already borrowed")
     }
 }
 
@@ -35,16 +72,6 @@ pub struct BorrowRef<'a> {
 }
 
 impl<'a> BorrowRef<'a> {
-    #[track_caller]
-    #[inline]
-    pub fn new(flag: &'a BorrowFlag) -> Option<Self> {
-        if !flag.is_writing() {
-            flag.value.set(flag.value.get().checked_add(1).expect("too many borrows"));
-            Some(Self { flag })
-        }
-        else { None }
-    }
-
     #[track_caller]
     #[inline]
     pub fn clone(this: &Self) -> Self {
@@ -69,15 +96,6 @@ pub struct BorrowRefMut<'a> {
 }
 
 impl<'a> BorrowRefMut<'a> {
-    #[inline]
-    pub fn new(flag: &'a BorrowFlag) -> Option<Self> {
-        if flag.is_idle() {
-            flag.value.set(-1);
-            Some(Self { flag })
-        }
-        else { None }
-    }
-
     #[track_caller]
     #[inline]
     pub fn clone(this: &Self) -> Self {
@@ -108,7 +126,7 @@ pub struct Ref<'a, T: ?Sized> {
 
 impl<'a, T: ?Sized> Ref<'a, T> {
     #[inline(always)]
-    pub unsafe fn new(value: NonNull<T>, borrow: BorrowRef<'a>) -> Self {
+    pub unsafe fn new(borrow: BorrowRef<'a>, value: NonNull<T>) -> Self {
         Self { value, borrow, phantom: PhantomData }
     }
 }
@@ -116,7 +134,7 @@ impl<'a, T: ?Sized> Ref<'a, T> {
 impl<'a, T: ?Sized> Clone for Ref<'a, T> {
     #[inline]
     fn clone(&self) -> Self {
-        unsafe { Self::new(self.value, BorrowRef::clone(&self.borrow)) }
+        unsafe { Self::new(BorrowRef::clone(&self.borrow), self.value) }
     }
 }
 
@@ -135,14 +153,14 @@ pub struct RefMut<'a, T: ?Sized> {
     // > NB: we use a pointer instead of `&'b mut T` to avoid `noalias` violations, because a
     //   `RefMut` argument doesn't hold exclusivity for its whole scope, only until it drops.
     value: NonNull<T>,
-    borrow: BorrowRefMut<'a>,
+    _borrow: BorrowRefMut<'a>,
     phantom: PhantomData<&'a mut T>,
 }
 
 impl<'a, T: ?Sized> RefMut<'a, T> {
     #[inline(always)]
-    pub unsafe fn new(value: NonNull<T>, borrow: BorrowRefMut<'a>) -> Self {
-        Self { value, borrow, phantom: PhantomData }
+    pub unsafe fn new(borrow: BorrowRefMut<'a>, value: NonNull<T>) -> Self {
+        Self { value, _borrow: borrow, phantom: PhantomData }
     }
 }
 

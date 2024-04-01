@@ -1,7 +1,7 @@
 use core::cell::UnsafeCell;
 use core::ptr::NonNull;
 
-use crate::borrow::{BorrowFlag, BorrowRef, BorrowRefMut};
+use crate::borrow::BorrowFlag;
 
 pub use crate::borrow::{Ref, RefMut};
 
@@ -24,41 +24,27 @@ impl<T> RefCell<T> {
 
 impl<T: ?Sized> RefCell<T> {
     #[inline]
-    pub fn try_borrow(&self) -> Option<Ref<T>> {
-        match BorrowRef::new(&self.flag) {
-            Some(borrow) => unsafe {
-                let value = NonNull::new_unchecked(self.value.get());
-                Some(Ref::new(value, borrow))
-            }
+    pub fn try_borrow(&self) -> Option<Ref<T>> { unsafe {
+        Some(Ref::new(self.flag.try_borrow()?, NonNull::new_unchecked(self.value.get())))
+    }}
 
-            None => None,
-        }
-    }
+    #[track_caller]
+    #[inline(always)]
+    pub fn borrow(&self) -> Ref<T> { unsafe {
+        Ref::new(self.flag.borrow(), NonNull::new_unchecked(self.value.get()))
+    }}
+
+
+    #[inline]
+    pub fn try_borrow_mut(&self) -> Option<RefMut<T>> { unsafe {
+        Some(RefMut::new(self.flag.try_borrow_mut()?, NonNull::new_unchecked(self.value.get())))
+    }}
 
     #[track_caller]
     #[inline]
-    pub fn borrow(&self) -> Ref<T> {
-        self.try_borrow().expect("already mutably borrowed")
-    }
-
-
-    #[inline]
-    pub fn try_borrow_mut(&self) -> Option<RefMut<T>> {
-        match BorrowRefMut::new(&self.flag) {
-            Some(borrow) => unsafe {
-                let value = NonNull::new_unchecked(self.value.get());
-                Some(RefMut::new(value, borrow))
-            }
-
-            None => None,
-        }
-    }
-
-    #[track_caller]
-    #[inline]
-    pub fn borrow_mut(&self) -> RefMut<T> {
-        self.try_borrow_mut().expect("already borrowed")
-    }
+    pub fn borrow_mut(&self) -> RefMut<T> { unsafe {
+        RefMut::new(self.flag.borrow_mut(), NonNull::new_unchecked(self.value.get()))
+    }}
 }
 
 
