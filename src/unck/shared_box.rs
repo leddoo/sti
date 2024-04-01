@@ -162,6 +162,26 @@ mod impel {
             drop_and_free(&GlobalAlloc, alloc_box);
         }}
     }
+
+    impl<T> core::fmt::Debug for SharedBoxUnck<T> {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            self.inner.fmt(f)
+        }
+    }
+
+    impl<T> PartialEq for SharedPtrUnck<T> {
+        #[inline(always)]
+        fn eq(&self, other: &Self) -> bool {
+            self.inner == other.inner
+        }
+    }
+    impl<T> Eq for SharedPtrUnck<T> {}
+
+    impl<T> core::fmt::Debug for SharedPtrUnck<T> {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            self.inner.fmt(f)
+        }
+    }
 }
 
 #[cfg(not(debug_assertions))]
@@ -233,6 +253,26 @@ mod impel {
             unsafe { drop_and_free(&self.alloc, self.value) }
         }
     }
+
+    impl<T> core::fmt::Debug for SharedBoxUnck<T> {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            self.value.fmt(f)
+        }
+    }
+
+    impl<T> PartialEq for SharedPtrUnck<T> {
+        #[inline(always)]
+        fn eq(&self, other: &Self) -> bool {
+            self.inner == other.inner
+        }
+    }
+    impl<T> Eq for SharedPtrUnck<T> {}
+
+    impl<T> core::fmt::Debug for SharedPtrUnck<T> {
+        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            self.inner.fmt(f)
+        }
+    }
 }
 
 
@@ -248,6 +288,7 @@ mod debug_tests {
 
         let p1 = b.new_ptr();
         let p2 = p1.new_ptr();
+        assert_eq!(p1, p2);
         assert_eq!(*p1.borrow(), 42);
         assert_eq!(*p1.borrow_mut(), 42);
         assert_eq!(*p2.borrow(), 42);
@@ -406,6 +447,7 @@ mod unck_tests {
 
         let p1 = b.new_ptr();
         let p2 = p1.new_ptr();
+        assert_eq!(p1, p2);
         assert_eq!(*p1.borrow(), 42);
         assert_eq!(*p1.borrow_mut(), 42);
         assert_eq!(*p2.borrow(), 42);
