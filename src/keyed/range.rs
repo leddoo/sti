@@ -75,7 +75,7 @@ impl<K: Key> KRange<K> {
 
     #[inline(always)]
     pub fn idx(self, i: usize) -> K {
-        self.try_idx(i).unwrap()
+        self.try_idx(i).expect("invalid index")
     }
 
     #[inline(always)]
@@ -100,7 +100,7 @@ impl<K: Key> KRange<K> {
 
     #[inline(always)]
     pub fn rev(self, i: usize) -> K {
-        self.try_rev(i).unwrap()
+        self.try_rev(i).expect("invalid index")
     }
 
     #[inline(always)]

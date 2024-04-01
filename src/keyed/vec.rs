@@ -94,18 +94,11 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
 
 
     #[inline(always)]
-    pub fn try_push(&mut self, value: V) -> Result<K, ()> {
-        if self.len() + 1 < K::LIMIT {
-            let result = K::from_usize_unck(self.len());
-            self.inner.push(value);
-            return Ok(result);
-        }
-        return Err(());
-    }
-
-    #[inline(always)]
     pub fn push(&mut self, value: V) -> K {
-        self.try_push(value).unwrap()
+        assert!(self.len() + 1 < K::LIMIT, "too many elements");
+        let result = K::from_usize_unck(self.len());
+        self.inner.push(value);
+        return result;
     }
 
 

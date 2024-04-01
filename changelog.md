@@ -2,6 +2,7 @@
 - add `borrow::{BorrowFlag, BorrowRef, BorrowRefMut, Ref, RefMut}`.
 - add `cell::RefCell` & `unck::cell::RefCellUnck`.
 - add `unck::shared_box::{SharedBoxUnck, SharedPtrUnck}`.
+- add `ExpectDebug`.
 
 0.2.1:
 - now bumping minor for features & changes, patch for fixes.

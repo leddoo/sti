@@ -41,7 +41,7 @@ impl<T> RwSpinLock<T> {
             *readers = 1;
         }
         else {
-            *readers = readers.checked_add(1).unwrap();
+            *readers = readers.checked_add(1).expect("too many readers");
         }
 
         return ReadGuard { lock: self };
@@ -59,7 +59,7 @@ impl<T> RwSpinLock<T> {
             *readers = 1;
         }
         else {
-            *readers = readers.checked_add(1).unwrap();
+            *readers = readers.checked_add(1).expect("too many readers");
         }
 
         return Some(ReadGuard { lock: self });
@@ -110,13 +110,9 @@ impl<'a, T> Drop for ReadGuard<'a, T> {
     #[inline]
     fn drop(&mut self) {
         let mut readers = self.lock.readers.lock();
-
-        if *readers == 1 {
-            *readers = 0;
+        *readers -= 1;
+        if *readers == 0 {
             self.lock.locked.store(false, Ordering::Release);
-        }
-        else {
-            *readers = readers.checked_sub(1).unwrap();
         }
     }
 }

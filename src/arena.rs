@@ -119,18 +119,18 @@ impl<A: Alloc> Arena<A> {
 
     #[inline]
     pub fn alloc_ptr<T>(&self) -> NonNull<T> {
-        alloc_ptr::<T, Self>(self).unwrap()
+        alloc_ptr::<T, Self>(self).expect("oom")
     }
 
     #[inline]
     pub fn alloc_new<T>(&self, value: T) -> &mut T {
-        unsafe { alloc_new(self, value).unwrap().as_mut() }
+        unsafe { alloc_new(self, value).expect("oom").as_mut() }
     }
 
     #[inline]
     pub fn alloc_str<'a>(&'a self, value: &str) -> &'a str {
         unsafe {
-            let bytes = alloc_array(self, value.len()).unwrap();
+            let bytes = alloc_array(self, value.len()).expect("oom");
             core::ptr::copy_nonoverlapping(value.as_ptr(), bytes.as_ptr(), value.len());
             core::str::from_utf8_unchecked(
                 core::slice::from_raw_parts(bytes.as_ptr(), value.len()))

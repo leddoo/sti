@@ -59,3 +59,26 @@ impl<T, E: core::fmt::Debug> UnwrapDebug for Result<T, E> {
 }
 
 
+pub trait ExpectDebug {
+    fn expect_debug(self, msg: &str);
+}
+
+impl<T> ExpectDebug for Option<T> {
+    #[track_caller]
+    #[inline(always)]
+    fn expect_debug(self, msg: &str) {
+        #[cfg(debug_assertions)]
+        self.expect(msg);
+    }
+}
+
+impl<T, E: core::fmt::Debug> ExpectDebug for Result<T, E> {
+    #[track_caller]
+    #[inline(always)]
+    fn expect_debug(self, msg: &str) {
+        #[cfg(debug_assertions)]
+        self.expect(msg);
+    }
+}
+
+

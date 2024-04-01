@@ -76,10 +76,11 @@ impl<T, A: Alloc> VecDeque<T, A> {
             return;
         }
 
-        let old_layout = Layout::array::<T>(self.cap).unwrap();
-        let new_layout = Layout::array::<T>(new_cap).unwrap_or_else(|_| panic!("size overflow"));
-
         let new_data = unsafe {
+            // `self.cap` is always valid for `Layout::array`.
+            let old_layout = Layout::array::<T>(self.cap).unwrap_unchecked();
+            let new_layout = Layout::array::<T>(new_cap).expect("too many elements");
+
             // `self.data` is an allocation iff `self.cap > 0`.
             // align is equal.
             if let Ok(()) = self.alloc.try_realloc(self.data.cast(), old_layout, new_layout) {
@@ -94,7 +95,7 @@ impl<T, A: Alloc> VecDeque<T, A> {
                 self.data
             }
             else {
-                let new_data = self.alloc.alloc(new_layout).unwrap().cast::<T>();
+                let new_data = self.alloc.alloc(new_layout).expect("oom").cast::<T>();
 
                 let wrapped = (self.head + self.len).checked_sub(self.cap).unwrap_or(0);
                 core::ptr::copy_nonoverlapping(
@@ -236,17 +237,14 @@ impl<T, A: Alloc> VecDeque<T, A> {
 
 impl<T, A: Alloc> Drop for VecDeque<T, A> {
     fn drop(&mut self) {
-        let len = self.len;
-        #[cfg(debug_assertions)] { self.len = 0; }
-
         // drop values.
         unsafe {
-            let wrapped = (self.head + len).checked_sub(self.cap).unwrap_or(0);
+            let wrapped = (self.head + self.len).checked_sub(self.cap).unwrap_or(0);
 
             core::ptr::drop_in_place(
                 core::slice::from_raw_parts_mut(
                     self.data.as_ptr().add(self.head),
-                    len - wrapped));
+                    self.len - wrapped));
 
             core::ptr::drop_in_place(
                 core::slice::from_raw_parts_mut(
@@ -254,14 +252,12 @@ impl<T, A: Alloc> Drop for VecDeque<T, A> {
                     wrapped));
         }
 
-        let layout = Layout::array::<T>(self.cap).unwrap();
+        unsafe {
+            // `self.cap` is always valid for `Layout::array`.
+            let layout = Layout::array::<T>(self.cap).unwrap_unchecked();
 
-        // `self.data` is an allocation iff `self.cap > 0`.
-        unsafe { self.alloc.free(self.data.cast(), layout) }
-
-        #[cfg(debug_assertions)] {
-            self.data = NonNull::dangling();
-            self.cap  = 0;
+            // `self.data` is an allocation iff `self.cap > 0`.
+            self.alloc.free(self.data.cast(), layout);
         }
     }
 }

@@ -20,14 +20,8 @@ impl<T, A: Alloc> Box<T, A> {
     #[track_caller]
     #[inline(always)]
     pub fn new_in(alloc: A, value: T) -> Self {
-        let value = alloc_new(&alloc, value).unwrap();
+        let value = alloc_new(&alloc, value).expect("oom");
         Self { value, alloc }
-    }
-
-    #[inline(always)]
-    pub fn try_new_in(alloc: A, value: T) -> Option<Self> {
-        let value = alloc_new(&alloc, value)?;
-        Some(Self { value, alloc })
     }
 }
 

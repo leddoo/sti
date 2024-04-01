@@ -13,7 +13,7 @@ pub(super) struct RawHashMap<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> {
     alloc: A,
 
     groups: NonNull<Group>,
-    num_groups: u32,
+    num_groups: u32, // valid for use in `Self::layout(num_groups)`.
     empty: u32,
     used:  u32,
 
@@ -226,8 +226,10 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     {
         // allocate uninitialized hash map with same capacity.
         let mut result = {
-            let layout = Self::layout(self.num_groups).unwrap();
-            let data = alloc.alloc(layout).expect("allocation failed");
+            // `self.num_groups` is always valid for `Self::layout`.
+            let layout = unsafe { Self::layout(self.num_groups).unwrap_unchecked() };
+
+            let data = alloc.alloc(layout).expect("oom");
 
             RawHashMap {
                 seed: self.seed.clone(),
@@ -286,9 +288,10 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     pub fn copy_in<A2>(&self, alloc: A2) -> RawHashMap<K, V, S, A2>
     where K: Copy, V: Copy, S: Clone, A2: Alloc
     {
-        let layout = Self::layout(self.num_groups).unwrap();
-        let data = alloc.alloc(layout).expect("allocation failed");
+        // `self.num_groups` is always valid for `Self::layout`.
+        let layout = unsafe { Self::layout(self.num_groups).unwrap_unchecked() };
 
+        let data = alloc.alloc(layout).expect("oom");
         unsafe {
             core::ptr::copy_nonoverlapping(
                 self.groups.as_ptr() as *const u8,
@@ -310,11 +313,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
     pub fn move_into<A2: Alloc>(self, alloc: A2) -> RawHashMap<K, V, S, A2> {
-        let layout = Self::layout(self.num_groups).unwrap();
-        let data = alloc.alloc(layout).expect("allocation failed");
+        // `self.num_groups` is always valid for `Self::layout`.
+        let layout = unsafe { Self::layout(self.num_groups).unwrap_unchecked() };
+        let data = alloc.alloc(layout).expect("oom");
 
         let this = core::mem::ManuallyDrop::new(self);
-
         unsafe {
             // copy groups/slots to new map.
             core::ptr::copy_nonoverlapping(
@@ -501,8 +504,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
                 }
             }
 
-            let layout = Self::layout(old_num_groups).unwrap();
-            unsafe { self.alloc.free(old_groups.cast(), layout) }
+            unsafe {
+                // `self.num_groups` is always valid for `Self::layout`.
+                let layout = Self::layout(old_num_groups).unwrap_unchecked();
+                self.alloc.free(old_groups.cast(), layout);
+            }
         }
         else { debug_assert_eq!(old_used, 0) }
     }
@@ -545,7 +551,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
 
     #[inline(always)]
     fn layout(num_groups: u32) -> Option<Layout> {
-        let num_groups: usize = num_groups.try_into().unwrap();
+        let num_groups: usize = num_groups.try_into().expect("unreachable");
         let num_slots = num_groups.checked_mul(Group::WIDTH)?;
         cat_join(
             Layout::array::<Group>(num_groups).ok()?,
@@ -609,8 +615,11 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> Drop for RawHashMap<K, V, S
                 }
             }
 
-            let layout = Self::layout(self.num_groups).unwrap();
-            unsafe { self.alloc.free(self.groups.cast(), layout) }
+            unsafe {
+                // `self.num_groups` is always valid for `Self::layout`.
+                let layout = Self::layout(self.num_groups).unwrap_unchecked();
+                self.alloc.free(self.groups.cast(), layout);
+            }
         }
         else { debug_assert_eq!(self.used, 0) }
     }

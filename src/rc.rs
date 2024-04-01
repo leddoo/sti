@@ -24,9 +24,10 @@ impl<T> Rc<T, GlobalAlloc> {
 }
 
 impl<T, A: Alloc> Rc<T, A> {
+    #[track_caller]
     #[inline]
-    pub fn try_new_in(alloc: A, value: T) -> Option<Self> {
-        let inner = alloc_ptr::<RcInner<T, A>, _>(&alloc)?;
+    pub fn new_in(alloc: A, value: T) -> Self {
+        let inner = alloc_ptr::<RcInner<T, A>, _>(&alloc).expect("oom");
         unsafe {
             inner.as_ptr().write(RcInner {
                 alloc,
@@ -34,13 +35,7 @@ impl<T, A: Alloc> Rc<T, A> {
                 data: value,
             });
         }
-        return Some(Rc { inner })
-    }
-
-    #[track_caller]
-    #[inline]
-    pub fn new_in(alloc: A, value: T) -> Self {
-        Self::try_new_in(alloc, value).unwrap()
+        return Rc { inner };
     }
 }
 
@@ -126,7 +121,7 @@ impl<T: ?Sized, A: Alloc> Clone for Rc<T, A> {
     #[inline]
     fn clone(&self) -> Self {
         let refs = unsafe { &self.inner.as_ref().refs };
-        refs.set(refs.get().checked_add(1).unwrap());
+        refs.set(refs.get().checked_add(1).expect("too many refs"));
         return Rc { inner: self.inner };
     }
 }

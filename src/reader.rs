@@ -250,7 +250,7 @@ impl<'a, T: Copy> Reader<'a, T> {
     #[must_use]
     pub fn next_array<const N: usize>(&mut self) -> Option<[T; N]> {
         let slice = self.next_n(N)?;
-        Some(slice.try_into().unwrap())
+        Some(slice.try_into().expect("unreachable"))
     }
 
 

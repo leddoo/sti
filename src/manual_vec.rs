@@ -311,24 +311,19 @@ impl<T, A: Alloc + Default> Default for ManualVec<T, A> {
 
 impl<T, A: Alloc> Drop for ManualVec<T, A> {
     fn drop(&mut self) {
-        let len = self.len;
-        #[cfg(debug_assertions)] { self.len = 0; }
-
         // drop values.
         unsafe {
             core::ptr::drop_in_place(
                 core::slice::from_raw_parts_mut(
-                    self.data.as_ptr(), len));
+                    self.data.as_ptr(), self.len));
         }
 
-        let layout = Layout::array::<T>(self.cap).unwrap();
+        unsafe {
+            // `self.cap` is always valid for `Layout::array`.
+            let layout = Layout::array::<T>(self.cap).unwrap_unchecked();
 
-        // `self.data` is an allocation iff `self.cap > 0`.
-        unsafe { self.alloc.free(self.data.cast(), layout) }
-
-        #[cfg(debug_assertions)] {
-            self.data = NonNull::dangling();
-            self.cap  = 0;
+            // `self.data` is an allocation iff `self.cap > 0`.
+            self.alloc.free(self.data.cast(), layout);
         }
     }
 }

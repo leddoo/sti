@@ -1,10 +1,11 @@
 
 - todo:
-    - `unwrap` -> `expect("oom")`.
     - leb128.
+    - update readme & license.
     - cell & unck docs.
         - why we have them, what they're for.
         - how to use them correctly.
+    - remove manual vec?
     - mimalloc.
 
 

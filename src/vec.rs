@@ -100,13 +100,11 @@ impl<T, A: Alloc> Vec<T, A> {
             let old_layout = Layout::array::<T>(self.cap).unwrap_unchecked();
 
             // ensure new layout is valid.
-            let new_layout = Layout::array::<T>(new_cap).unwrap();
+            let new_layout = Layout::array::<T>(new_cap).expect("too many elements");
 
             // `self.data` is an allocation iff `self.cap > 0`.
             // align is equal.
-            self.alloc.realloc(self.data.cast(), old_layout, new_layout)
-            .unwrap()
-            .cast()
+            self.alloc.realloc(self.data.cast(), old_layout, new_layout).expect("oom").cast()
         };
 
         self.data = new_data;
@@ -159,7 +157,7 @@ impl<T, A: Alloc> Vec<T, A> {
     #[inline]
     #[track_caller]
     pub fn reserve_extra(&mut self, extra: usize) {
-        self.reserve(self.len.checked_add(extra).unwrap())
+        self.reserve(self.len.checked_add(extra).expect("too many elements"))
     }
 
     #[cold]
@@ -539,27 +537,18 @@ impl<T: Clone, A: Alloc + Clone> Clone for Vec<T, A> {
 
 
 impl<T, A: Alloc> Drop for Vec<T, A> {
-    fn drop(&mut self) {
-        let len = self.len;
-        #[cfg(debug_assertions)] { self.len = 0; }
-
+    fn drop(&mut self) { unsafe {
         // drop values.
-        unsafe {
-            core::ptr::drop_in_place(
-                core::slice::from_raw_parts_mut(
-                    self.data.as_ptr(), len));
-        }
+        core::ptr::drop_in_place(
+            core::slice::from_raw_parts_mut(
+                self.data.as_ptr(), self.len));
 
-        let layout = Layout::array::<T>(self.cap).unwrap();
+        // `self.cap` is always valid for `Layout::array`.
+        let layout = Layout::array::<T>(self.cap).unwrap_unchecked();
 
         // `self.data` is an allocation iff `self.cap > 0`.
-        unsafe { self.alloc.free(self.data.cast(), layout) }
-
-        #[cfg(debug_assertions)] {
-            self.data = NonNull::dangling();
-            self.cap  = 0;
-        }
-    }
+        self.alloc.free(self.data.cast(), layout);
+    }}
 }
 
 
@@ -674,29 +663,22 @@ impl<'a, T, A: Alloc> IntoIterator for &'a Vec<T, A> {
 
 
 impl<T, A: Alloc> Drop for IntoIter<T, A> {
-    fn drop(&mut self) {
+    fn drop(&mut self) { unsafe {
         let len_left =
             if self.cursor == self.end { 0 }
-            else { unsafe { self.end.as_ptr().offset_from(self.cursor.as_ptr()) } } as usize;
+            else { self.end.as_ptr().offset_from(self.cursor.as_ptr()) as usize };
 
         // drop values
-        unsafe {
-            core::ptr::drop_in_place(
-                core::slice::from_raw_parts_mut(
-                    self.cursor.as_ptr(), len_left));
-        }
+        core::ptr::drop_in_place(
+            core::slice::from_raw_parts_mut(
+                self.cursor.as_ptr(), len_left));
 
-        let layout = Layout::array::<T>(self.cap).unwrap();
+        // `self.cap` is always valid for `Layout::array`.
+        let layout = Layout::array::<T>(self.cap).unwrap_unchecked();
 
-        unsafe { self.alloc.free(self.initial.cast(), layout); };
-
-        #[cfg(debug_assertions)] {
-            self.initial = NonNull::dangling();
-            self.cursor = NonNull::dangling();
-            self.end = NonNull::dangling();
-            self.cap = 0;
-        }
-    }
+        // `self.data` is an allocation iff `self.cap > 0`.
+        self.alloc.free(self.initial.cast(), layout);
+    }}
 }
 
 
