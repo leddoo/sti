@@ -1,7 +1,5 @@
 
 - todo:
-    - `SharedBoxUnck` & `SharedPtrUnck`.
-        - unck impl.
     - `unwrap` -> `expect("oom")`.
     - leb128.
     - cell & unck docs.

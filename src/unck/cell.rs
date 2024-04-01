@@ -105,23 +105,27 @@ mod unck_tests {
     #[test]
     fn already_mutably_borrowed() { unsafe {
         let r = RefCellUnck::new(42);
-        let m = r.borrow_mut();
+        let mut m = r.borrow_mut();
+        assert_eq!(*m, 42);
+        *m = 69;
         // technically valid due to the use of `NonNull`,
         // but UB via the contract of `RefCellUnck`
         let s1 = r.borrow();
-        assert_eq!(*m, 42);
-        assert_eq!(*s1, 42);
+        assert_eq!(*m, 69);
+        assert_eq!(*s1, 69);
     }}
 
     #[test]
     fn already_borrowed() { unsafe {
         let r = RefCellUnck::new(42);
         let s1 = r.borrow();
+        assert_eq!(*s1, 42);
         // technically valid due to the use of `NonNull`,
         // but UB via the contract of `RefCellUnck`
-        let m = r.borrow_mut();
-        assert_eq!(*s1, 42);
-        assert_eq!(*m, 42);
+        let mut m = r.borrow_mut();
+        *m = 69;
+        assert_eq!(*s1, 69);
+        assert_eq!(*m, 69);
     }}
 }
 
