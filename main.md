@@ -1,9 +1,12 @@
 
 - todo:
+    - `RefCell` tests.
+    - `RefCell` traits.
+    - `RefCellUnck` as `RefCell` wrapper.
     - unck module.
-        - `RefCellUnck`.
         - `SharedBoxUnck`.
         - `SharedPtrUnck`.
+    - `unwrap` -> `expect("oom")`.
     - mimalloc.
 
 

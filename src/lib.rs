@@ -3,6 +3,8 @@
 pub mod num;
 pub mod hint;
 pub mod mem;
+pub mod borrow;
+pub mod cell;
 
 pub mod simd;
 pub mod float;

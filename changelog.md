@@ -1,3 +1,7 @@
+0.3.1:
+- add `borrow::{BorrowFlag, BorrowRef, BorrowRefMut, Ref, RefMut}`.
+- add `cell::RefCell` & `unck::cell::RefCellUnck`.
+
 0.2.1:
 - now bumping minor for features & changes, patch for fixes.
 - `trait Alloc` is now unsafe (`Clone` requirement).
