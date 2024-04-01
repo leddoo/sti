@@ -1,7 +1,6 @@
 use core::alloc::Layout;
 use core::ptr::NonNull;
 use core::cell::Cell;
-use core::mem::ManuallyDrop;
 
 use crate::alloc::{Alloc, GlobalAlloc, alloc_ptr};
 
@@ -47,6 +46,17 @@ impl<T, A: Alloc> Rc<T, A> {
 
 impl<T: ?Sized, A: Alloc> Rc<T, A> {
     #[inline]
+    pub fn into_inner(self) -> NonNull<RcInner<T, A>> {
+        self.inner
+    }
+
+    #[inline]
+    pub unsafe fn from_inner(inner: NonNull<RcInner<T, A>>) -> Self {
+        Self { inner }
+    }
+
+
+    #[inline]
     pub fn alloc(&self) -> &A {
         unsafe { &self.inner.as_ref().alloc }
     }
@@ -75,14 +85,6 @@ impl<T: ?Sized, A: Alloc> Rc<T, A> {
         }
         assert_eq!(self.ref_count(), 1);
         unsafe { &mut self.inner.as_mut().data }
-    }
-
-
-    #[inline(always)]
-    pub unsafe fn cast<U: ?Sized, F>(self, f: F) -> Rc<U, A>
-    where F: FnOnce(*mut RcInner<T, A>) -> *mut RcInner<U, A> {
-        let this = ManuallyDrop::new(self);
-        Rc { inner: unsafe { NonNull::new_unchecked(f(this.inner.as_ptr())) } }
     }
 }
 
