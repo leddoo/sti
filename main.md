@@ -1,10 +1,12 @@
 
 - todo:
     - `SharedBoxUnck` & `SharedPtrUnck`.
+        - unck impl.
+    - `unwrap` -> `expect("oom")`.
+    - leb128.
     - cell & unck docs.
         - why we have them, what they're for.
         - how to use them correctly.
-    - `unwrap` -> `expect("oom")`.
     - mimalloc.
 
 
@@ -14,11 +16,17 @@
 - utf-8 module:
     - ceil/floor.
     - iteration.
+    - consider removing `_inline` versions.
+      perhaps maybe have short string opt inline versions.
 
 - arena:
     - `prev_cap` for consistent geometric growth.
         - don't write when allocating block `> max_block_size`.
         - test that.
+        - maybe just delegate to global instead, if size exceeds some limit.
+          (we're given the size on free)
+    - remove `A` parameter.
+        - consider `backing: Option<Rc<dyn Alloc>>,`
 
 - simd:
     - scalar add/sub (ext trait, "add", "sub", maybe "sadd").

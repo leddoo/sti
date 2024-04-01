@@ -1,6 +1,7 @@
 0.3.0:
 - add `borrow::{BorrowFlag, BorrowRef, BorrowRefMut, Ref, RefMut}`.
 - add `cell::RefCell` & `unck::cell::RefCellUnck`.
+- add `unck::shared_box::{SharedBoxUnck, SharedPtrUnck}`.
 
 0.2.1:
 - now bumping minor for features & changes, patch for fixes.
