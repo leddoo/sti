@@ -31,8 +31,6 @@ pub mod packed_option;
 pub mod keyed;
 
 
-pub mod prelude;
-
 
 #[macro_export]
 macro_rules! static_assert {

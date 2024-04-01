@@ -8,6 +8,7 @@
 - simd `Default` impls.
 - add `erase`, `inc`, `enclose` macros.
 - replace `Rc::cast` with `{from, into}_inner`.
+- remove `prelude`.
 
 0.1.11:
 - add `UnwrapDebug`.
