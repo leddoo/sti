@@ -163,9 +163,17 @@ mod impel {
         }}
     }
 
+
     impl<T> core::fmt::Debug for SharedBoxUnck<T> {
         fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
             self.inner.fmt(f)
+        }
+    }
+
+
+    impl<T> Clone for SharedPtrUnck<T> {
+        fn clone(&self) -> Self {
+            self.new_ptr()
         }
     }
 
@@ -254,9 +262,18 @@ mod impel {
         }
     }
 
+
     impl<T> core::fmt::Debug for SharedBoxUnck<T> {
         fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
             self.value.fmt(f)
+        }
+    }
+
+
+    impl<T> Clone for SharedPtrUnck<T> {
+        #[inline(always)]
+        fn clone(&self) -> Self {
+            self.new_ptr()
         }
     }
 
@@ -287,7 +304,7 @@ mod debug_tests {
         assert_eq!(*b.borrow_mut(), 42);
 
         let p1 = b.new_ptr();
-        let p2 = p1.new_ptr();
+        let p2 = p1.clone();
         assert_eq!(p1, p2);
         assert_eq!(*p1.borrow(), 42);
         assert_eq!(*p1.borrow_mut(), 42);
@@ -446,7 +463,7 @@ mod unck_tests {
         assert_eq!(*b.borrow_mut(), 42);
 
         let p1 = b.new_ptr();
-        let p2 = p1.new_ptr();
+        let p2 = p1.clone();
         assert_eq!(p1, p2);
         assert_eq!(*p1.borrow(), 42);
         assert_eq!(*p1.borrow_mut(), 42);
