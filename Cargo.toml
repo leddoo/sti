@@ -9,7 +9,8 @@ repository = "https://github.com/leddoo/sti"
 documentation = "https://docs.rs/sti"
 readme = "readme.md"
 
-#[features]
-#default = ["sti_bench"]
+[features]
+default = ["std"]
+std = []
 #sti_bench = []
 
