@@ -122,6 +122,10 @@ mod impel {
 
     impl<T, A: Alloc> Drop for SharedBoxUnck<T, A> {
         fn drop(&mut self) {
+            // freeing `Inner` is centralized in `SharedPtrUnck::drop`.
+            // cf `tests::bug_double_free_on_cyclic_drop`
+            let keep_alive = self.new_ptr();
+
             // drop value.
             unsafe {
                 let borrows = &self.inner.as_ref().borrow_flag;
@@ -131,35 +135,26 @@ mod impel {
 
                 drop(self.inner.as_mut().value.take());
             }
-            Inner::release(self.inner);
+
+            drop(keep_alive);
         }
     }
 
     impl<T> Drop for SharedPtrUnck<T> {
-        fn drop(&mut self) {
+        fn drop(&mut self) { unsafe {
             // dec #ptrs.
-            unsafe {
-                let ptrs = &self.inner.as_ref().ptrs;
-                ptrs.set(ptrs.get().checked_sub(1).expect("pointer was dropped multiple times"));
-            }
-            Inner::release(self.inner);
-        }
-    }
+            let inner = self.inner.as_ref();
+            inner.ptrs.set(inner.ptrs.get().checked_sub(1).expect("pointer was dropped multiple times"));
 
-    impl<T> Inner<T> {
-        // free the allocation if no more pointers exist.
-        fn release(this: NonNull<Self>) { unsafe {
-            let me = this.as_ref();
-            if me.ptrs.get() != 0 || me.value.is_some() {
-                return;
+            // free allocation.
+            if inner.ptrs.get() == 0 && inner.value.is_none() {
+                let alloc_box = inner.alloc;
+                let alloc = alloc_box.as_ref();
+                // free `Inner`
+                alloc.free(self.inner.cast(), Layout::new::<Inner<T>>());
+                // free `alloc`
+                drop_and_free(&GlobalAlloc, alloc_box);
             }
-
-            let alloc_box = me.alloc;
-            let alloc = alloc_box.as_ref();
-            // free `Inner`
-            alloc.free(this.cast(), Layout::new::<Self>());
-            // free `alloc`
-            drop_and_free(&GlobalAlloc, alloc_box);
         }}
     }
 
@@ -448,6 +443,25 @@ mod debug_tests {
         assert!(log.borrow().is_empty());
         drop(p2);
         assert_eq!(&*log.borrow_mut().take(), &["LogAlloc::free", "LogAlloc::drop"]);
+    }
+
+    #[test]
+    fn bug_double_free_on_cyclic_drop() {
+        struct Foo {
+            ptr: Option<SharedPtrUnck<Foo>>,
+        }
+
+        let f = SharedBoxUnck::new(Foo { ptr: None });
+        let ptr = f.new_ptr();
+        unsafe { f.borrow_mut().ptr = Some(ptr) };
+
+        // `f.ptr == &f`
+        // what used to happen:
+        //  - `SharedBoxUnck::drop` would take the value. #ptrs = 1.
+        //      - `Foo::drop` drops the shared ptr. #ptrs = 0.
+        //          - now, because value is None, `Inner` is freed.
+        //  - `SharedBoxUnck::drop` calls release on freed `Inner`.
+        drop(f);
     }
 }
 
