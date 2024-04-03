@@ -552,13 +552,102 @@ impl<T, A: Alloc> Drop for Vec<T, A> {
 }
 
 
-impl<T: PartialEq, A: Alloc> PartialEq for Vec<T, A> {
+impl<T: PartialEq<Y>, Y, A1: Alloc, A2: Alloc> PartialEq<Vec<Y, A2>> for Vec<T, A1> {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, other: &Vec<Y, A2>) -> bool {
         self.as_slice() == other.as_slice()
     }
 }
 
+
+impl<T: PartialEq<Y>, Y, A1: Alloc, A2: Alloc> PartialEq<&Vec<Y, A2>> for Vec<T, A1> {
+    #[inline(always)]
+    fn eq(&self, other: &&Vec<Y, A2>) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+
+impl<T: PartialEq<Y>, Y, A1: Alloc, A2: Alloc> PartialEq<&mut Vec<Y, A2>> for Vec<T, A1> {
+    #[inline(always)]
+    fn eq(&self, other: &&mut Vec<Y, A2>) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+
+impl<T: PartialEq<Y>, Y, A: Alloc> PartialEq<&[Y]> for Vec<T, A> {
+    #[inline(always)]
+    fn eq(&self, other: &&[Y]) -> bool {
+        self.as_slice() == *other
+    }
+}
+
+
+impl<T: PartialEq<Y>, Y, A: Alloc> PartialEq<&mut [Y]> for Vec<T, A> {
+    #[inline(always)]
+    fn eq(&self, other: &&mut [Y]) -> bool {
+        self.as_slice() == *other
+    }
+}
+
+
+impl<T: PartialEq<Y>, Y, A: Alloc, const N: usize> PartialEq<[Y; N]> for Vec<T, A> {
+    #[inline(always)]
+    fn eq(&self, other: &[Y; N]) -> bool {
+        self.as_slice() == &other[..]
+    }
+}
+
+
+impl<T: PartialEq<Y>, Y, A: Alloc, const N: usize> PartialEq<&[Y; N]> for Vec<T, A> {
+    #[inline(always)]
+    fn eq(&self, other: &&[Y; N]) -> bool {
+        &self.as_slice() == other
+    }
+}
+
+
+impl<T: PartialEq<Y>, Y, A: Alloc, const N: usize> PartialEq<&mut [Y; N]> for Vec<T, A> {
+    #[inline(always)]
+    fn eq(&self, other: &&mut [Y; N]) -> bool {
+        self.as_slice() == &other[..]
+    }
+}
+
+
+impl<T: core::hash::Hash, A: Alloc> core::hash::Hash for Vec<T, A> {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        core::hash::Hash::hash(self.as_slice(), state)
+    }
+}
+
+
+impl<A: Alloc> core::fmt::Write for Vec<u8, A> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.extend_from_slice(s.as_bytes());
+        Ok(())
+    }
+}
+
+
+impl<A: Alloc> std::io::Write for Vec<u8, A> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+
+//
+// Of course the `Eq` trait expects T: PartialEq<Self>
+// This means the monstrocity for PartialEq<Vec> won't work
+// and only Vec<T, ..> is `Eq` to Vec<T, ..>
+// 
 impl<T: Eq, A: Alloc> Eq for Vec<T, A> {}
 
 
@@ -699,6 +788,7 @@ impl<T> FromIterator<T> for Vec<T, GlobalAlloc> {
         Self::from_in(GlobalAlloc, iter.into_iter())
     }
 }
+
 
 impl<T, A: Alloc, I: Iterator<Item = T>> FromIn<I, A> for Vec<T, A> {
     #[inline]
@@ -1063,5 +1153,33 @@ mod tests {
         assert_eq!(iter.next(), None);
     }
 
-}
 
+    #[allow(unused)]
+    fn vec_eq_ty_check() {
+        struct T;
+        struct A;
+        impl PartialEq<T> for T {
+            fn eq(&self, other: &T) -> bool {
+                true
+            }
+        }
+        impl PartialEq<A> for T {
+            fn eq(&self, other: &A) -> bool {
+                true
+            }
+        }
+
+        Vec::<T>::new() == Vec::<T>::new();
+        Vec::<T>::new() == &Vec::<T>::new();
+        Vec::<T>::new() == &mut Vec::<T>::new();
+        Vec::<T>::new() == Vec::<A>::new();
+        Vec::<T>::new() == &Vec::<A>::new();
+        Vec::<T>::new() == &mut Vec::<A>::new();
+        Vec::<T>::new() == [T].as_slice();
+        Vec::<T>::new() == [T].as_slice();
+        Vec::<T>::new() == [T].as_mut();
+        Vec::<T>::new() == [T];
+        Vec::<T>::new() == &[T];
+        Vec::<T>::new() == &mut [T];
+    }
+}
