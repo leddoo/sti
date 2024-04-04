@@ -3,6 +3,8 @@
 - add `cell::RefCell` & `unck::cell::RefCellUnck`.
 - add `unck::shared_box::{SharedBoxUnck, SharedPtrUnck}`.
 - add `ExpectDebug`.
+- add `Vec: Hash + Write`.
+- add `mod leb128`.
 
 0.2.1:
 - now bumping minor for features & changes, patch for fixes.

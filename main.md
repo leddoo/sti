@@ -1,10 +1,14 @@
 
 - todo:
-    - leb128.
-    - update readme & license.
+    - leb128:
+        - single byte fast path inline fns.
+        - writing.
+        - tests.
     - cell & unck docs.
         - why we have them, what they're for.
         - how to use them correctly.
+    - update readme.
+    - push to crates.io.
     - remove manual vec?
     - mimalloc.
 
