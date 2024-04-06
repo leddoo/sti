@@ -7,6 +7,9 @@
     - cell & unck docs.
         - why we have them, what they're for.
         - how to use them correctly.
+    - simplify key:
+        - only from/to usize.
+        - don't make ZERO/MAX pub on impl.
     - update readme.
     - push to crates.io.
     - remove manual vec?
@@ -28,6 +31,7 @@
         - test that.
         - maybe just delegate to global instead, if size exceeds some limit.
           (we're given the size on free)
+          but we still need to track the alloc cause leak.
     - remove `A` parameter.
         - consider `backing: Option<Rc<dyn Alloc>>,`
 

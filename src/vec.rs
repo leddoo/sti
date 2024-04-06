@@ -483,14 +483,11 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
+    /// - this does not drop the allocator.
     #[inline]
     pub fn leak<'a>(self) -> &'a mut [T]  where A: 'a {
         unsafe {
-            let mut this = core::mem::ManuallyDrop::new(self);
-
-            // drop alloc.
-            core::ptr::drop_in_place(&mut this.alloc);
-
+            let this = core::mem::ManuallyDrop::new(self);
             core::slice::from_raw_parts_mut(this.data.as_ptr(), this.len())
         }
     }
