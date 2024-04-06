@@ -71,6 +71,22 @@ impl<K: Key, V> KSlice<K, V> {
 }
 
 
+impl<'a, K: Key, V> Default for &'a KSlice<K, V> {
+    #[inline(always)]
+    fn default() -> Self {
+        KSlice::new_unck(&[])
+    }
+}
+
+
+impl<K: Key, V> core::fmt::Debug for KSlice<K, V>
+where K: core::fmt::Debug, V: core::fmt::Debug {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_map().entries(self.iter()).finish()
+    }
+}
+
+
 impl<K: Key, V> core::ops::Index<K> for KSlice<K, V> {
     type Output = V;
 
@@ -208,9 +224,3 @@ impl<'a, K: Key, V> Iterator for KIterMut<'a, K, V> {
 }
 
 
-impl<K: Key, V> core::fmt::Debug for KSlice<K, V>
-where K: core::fmt::Debug, V: core::fmt::Debug {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_map().entries(self.iter()).finish()
-    }
-}
