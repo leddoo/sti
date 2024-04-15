@@ -476,8 +476,9 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
+    /// - new Vec's `cap` = `self.len()`.
     pub fn clone_in<B: Alloc>(&self, alloc: B) -> Vec<T, B>  where T: Clone {
-        let mut result = Vec::new_in(alloc);
+        let mut result = Vec::with_cap_in(alloc, self.len());
         result.extend_from_slice(&self);
         return result;
     }
@@ -942,6 +943,33 @@ mod tests {
 
         v.resize(7, 69);
         assert_eq!(*v, [1, 2, 69, 69, 69, 69, 69]);
+    }
+
+    #[test]
+    fn vec_clone() {
+        let mut v = vec![1];
+        assert_eq!(v.cap(), 1);
+
+        let v2 = v.clone();
+        assert_eq!(v2.cap(), v2.len());
+        assert_eq!(*v2, [1]);
+        drop(v2);
+
+        v.push(2);
+        assert_eq!(v.cap(), 4); // grow min cap.
+
+        let v3 = v.clone();
+        assert_eq!(v3.cap(), v3.len());
+        assert_eq!(*v3, [1, 2]);
+        drop(v3);
+
+        v.push(3);
+        assert_eq!(v.cap(), 4);
+
+        let v4 = v.clone();
+        assert_eq!(v4.cap(), v4.len());
+        assert_eq!(*v4, [1, 2, 3]);
+        drop(v4);
     }
 
     #[test]
