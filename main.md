@@ -1,5 +1,16 @@
 
 - todo:
+    - arena:
+        - simp arena pool.
+        - remove backing.
+        - large allocations -> globalalloc.
+    - remove unnecessary `inline(always)`
+    - remove ordutils.
+    - remove unwindsafe impls.
+    - !Send, !Sync impls.
+    - simp key:
+        - only from/to usize.
+        - don't make ZERO/MAX pub on impl.
     - leb128:
         - single byte fast path inline fns.
         - writing.
@@ -7,9 +18,6 @@
     - cell & unck docs.
         - why we have them, what they're for.
         - how to use them correctly.
-    - simplify key:
-        - only from/to usize.
-        - don't make ZERO/MAX pub on impl.
     - update readme.
     - push to crates.io.
     - remove manual vec?
@@ -24,16 +32,6 @@
     - iteration.
     - consider removing `_inline` versions.
       perhaps maybe have short string opt inline versions.
-
-- arena:
-    - `prev_cap` for consistent geometric growth.
-        - don't write when allocating block `> max_block_size`.
-        - test that.
-        - maybe just delegate to global instead, if size exceeds some limit.
-          (we're given the size on free)
-          but we still need to track the alloc cause leak.
-    - remove `A` parameter.
-        - consider `backing: Option<Rc<dyn Alloc>>,`
 
 - simd:
     - scalar add/sub (ext trait, "add", "sub", maybe "sadd").
@@ -53,10 +51,5 @@
     - test key mutation.
     - rename `empty` to something less misleading.
     - slot api for ptr eq keys.
-
-- stuff:
-    - `no_std` support.
-        - `thread_local`.
-        - global heap allocator (mimalloc).
 
 

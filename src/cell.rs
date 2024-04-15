@@ -1,8 +1,7 @@
-use core::cell::UnsafeCell;
 use core::ptr::NonNull;
-
 use crate::borrow::BorrowFlag;
 
+pub use core::cell::{Cell, UnsafeCell};
 pub use crate::borrow::{Ref, RefMut};
 
 

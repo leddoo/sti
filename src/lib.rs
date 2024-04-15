@@ -93,7 +93,7 @@ macro_rules! assume {
 ///
 /// this is safer than using transmute directly
 /// as you're forced to specify the type
-/// but you don't have to repeat it.
+/// and you don't have to repeat it.
 #[macro_export]
 macro_rules! erase {
     ($T:ty, $x:expr) => {
