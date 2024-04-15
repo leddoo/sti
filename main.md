@@ -1,7 +1,6 @@
 
 - todo:
     - arena:
-        - simp arena pool.
         - remove backing.
         - large allocations -> globalalloc.
     - remove unnecessary `inline(always)`
@@ -26,6 +25,10 @@
 
 
 ### backlog:
+
+- arena:
+    - test temp arena overflow case.
+    - consider returning growing arena for temp overflow case.
 
 - utf-8 module:
     - ceil/floor.

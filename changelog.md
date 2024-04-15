@@ -1,3 +1,11 @@
+0.4.0:
+- arena pool rework:
+    - new api: `Arena::tls_get_temp`, `Arena::tls_get_rec`, `Arena::tls_rec_num_refs`.
+    - remove unsafe scoped api.
+    - temp arenas are pooled per thread. rec arena is exactly one per thread.
+      this is effectively how it worked previously too. but now the impls are separated
+      and much simpler.
+
 0.3.0:
 - add `borrow::{BorrowFlag, BorrowRef, BorrowRefMut, Ref, RefMut}`.
 - add `cell::RefCell` & `unck::cell::RefCellUnck`.

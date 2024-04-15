@@ -459,6 +459,256 @@ impl core::fmt::Debug for Arena {
 }
 
 
+
+mod pool {
+    use core::mem::ManuallyDrop;
+    use core::ptr::NonNull;
+    use crate::cell::UnsafeCell;
+    use crate::boks::Box;
+    use super::Arena;
+
+
+    impl Arena {
+        #[inline]
+        pub fn tls_get_temp() -> TempArena {
+            return TEMP.with(|pool| {
+                let pool = unsafe { &mut *pool.get() };
+                if let Some(arena) = pool.arenas[0].take() {
+                    TempArena { arena: ManuallyDrop::new(arena) }
+                }
+                else {
+                    slow_path(pool)
+                }
+            });
+
+            #[cold]
+            fn slow_path(pool: &mut TempPool) -> TempArena {
+                for i in 1..pool.arenas.len() {
+                    if let Some(arena) = pool.arenas[i].take() {
+                        return TempArena { arena: ManuallyDrop::new(arena) }
+                    }
+                }
+
+                let new_arena = Arena::new();
+                new_arena.min_block_size.set(TEMP_BLOCK_SIZE);
+                new_arena.max_block_size.set(TEMP_BLOCK_SIZE);
+                TempArena { arena: ManuallyDrop::new(Box::new(new_arena)) }
+            }
+        }
+
+        #[inline]
+        pub fn tls_get_rec() -> RecArena {
+            return REC.with(|rec| {
+                let rec = unsafe { &mut *rec.get() };
+                rec.refs = rec.refs.checked_add(1).expect("too many refs");
+                return RecArena { arena: unsafe { NonNull::new_unchecked(rec.arena.get()) } }
+            });
+        }
+
+        pub fn tls_rec_num_refs() -> usize {
+            return REC.with(|rec| {
+                let rec = unsafe { &*rec.get() };
+                return rec.refs;
+            });
+        }
+    }
+
+
+    thread_local! {
+        static TEMP: UnsafeCell<TempPool> = UnsafeCell::new(TempPool { arenas: [None, None, None, None] });
+        static REC: UnsafeCell<Rec> = UnsafeCell::new(Rec::new());
+    }
+
+    const TEMP_BLOCK_SIZE: usize = 128*1024;
+    const REC_BLOCK_SIZE:  usize = 512*1024;
+
+
+    struct TempPool {
+        arenas: [Option<Box<Arena>>; 4],
+    }
+
+    pub struct TempArena {
+        arena: ManuallyDrop<Box<Arena>>,
+    }
+
+    impl core::ops::Deref for TempArena {
+        type Target = Arena;
+
+        #[inline(always)]
+        fn deref(&self) -> &Self::Target { &self.arena }
+    }
+
+    impl Drop for TempArena {
+        #[inline]
+        fn drop(&mut self) {
+            TEMP.with(|pool| {
+                self.arena.reset();
+
+                let pool = unsafe { &mut *pool.get() };
+                if pool.arenas[0].is_none() {
+                    pool.arenas[0] = unsafe { Some(ManuallyDrop::take(&mut self.arena)) };
+                }
+                else {
+                    slow_path(pool, self)
+                }
+            });
+
+            #[cold]
+            fn slow_path(pool: &mut TempPool, arena: &mut TempArena) {
+                let arena = unsafe { ManuallyDrop::take(&mut arena.arena) };
+                for i in 1..pool.arenas.len() {
+                    if pool.arenas[i].is_none() {
+                        pool.arenas[i] = Some(arena);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+
+    struct Rec {
+        arena: Box<UnsafeCell<Arena>>,
+        refs: usize,
+    }
+
+    impl Rec {
+        fn new() -> Rec {
+            Rec {
+                arena: Box::new(UnsafeCell::new({
+                    let arena = Arena::new();
+                    arena.min_block_size.set(REC_BLOCK_SIZE);
+                    arena.max_block_size.set(REC_BLOCK_SIZE);
+                    arena
+                })),
+                refs: 0,
+            }
+        }
+    }
+
+    pub struct RecArena {
+        arena: NonNull<Arena>,
+    }
+
+    impl core::ops::Deref for RecArena {
+        type Target = Arena;
+
+        #[inline(always)]
+        fn deref(&self) -> &Self::Target { unsafe { self.arena.as_ref() } }
+    }
+
+    impl Drop for RecArena {
+        #[inline]
+        fn drop(&mut self) {
+            REC.with(|rec| {
+                let rec = unsafe { &mut *rec.get() };
+                debug_assert_eq!(self.arena.as_ptr(), rec.arena.get());
+                rec.refs -= 1;
+                if rec.refs == 0 {
+                    let arena = unsafe { &mut *rec.arena.get() };
+                    arena.reset();
+                }
+            });
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn temp() {
+            // new temp.
+            let t1 = Arena::tls_get_temp();
+            let p1 = &*t1 as *const Arena;
+            {
+                assert_eq!(t1.stats().num_blocks, 0);
+
+                while t1.stats().num_blocks < 2 {
+                    t1.alloc_ptr::<[u8; 16*1024]>();
+                }
+
+                assert_eq!(t1.stats().num_blocks, 2);
+                assert_eq!(t1.stats().total_allocated, 2*TEMP_BLOCK_SIZE);
+            }
+            drop(t1);
+
+            // reuse t1.
+            let t2 = Arena::tls_get_temp();
+            let p2 = &*t2 as *const Arena;
+            assert_eq!(p2, p1);
+            {
+                assert_eq!(t2.stats().num_blocks, 1);
+                assert_eq!(t2.stats().total_allocated, 1*TEMP_BLOCK_SIZE);
+            }
+
+            // new temp.
+            let t3 = Arena::tls_get_temp();
+            let p3 = &*t3 as *const Arena;
+            assert_ne!(p3, p2);
+            drop(t3);
+
+            // reuse t3.
+            let t4 = Arena::tls_get_temp();
+            let p4 = &*t4 as *const Arena;
+            assert_eq!(p4, p3);
+        }
+
+        #[test]
+        fn rec() {
+            assert_eq!(Arena::tls_rec_num_refs(), 0);
+
+            // initial rec.
+            let t1 = Arena::tls_get_rec();
+            let p1 = &*t1 as *const Arena;
+            assert_eq!(Arena::tls_rec_num_refs(), 1);
+            {
+                assert_eq!(t1.stats().num_blocks, 0);
+
+                while t1.stats().num_blocks < 2 {
+                    t1.alloc_ptr::<[u8; 16*1024]>();
+                }
+
+                assert_eq!(t1.stats().num_blocks, 2);
+                assert_eq!(t1.stats().total_allocated, 2*REC_BLOCK_SIZE);
+            }
+
+            // same arena.
+            let t2 = Arena::tls_get_rec();
+            let p2 = &*t2 as *const Arena;
+            assert_eq!(p2, p1);
+            assert_eq!(Arena::tls_rec_num_refs(), 2);
+
+            // t2 keeps it alive.
+            let ptr = unsafe { crate::erase!(&i32, t1.alloc_new(42)) };
+            assert_eq!(t2.stats().total_allocated, 2*REC_BLOCK_SIZE);
+            drop(t1);
+            assert_eq!(t2.stats().total_allocated, 2*REC_BLOCK_SIZE);
+            assert_eq!(*ptr, 42);
+            assert_eq!(Arena::tls_rec_num_refs(), 1);
+
+            // still same arena.
+            let t3 = Arena::tls_get_rec();
+            let p3 = &*t3 as *const Arena;
+            assert_eq!(p3, p1);
+            assert_eq!(t3.stats().total_allocated, 2*REC_BLOCK_SIZE);
+            assert_eq!(Arena::tls_rec_num_refs(), 2);
+
+            drop((t2, t3));
+            assert_eq!(Arena::tls_rec_num_refs(), 0);
+
+            // still same arena, but it was reset.
+            let t4 = Arena::tls_get_rec();
+            let p4 = &*t4 as *const Arena;
+            assert_eq!(p4, p1);
+            assert_eq!(t4.stats().total_allocated, 1*REC_BLOCK_SIZE);
+            assert_eq!(Arena::tls_rec_num_refs(), 1);
+        }
+    }
+}
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

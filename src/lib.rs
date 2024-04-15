@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "sti_bench", feature(test))]
-
 pub mod num;
 pub mod hint;
 pub mod mem;
@@ -15,7 +13,6 @@ pub mod traits;
 
 pub mod alloc;
 pub mod arena;
-pub mod arena_pool;
 pub mod boks;
 pub mod rc;
 pub mod manual_vec;
