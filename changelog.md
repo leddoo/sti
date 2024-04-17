@@ -6,6 +6,7 @@
       this is effectively how it worked previously too. but now the impls are separated
       and much simpler.
 - `Vec::clone{_in}` now guarantees `clone.len() == clone.cap()`.
+- make `Box`, `VecDeque` `Send + Sync`.
 
 0.3.0:
 - add `borrow::{BorrowFlag, BorrowRef, BorrowRefMut, Ref, RefMut}`.

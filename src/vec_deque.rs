@@ -235,6 +235,10 @@ impl<T, A: Alloc> VecDeque<T, A> {
 }
 
 
+unsafe impl<T: Sync, A: Alloc + Sync> Sync for VecDeque<T, A> {}
+unsafe impl<T: Send, A: Alloc + Send> Send for VecDeque<T, A> {}
+
+
 impl<T, A: Alloc> Drop for VecDeque<T, A> {
     fn drop(&mut self) {
         // drop values.

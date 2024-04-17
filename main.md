@@ -30,6 +30,10 @@
     - test temp arena overflow case.
     - consider returning growing arena for temp overflow case.
 
+- kslice index proper panic & track caller.
+
+- str::Repeat.
+
 - utf-8 module:
     - ceil/floor.
     - iteration.
