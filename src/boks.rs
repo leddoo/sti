@@ -76,8 +76,8 @@ impl<T: ?Sized, A: Alloc> Box<T, A> {
     }
 }
 
-unsafe impl<T: Sync, A: Alloc + Sync> Sync for Box<T, A> {}
-unsafe impl<T: Send, A: Alloc + Send> Send for Box<T, A> {}
+unsafe impl<T: ?Sized + Sync, A: Alloc + Sync> Sync for Box<T, A> {}
+unsafe impl<T: ?Sized + Send, A: Alloc + Send> Send for Box<T, A> {}
 
 impl<T: ?Sized, A: Alloc> core::ops::Deref for Box<T, A> {
     type Target = T;
