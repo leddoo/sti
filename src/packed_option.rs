@@ -11,7 +11,7 @@ pub trait Reserved: Copy + PartialEq {
 
 
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct PackedOption<T: Reserved> {
     value: T
