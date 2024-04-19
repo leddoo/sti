@@ -1,12 +1,15 @@
 
 - todo:
+    - improve rwspinlock test.
+    - enclose `ident as ident` -> `ident = expr`.
     - arena:
         - remove backing.
         - large allocations -> globalalloc.
+        - stats isize, sub, include total used.
     - remove unnecessary `inline(always)`
     - remove ordutils.
     - remove unwindsafe impls.
-    - !Send, !Sync impls.
+    - remove manual vec.
     - simp key:
         - only from/to usize.
         - don't make ZERO/MAX pub on impl.
@@ -19,7 +22,6 @@
         - how to use them correctly.
     - update readme.
     - push to crates.io.
-    - remove manual vec?
     - mimalloc.
 
 
