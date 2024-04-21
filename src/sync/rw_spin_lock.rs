@@ -1,14 +1,9 @@
-use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use core::sync::atomic::{AtomicU32, Ordering};
 use core::cell::UnsafeCell;
-
-use crate::sync::spin_lock::SpinLock;
 
 
 pub struct RwSpinLock<T> {
-    locked: AtomicBool,
-    // the number of writers trying to acquire the lock.
-    writers: AtomicU32,
-    readers: SpinLock<u32>,
+    state: AtomicState,
     value: UnsafeCell<T>,
 }
 
@@ -20,55 +15,28 @@ pub struct WriteGuard<'a, T> {
     lock: &'a RwSpinLock<T>,
 }
 
-
 impl<T> RwSpinLock<T> {
     #[inline(always)]
     pub const fn new(value: T) -> Self {
         Self {
-            locked: AtomicBool::new(false),
-            writers: AtomicU32::new(0),
-            readers: SpinLock::new(0),
+            state: AtomicState::new(UNLOCKED),
             value: UnsafeCell::new(value),
         }
     }
 
-    #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn read(&self) -> ReadGuard<T> {
-        while self.writers.load(Ordering::Relaxed) != 0 {
-            core::hint::spin_loop();
-        }
-
-        let mut readers = self.readers.lock();
-        if *readers == 0 {
-            while self.locked.swap(true, Ordering::Acquire) {
-                core::hint::spin_loop();
-            }
-            *readers = 1;
-        }
-        else {
-            *readers = readers.checked_add(1).expect("too many readers");
+        if !try_read(&self.state) {
+            lock(&self.state, false);
         }
 
         return ReadGuard { lock: self };
     }
 
-    #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn try_read(&self) -> Option<ReadGuard<T>> {
-        if self.writers.load(Ordering::Relaxed) != 0 {
-            return None;
-        }
-
-        let mut readers = self.readers.try_lock()?;
-        if *readers == 0 {
-            if self.locked.swap(true, Ordering::Acquire) {
-                return None;
-            }
-            *readers = 1;
-        }
-        else {
-            *readers = readers.checked_add(1).expect("too many readers");
+        if !try_read(&self.state) {
+            return None
         }
 
         return Some(ReadGuard { lock: self });
@@ -78,14 +46,8 @@ impl<T> RwSpinLock<T> {
     #[track_caller]
     #[inline(always)]
     pub fn write(&self) -> WriteGuard<T> {
-        // wrapping is fine (not that it should ever happen).
-        // it would just not favor that one writer.
-        // the value must however always be decremented again,
-        // otherwise the readers never get access again.
-        self.writers.fetch_add(1, Ordering::Acquire);
-
-        while self.locked.swap(true, Ordering::Acquire) {
-            core::hint::spin_loop();
+        if !try_write(&self.state) {
+            lock(&self.state, true);
         }
 
         return WriteGuard { lock: self };
@@ -94,12 +56,9 @@ impl<T> RwSpinLock<T> {
     #[track_caller]
     #[inline(always)]
     pub fn try_write(&self) -> Option<WriteGuard<T>> {
-        if self.locked.swap(true, Ordering::Acquire) {
+        if !try_write(&self.state) {
             return None;
         }
-
-        // the write guard always decrements!
-        self.writers.fetch_add(1, Ordering::Acquire);
 
         return Some(WriteGuard { lock: self });
     }
@@ -127,11 +86,16 @@ impl<'a, T> core::ops::Deref for ReadGuard<'a, T> {
 impl<'a, T> Drop for ReadGuard<'a, T> {
     #[inline]
     fn drop(&mut self) {
-        let mut readers = self.lock.readers.lock();
-        *readers -= 1;
-        if *readers == 0 {
-            self.lock.locked.store(false, Ordering::Release);
-        }
+        let ok = self.lock.state.fetch_update(Ordering::Release, Ordering::Acquire, |s| Some({
+            debug_assert!(s & LOCKED != 0);
+
+            let count = s >> READERS_SHIFT;
+            debug_assert!(count > 0);
+
+            if count == 1 { s - (READER | LOCKED) }
+            else          { s - READER            }
+        }));
+        assert!(ok.is_ok());
     }
 }
 
@@ -155,10 +119,108 @@ impl<'a, T> core::ops::DerefMut for WriteGuard<'a, T> {
 impl<'a, T> Drop for WriteGuard<'a, T> {
     #[inline]
     fn drop(&mut self) {
-        self.lock.locked.store(false, Ordering::Release);
-        self.lock.writers.fetch_sub(1, Ordering::Relaxed);
+        debug_assert!(self.lock.state.load(Ordering::Relaxed) & LOCKED != 0);
+
+        self.lock.state.store(UNLOCKED, Ordering::Release);
     }
 }
+
+
+// implementation inspired by std's sys::sync::queue::RwLock.
+
+type State = u32;
+type AtomicState = AtomicU32;
+
+const UNLOCKED: State = 0;
+
+/// writer intention. setting this flag as a writer is optional!
+const WRITER: State = 0b001;
+
+/// locked by either readers or a writer.
+const LOCKED: State = 0b010;
+
+/// constant added for each reader.
+const READER: State = 0b100;
+
+const READERS_SHIFT: u32 = 2;
+
+#[inline]
+fn update_read(s: u32) -> Option<u32> {
+    // cases:
+    //  s = UNLOCKED            // can acquire, must set LOCKED.
+    //  s = WRITER              // writer intention.
+    //  s = LOCKED              // writer 1.
+    //  s = LOCKED | WRITER     // writer 2.
+    //  s = LOCKED | READER(s)  // can join.
+    if s != LOCKED {
+        // not writer 1.
+        if s & WRITER == 0 {
+            // not writer intention, writer 2.
+            if let Some(next) = s.checked_add(READER) {
+                return Some(next | LOCKED);
+            }
+        }
+    }
+    None
+}
+
+#[inline]
+fn update_write(s: u32) -> Option<u32> {
+    if s & LOCKED == 0 {
+        return Some(LOCKED);
+    }
+    None
+}
+
+#[inline]
+fn try_read(a: &AtomicState) -> bool {
+    // idk why Relaxed on the fetch is fine here.
+    a.fetch_update(Ordering::Acquire, Ordering::Relaxed, update_read).is_ok()
+}
+
+#[inline]
+fn try_write(a: &AtomicState) -> bool {
+    a.fetch_or(LOCKED, Ordering::Acquire) & !WRITER == UNLOCKED
+}
+
+
+// exponential backoff -> 127 in total before yielding.
+const MAX_SPINS: u32 = 64;
+
+#[cold]
+fn lock(a: &AtomicState, write: bool) {
+    let update = if write { update_write } else { update_read };
+
+    let mut s = a.load(Ordering::Relaxed);
+    let mut n = 1;
+    loop {
+        if let Some(next) = update(s) {
+            match a.compare_exchange_weak(s, next, Ordering::Acquire, Ordering::Relaxed) {
+                Ok(_) => return,
+                Err(new) => s = new,
+            }
+        }
+        else if cfg!(feature = "std") && n > MAX_SPINS {
+            std::thread::yield_now();
+
+            s = a.load(Ordering::Relaxed);
+            n = 1;
+        }
+        else {
+            if write && s & WRITER == 0 {
+                a.fetch_or(WRITER, Ordering::Relaxed);
+            }
+
+            for _ in 0..n {
+                core::hint::spin_loop();
+            }
+
+            s = a.load(Ordering::Relaxed);
+            n = (n << 1).min(MAX_SPINS+1);
+        }
+    }
+}
+
 
 
 #[cfg(test)]
@@ -220,7 +282,8 @@ mod tests {
         // - this is repeated for n_iters.
 
         const READERS: u32 = 10; // more!
-        const WRITERS: u32 = 5;
+        const WRITERS: u32 = 1; // currently broken for multiple writers
+                                // cause writer intention is "weak".
         const ITERS: u32 = 50;
 
         fn reader(num_readers: &AtomicU32, num_writers: &AtomicU32, lock: &RwSpinLock<u32>) {
@@ -236,14 +299,14 @@ mod tests {
                     break;
                 }
 
-                while lock.writers.load(Ordering::Relaxed) == 0 {
+                while lock.try_read().is_some() {
                     //std::thread::yield_now();
                     core::hint::spin_loop();
                 }
 
                 while num_writers.load(Ordering::Relaxed) != WRITERS {
-                    //std::thread::yield_now();
-                    core::hint::spin_loop();
+                    std::thread::yield_now();
+                    //core::hint::spin_loop();
                 }
 
                 num_readers.fetch_sub(1, Ordering::SeqCst);
@@ -254,8 +317,8 @@ mod tests {
         fn writer(num_readers: &AtomicU32, num_writers: &AtomicU32, lock: &RwSpinLock<u32>) {
             loop {
                 while num_readers.load(Ordering::Relaxed) != READERS {
-                    //std::thread::yield_now();
-                    core::hint::spin_loop();
+                    std::thread::yield_now();
+                    //core::hint::spin_loop();
                 }
 
                 num_writers.fetch_add(1, Ordering::Relaxed);

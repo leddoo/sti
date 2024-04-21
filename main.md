@@ -1,5 +1,6 @@
 
 - todo:
+    - spinlock slow path with yield.
     - improve rwspinlock test.
     - enclose `ident as ident` -> `ident = expr`.
     - arena:
