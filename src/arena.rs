@@ -4,7 +4,7 @@ use core::cell::Cell;
 use core::mem::{size_of, align_of};
 
 use crate::static_assert;
-use crate::num::{is_pow2, ceil_to_multiple_pow2, OrdUtils};
+use crate::num::ceil_to_multiple_pow2;
 use crate::alloc::{Alloc, GlobalAlloc, alloc_ptr, alloc_new, alloc_array};
 
 
@@ -16,7 +16,7 @@ pub const MAX_ALLOC_SIZE: usize = MAX_CAP - HEADER_SIZE;
 /// maximum alignment.
 /// - allocations with greater alignment fail.
 pub const MAX_ALIGN: usize = 32;
-static_assert!(is_pow2(MAX_ALIGN));
+static_assert!(MAX_ALIGN.is_power_of_two());
 
 
 /// default minimum block size.
@@ -211,13 +211,13 @@ impl<A: Alloc> Arena<A> {
             let new_cap = 2*self.cap.get();
 
             // clamp to user prefs.
-            let new_cap = new_cap.at_least(self.min_block_size.get());
-            let new_cap = new_cap.at_most(self.max_block_size.get());
+            let new_cap = new_cap.max(self.min_block_size.get());
+            let new_cap = new_cap.min(self.max_block_size.get());
 
             // can't overflow cause `layout.size() <= MAX_ALLOC_SIZE`.
-            let new_cap = new_cap.at_least(HEADER_SIZE + layout.size());
+            let new_cap = new_cap.max(HEADER_SIZE + layout.size());
 
-            let new_cap = new_cap.at_most(MAX_CAP);
+            let new_cap = new_cap.min(MAX_CAP);
             new_cap
         };
 

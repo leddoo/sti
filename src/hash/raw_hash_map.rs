@@ -2,7 +2,6 @@ use core::ptr::NonNull;
 use core::borrow::Borrow;
 use core::marker::PhantomData;
 
-use crate::num::OrdUtils;
 use crate::hint::unlikely;
 use crate::alloc::*;
 use crate::hash::HashFnSeed;
@@ -518,7 +517,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         let new_num_groups =
             self.num_groups
             .checked_mul(2).expect("capacity overflow")
-            .at_least(1);
+            .max(1);
         unsafe { self.resize(new_num_groups) };
         assert!(self.empty > 0);
     }

@@ -95,7 +95,7 @@ pub unsafe trait Alloc {
         if old_layout.size() == 0 || new_layout.size() == 0 {
             return Err(())
         }
-        self.try_realloc_nonzero(ptr, old_layout, new_layout)
+        unsafe { self.try_realloc_nonzero(ptr, old_layout, new_layout) }
     }
 
     /// attempts to resize an allocation.
@@ -240,7 +240,7 @@ pub unsafe fn cat_next_bytes<T, U>(base: *const T, base_size: usize, next_align:
     #[cfg(miri)] {
         // miri doesn't like int->ptr casts.
         let delta = result - base as usize;
-        return (base as *const u8).add(delta) as *const U;
+        return unsafe { (base as *const u8).add(delta) as *const U };
     }
     #[cfg(not(miri))] {
         return result as *const U;
@@ -258,7 +258,7 @@ pub unsafe fn cat_next_mut_bytes<T, U>(base: *mut T, base_size: usize, next_alig
     #[cfg(miri)] {
         // miri doesn't like int->ptr casts.
         let delta = result - base as usize;
-        return (base as *mut u8).add(delta) as *mut U;
+        return unsafe { (base as *mut u8).add(delta) as *mut U };
     }
     #[cfg(not(miri))] {
         return result as *mut U;
@@ -333,34 +333,34 @@ unsafe impl<A: Alloc + ?Sized> Alloc for &A {
 
     #[inline(always)]
     unsafe fn alloc_nonzero(&self, layout: Layout) -> Option<NonNull<u8>> {
-        (**self).alloc_nonzero(layout)
+        unsafe { (**self).alloc_nonzero(layout) }
     }
 
 
     #[inline(always)]
     unsafe fn free(&self, ptr: NonNull<u8>, layout: Layout) {
-        (**self).free(ptr, layout)
+        unsafe { (**self).free(ptr, layout) }
     }
 
     #[inline(always)]
     unsafe fn free_nonzero(&self, ptr: NonNull<u8>, layout: Layout) {
-        (**self).free_nonzero(ptr, layout)
+        unsafe { (**self).free_nonzero(ptr, layout) }
     }
 
 
     #[inline(always)]
     unsafe fn try_realloc(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
-        (**self).try_realloc(ptr, old_layout, new_layout)
+        unsafe { (**self).try_realloc(ptr, old_layout, new_layout) }
     }
 
     #[inline(always)]
     unsafe fn try_realloc_nonzero(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
-        (**self).try_realloc_nonzero(ptr, old_layout, new_layout)
+        unsafe { (**self).try_realloc_nonzero(ptr, old_layout, new_layout) }
     }
 
     #[inline(always)]
     unsafe fn realloc(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Option<NonNull<u8>> {
-        (**self).realloc(ptr, old_layout, new_layout)
+        unsafe { (**self).realloc(ptr, old_layout, new_layout) }
     }
 }
 

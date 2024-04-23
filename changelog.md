@@ -1,3 +1,10 @@
+0.5.0:
+- remove `ManualVec`.
+- remove `OrdUtils`.
+- remove `mem::Align*`.
+- remove `UnwrapDebug` & `ExpectDebug`.
+- reexport common unsafe primitives in `mem`.
+
 0.4.0:
 - arena pool rework:
     - new api: `Arena::tls_get_temp`, `Arena::tls_get_rec`, `Arena::tls_rec_num_refs`.

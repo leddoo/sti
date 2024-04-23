@@ -2,7 +2,6 @@ use core::ptr::NonNull;
 use core::mem::{size_of, ManuallyDrop};
 use core::alloc::Layout;
 
-use crate::num::OrdUtils;
 use crate::alloc::{Alloc, GlobalAlloc};
 use crate::traits::FromIn;
 
@@ -142,11 +141,11 @@ impl<T, A: Alloc> Vec<T, A> {
             let new_cap =
                 if size_of::<T>() > 0 {
                     // can't overflow, cause `self.cap <= isize::MAX/sizeof(T)`.
-                    new_cap.at_least(2*self.cap)
+                    new_cap.max(2*self.cap)
                 }
                 else { new_cap };
 
-            let new_cap = new_cap.at_least(Self::GROW_MIN_CAP);
+            let new_cap = new_cap.max(Self::GROW_MIN_CAP);
 
             // `new_cap > self.cap >= self.len`.
             unsafe { self.set_cap(new_cap) };

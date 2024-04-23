@@ -1,7 +1,9 @@
+pub use core::hint::{black_box, spin_loop, unreachable_unchecked};
+
 
 /// mark code path as cold.
-#[inline(always)]
 #[cold]
+#[inline(always)]
 pub fn cold() {}
 
 /// mark condition as likely.

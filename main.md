@@ -1,16 +1,15 @@
 
 - todo:
+    - move `ceil_to_multiple_pow2` into an extension trait.
+    - remove unnecessary `inline(always)`
+    - remove unwindsafe impls.
+    - arena deprecate backing.
     - spinlock slow path with yield.
     - improve rwspinlock test.
     - enclose `ident as ident` -> `ident = expr`.
     - arena:
-        - remove backing.
         - large allocations -> globalalloc.
         - stats isize, sub, include total used.
-    - remove unnecessary `inline(always)`
-    - remove ordutils.
-    - remove unwindsafe impls.
-    - remove manual vec.
     - simp key:
         - only from/to usize.
         - don't make ZERO/MAX pub on impl.

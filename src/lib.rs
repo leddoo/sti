@@ -1,3 +1,5 @@
+#![forbid(unsafe_op_in_unsafe_fn)]
+
 pub mod num;
 pub mod hint;
 pub mod mem;
@@ -15,7 +17,6 @@ pub mod alloc;
 pub mod arena;
 pub mod boks;
 pub mod rc;
-pub mod manual_vec;
 pub mod vec;
 pub mod vec_deque;
 pub mod hash;

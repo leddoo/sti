@@ -201,6 +201,7 @@ fn lock(a: &AtomicState, write: bool) {
             }
         }
         else if cfg!(feature = "std") && n > MAX_SPINS {
+            #[cfg(feature = "std")]
             std::thread::yield_now();
 
             s = a.load(Ordering::Relaxed);
