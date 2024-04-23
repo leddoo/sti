@@ -4,6 +4,9 @@
 - remove `mem::Align*`.
 - remove `UnwrapDebug` & `ExpectDebug`.
 - reexport common unsafe primitives in `mem`.
+- deprecate `Arena::new_in`.
+- make `enclose` more flexible (`ident = expr`).
+- bring back `prelude`.
 
 0.4.0:
 - arena pool rework:

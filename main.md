@@ -1,12 +1,12 @@
 
 - todo:
+    - box into/from raw parts in.
+    - what about the float module?
     - move `ceil_to_multiple_pow2` into an extension trait.
+    - replace `core` imports.
     - remove unnecessary `inline(always)`
-    - remove unwindsafe impls.
-    - arena deprecate backing.
     - spinlock slow path with yield.
     - improve rwspinlock test.
-    - enclose `ident as ident` -> `ident = expr`.
     - arena:
         - large allocations -> globalalloc.
         - stats isize, sub, include total used.

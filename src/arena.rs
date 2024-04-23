@@ -57,10 +57,6 @@ pub struct Arena<A: Alloc = GlobalAlloc> {
 
 unsafe impl<A: Alloc + Send> Send for Arena<A> {}
 
-// @todo: verify this is also true for panics raised in the impl.
-impl<A: Alloc> core::panic::RefUnwindSafe for Arena<A> {}
-impl<A: Alloc> core::panic::UnwindSafe for Arena<A> {}
-
 
 impl<A: Alloc> Arena<A> {
     fn _integrity_check(&self) {
@@ -97,14 +93,16 @@ const HEADER_SIZE: usize = (size_of::<BlockHeader>() + MAX_ALIGN - 1) / MAX_ALIG
 
 
 impl Arena<GlobalAlloc> {
-    #[inline(always)]
+    #[inline]
     pub fn new() -> Self {
+        #[allow(deprecated)]
         Self::new_in(GlobalAlloc)
     }
 }
 
 impl<A: Alloc> Arena<A> {
-    #[inline(always)]
+    #[deprecated]
+    #[inline]
     pub fn new_in(alloc: A) -> Self {
         Arena {
             alloc,
@@ -1037,6 +1035,7 @@ mod tests {
     fn arena_save_restore_contiguous() {
         let backing = Arena::new();
 
+        #[allow(deprecated)]
         let arena = Arena::new_in(&backing);
         arena.min_block_size.set(64);
         arena.max_block_size.set(64);

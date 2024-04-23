@@ -1,5 +1,7 @@
 #![forbid(unsafe_op_in_unsafe_fn)]
 
+pub mod prelude;
+
 pub mod num;
 pub mod hint;
 pub mod mem;
@@ -119,8 +121,8 @@ macro_rules! enclose {
         $crate::enclose!($($rest)*)
     }};
 
-    ($x:ident as $y:ident ; $($rest:tt)*) => {{
-        let $y = $x.clone();
+    ($x:ident = $v:expr ; $($rest:tt)*) => {{
+        let $x = ($v).clone();
         $crate::enclose!($($rest)*)
     }};
 
@@ -163,7 +165,7 @@ mod tests {
         assert_eq!(foo.ref_count(), 1);
         assert_eq!(foo.get(), 1);
 
-        let f = enclose!(foo as bar; foo; move |n| {
+        let f = enclose!(bar = foo; foo; move |n| {
             assert_eq!(foo.ref_count(), bar.ref_count());
             assert_eq!(foo.ref_count(), 3);
             foo.set(n);
