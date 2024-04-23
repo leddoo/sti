@@ -1,4 +1,3 @@
-
 /// a slice reader to aid with parsing.
 ///
 /// - `deref`s into a slice with the remaining values.

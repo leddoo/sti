@@ -1,8 +1,7 @@
-use core::num::NonZeroU32;
-
 use crate::alloc::{Alloc, GlobalAlloc};
 use crate::packed_option::PackedOption;
 use crate::keyed::{Key, KVec};
+use core::num::NonZeroU32;
 
 
 pub trait Gen: Copy + PartialEq {

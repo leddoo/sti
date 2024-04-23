@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use crate::mem::PhantomData;
 
 
 pub trait HashFn<T: ?Sized> {

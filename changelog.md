@@ -7,6 +7,7 @@
 - deprecate `Arena::new_in`.
 - make `enclose` more flexible (`ident = expr`).
 - bring back `prelude`.
+- change `Box::into_raw_parts` now `GlobalAlloc` based.
 
 0.4.0:
 - arena pool rework:

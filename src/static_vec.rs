@@ -1,4 +1,4 @@
-use core::mem::MaybeUninit;
+use crate::mem::MaybeUninit;
 
 
 pub struct StaticVec<T, const N: usize> {

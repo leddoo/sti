@@ -1,10 +1,8 @@
-use core::ptr::NonNull;
-use core::borrow::Borrow;
-use core::marker::PhantomData;
-
-use crate::hint::unlikely;
-use crate::alloc::*;
+use crate::alloc::{Alloc, Layout, cat_join, cat_next_mut};
+use crate::mem::{NonNull, PhantomData};
 use crate::hash::HashFnSeed;
+use crate::hint::unlikely;
+use core::borrow::Borrow;
 
 
 pub(super) struct RawHashMap<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> {

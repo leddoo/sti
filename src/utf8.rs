@@ -1,4 +1,4 @@
-use crate::bit::*;
+use crate::bit::{Bitmask4, Bitmask8};
 
 
 pub use core::str::from_utf8_unchecked as str_unck;

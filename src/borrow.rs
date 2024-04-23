@@ -1,6 +1,4 @@
-use core::cell::Cell;
-use core::ptr::NonNull;
-use core::marker::PhantomData;
+use crate::mem::{Cell, NonNull, PhantomData};
 
 
 pub struct BorrowFlag {

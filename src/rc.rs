@@ -1,8 +1,5 @@
-use core::alloc::Layout;
-use core::ptr::NonNull;
-use core::cell::Cell;
-
-use crate::alloc::{Alloc, GlobalAlloc, alloc_ptr};
+use crate::alloc::{Alloc, GlobalAlloc, Layout, alloc_ptr};
+use crate::mem::{Cell, NonNull};
 
 
 pub struct Rc<T: ?Sized, A: Alloc = GlobalAlloc> {

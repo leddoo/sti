@@ -1,6 +1,5 @@
-use core::iter::{Copied, Map};
-
 use crate::alloc::Alloc;
+use core::iter::{Copied, Map};
 
 
 pub trait FromIn<T, A: Alloc> {

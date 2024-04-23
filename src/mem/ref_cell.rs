@@ -1,9 +1,5 @@
-use core::ptr::NonNull;
-use crate::borrow::BorrowFlag;
-
-pub use core::cell::{Cell, UnsafeCell};
-pub use crate::borrow::{Ref, RefMut};
-
+use crate::borrow::{BorrowFlag, Ref, RefMut};
+use crate::mem::{NonNull, UnsafeCell};
 
 
 pub struct RefCell<T: ?Sized> {
@@ -87,5 +83,4 @@ mod tests {
         assert!(r.try_borrow_mut().is_some());
     }
 }
-
 

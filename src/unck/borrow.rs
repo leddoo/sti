@@ -1,5 +1,4 @@
-use core::ptr::NonNull;
-use core::marker::PhantomData;
+use crate::mem::{NonNull, PhantomData};
 
 
 pub struct Ref<'a, T: ?Sized> {

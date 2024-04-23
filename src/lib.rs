@@ -4,9 +4,8 @@ pub mod prelude;
 
 pub mod num;
 pub mod hint;
-pub mod mem;
 pub mod borrow;
-pub mod cell;
+pub mod mem;
 
 pub mod simd;
 pub mod float;
@@ -84,7 +83,7 @@ macro_rules! format_in {
 macro_rules! assume {
     ($cond: expr) => {
         if !($cond) {
-            ::core::hint::unreachable_unchecked();
+            $crate::hint::unreachable_unchecked();
         }
     };
 }
@@ -97,7 +96,7 @@ macro_rules! assume {
 #[macro_export]
 macro_rules! erase {
     ($T:ty, $x:expr) => {
-        ::core::mem::transmute::<$T, $T>($x)
+        $crate::mem::transmute::<$T, $T>($x)
     };
 }
 

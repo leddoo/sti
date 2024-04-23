@@ -1,10 +1,9 @@
-use core::marker::PhantomData;
+use crate::alloc::{Alloc, GlobalAlloc};
+use crate::mem::PhantomData;
+use crate::vec::Vec;
+use crate::traits::FromIn;
 
 use super::{Key, KRange, KSlice};
-
-use crate::traits::FromIn;
-use crate::alloc::{Alloc, GlobalAlloc};
-use crate::vec::Vec;
 
 
 #[derive(Clone)]

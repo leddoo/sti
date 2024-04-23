@@ -1,11 +1,7 @@
-use core::ptr::NonNull;
-use core::alloc::Layout;
-use core::cell::Cell;
-use core::mem::{size_of, align_of};
-
-use crate::static_assert;
+use crate::alloc::{Alloc, GlobalAlloc, Layout, alloc_ptr, alloc_new, alloc_array};
+use crate::mem::{Cell, NonNull, size_of, align_of};
 use crate::num::ceil_to_multiple_pow2;
-use crate::alloc::{Alloc, GlobalAlloc, alloc_ptr, alloc_new, alloc_array};
+use crate::static_assert;
 
 
 /// maximum allocation size.
@@ -459,11 +455,9 @@ impl core::fmt::Debug for Arena {
 
 
 mod pool {
-    use core::mem::ManuallyDrop;
-    use core::ptr::NonNull;
-    use crate::cell::UnsafeCell;
+    use crate::arena::Arena;
     use crate::boks::Box;
-    use super::Arena;
+    use crate::mem::{UnsafeCell, NonNull, ManuallyDrop};
 
 
     impl Arena {

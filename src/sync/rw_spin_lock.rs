@@ -1,5 +1,5 @@
-use core::sync::atomic::{AtomicU32, Ordering};
-use core::cell::UnsafeCell;
+use crate::mem::UnsafeCell;
+use crate::sync::atomic::{AtomicU32, Ordering};
 
 
 pub struct RwSpinLock<T> {

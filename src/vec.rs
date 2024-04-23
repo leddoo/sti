@@ -1,8 +1,5 @@
-use core::ptr::NonNull;
-use core::mem::{size_of, ManuallyDrop};
-use core::alloc::Layout;
-
-use crate::alloc::{Alloc, GlobalAlloc};
+use crate::alloc::{Alloc, GlobalAlloc, Layout};
+use crate::mem::{NonNull, ManuallyDrop, size_of};
 use crate::traits::FromIn;
 
 

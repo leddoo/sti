@@ -4,18 +4,14 @@
 ///   when in doubt, Rc the alloc in debug.
 
 
-pub use impel::{SharedBoxUnck, SharedPtrUnck, Ref, RefMut};
+pub use impel::{SharedBoxUnck, SharedPtrUnck};
 
 
 #[cfg(debug_assertions)]
 mod impel {
-    use core::ptr::NonNull;
-    use core::cell::{Cell, UnsafeCell};
-    use core::marker::PhantomData;
-
     use crate::alloc::{alloc_ptr, alloc_new, drop_and_free, Alloc, GlobalAlloc, Layout};
-    use crate::borrow::BorrowFlag;
-    pub use crate::cell::{Ref, RefMut};
+    use crate::borrow::{BorrowFlag, Ref, RefMut};
+    use crate::mem::{Cell, UnsafeCell, NonNull, PhantomData};
 
 
     pub struct SharedBoxUnck<T, A: Alloc = GlobalAlloc> {
@@ -189,10 +185,9 @@ mod impel {
 
 #[cfg(not(debug_assertions))]
 mod impel {
-    use core::ptr::NonNull;
-
     use crate::alloc::{alloc_new, drop_and_free, Alloc, GlobalAlloc};
-    pub use crate::unck::cell::{Ref, RefMut};
+    use crate::unck::borrow::{Ref, RefMut};
+    use crate::mem::NonNull;
 
 
     pub struct SharedBoxUnck<T, A: Alloc = GlobalAlloc> {
@@ -387,7 +382,7 @@ mod debug_tests {
 
     #[test]
     fn delayed_free() {
-        use crate::cell::RefCell;
+        use crate::mem::RefCell;
         use crate::vec::Vec;
 
         struct LogAlloc<'a> {
@@ -577,7 +572,7 @@ mod unck_tests {
 
     #[test]
     fn delayed_free() {
-        use crate::cell::RefCell;
+        use crate::mem::RefCell;
         use crate::vec::Vec;
 
         struct LogAlloc<'a> {

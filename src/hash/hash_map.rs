@@ -1,9 +1,8 @@
-use core::hash::Hash;
-use core::borrow::Borrow;
-
 use crate::alloc::{Alloc, GlobalAlloc};
 use crate::hash::{HashFnSeed, DefaultHashFnSeed};
 use crate::hash::fxhash::FxHasher32;
+use core::hash::Hash;
+use core::borrow::Borrow;
 
 use super::raw_hash_map::{RawHashMap, RawIter, RawIterMut};
 
@@ -564,8 +563,8 @@ mod tests {
 
     #[test]
     fn hm_get_or_insert() {
+        use crate::mem::Cell;
         use core::hash::{Hash, Hasher};
-        use core::cell::Cell;
 
 
         struct MagicString {
@@ -750,7 +749,7 @@ mod tests {
 
     #[test]
     fn hm_drop_and_clear() {
-        use core::cell::Cell;
+        use crate::mem::Cell;
 
         #[derive(PartialEq, Eq)]
         struct Dropper<'a> {

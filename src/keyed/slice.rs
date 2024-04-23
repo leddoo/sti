@@ -1,5 +1,4 @@
-use core::marker::PhantomData;
-use core::ptr::NonNull;
+use crate::mem::{NonNull, PhantomData};
 
 use super::Key;
 

@@ -1,6 +1,4 @@
-use core::ptr::NonNull;
-use core::mem::{size_of, align_of};
-
+use crate::mem::{NonNull, size_of, align_of};
 use crate::num::ceil_to_multiple_pow2;
 
 

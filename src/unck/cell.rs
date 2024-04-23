@@ -1,10 +1,10 @@
-pub use impel::{RefCellUnck, Ref, RefMut};
+pub use impel::RefCellUnck;
 
 
 #[cfg(debug_assertions)]
 mod impel {
-    use crate::cell::RefCell;
-    pub use crate::cell::{Ref, RefMut};
+    use crate::borrow::{Ref, RefMut};
+    use crate::mem::RefCell;
 
 
     pub struct RefCellUnck<T: ?Sized> {
@@ -37,9 +37,8 @@ mod impel {
 
 #[cfg(not(debug_assertions))]
 mod impel {
-    use core::ptr::NonNull;
-    use core::cell::UnsafeCell;
-    pub use crate::unck::borrow::{Ref, RefMut};
+    use crate::unck::borrow::{Ref, RefMut};
+    use crate::mem::{UnsafeCell, NonNull};
 
 
     pub struct RefCellUnck<T: ?Sized> {

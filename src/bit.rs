@@ -1,4 +1,3 @@
-
 #[inline(always)]
 pub const fn splat_4(b: u8) -> u32 {
     u32::from_ne_bytes([b; 4])

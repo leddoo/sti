@@ -1,4 +1,4 @@
-use core::marker::PhantomData;
+use crate::mem::PhantomData;
 
 
 /// Simd<T, N>

@@ -1,7 +1,6 @@
+use crate::hash::HashFn;
 use core::hash::{Hash, Hasher};
 use core::ops::BitXor;
-
-use crate::hash::HashFn;
 
 
 const ROL: u32 = 5;

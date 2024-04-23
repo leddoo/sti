@@ -1,5 +1,5 @@
-use core::sync::atomic::{AtomicBool, Ordering};
-use core::cell::UnsafeCell;
+use crate::mem::UnsafeCell;
+use crate::sync::atomic::{AtomicBool, Ordering};
 
 
 pub struct SpinLock<T> {
@@ -7,7 +7,7 @@ pub struct SpinLock<T> {
     value: UnsafeCell<T>,
 }
 
-pub struct SpinGuard<'a, T> {
+pub struct Guard<'a, T> {
     lock: &'a SpinLock<T>,
 }
 
@@ -22,21 +22,21 @@ impl<T> SpinLock<T> {
     }
 
     #[inline(always)]
-    pub fn lock(&self) -> SpinGuard<T> {
+    pub fn lock(&self) -> Guard<T> {
         while self.locked.swap(true, Ordering::Acquire) {
             core::hint::spin_loop();
         }
 
-        return SpinGuard { lock: self };
+        return Guard { lock: self };
     }
 
     #[inline(always)]
-    pub fn try_lock(&self) -> Option<SpinGuard<T>> {
+    pub fn try_lock(&self) -> Option<Guard<T>> {
         if self.locked.swap(true, Ordering::Acquire) {
             return None;
         }
 
-        return Some(SpinGuard { lock: self });
+        return Some(Guard { lock: self });
     }
 
     #[inline(always)]
@@ -56,7 +56,7 @@ unsafe impl<T: Send> Send for SpinLock<T> {}
 
 
 
-impl<'a, T> core::ops::Deref for SpinGuard<'a, T> {
+impl<'a, T> core::ops::Deref for Guard<'a, T> {
     type Target = T;
 
     #[inline(always)]
@@ -65,14 +65,14 @@ impl<'a, T> core::ops::Deref for SpinGuard<'a, T> {
     }
 }
 
-impl<'a, T> core::ops::DerefMut for SpinGuard<'a, T> {
+impl<'a, T> core::ops::DerefMut for Guard<'a, T> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.lock.value.get() }
     }
 }
 
-impl<'a, T> Drop for SpinGuard<'a, T> {
+impl<'a, T> Drop for Guard<'a, T> {
     #[inline]
     fn drop(&mut self) {
         self.lock.locked.store(false, Ordering::Release);

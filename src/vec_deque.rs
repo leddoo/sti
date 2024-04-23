@@ -1,7 +1,5 @@
-use core::ptr::NonNull;
-use core::mem::size_of;
-
 use crate::alloc::{Alloc, GlobalAlloc, Layout};
+use crate::mem::{NonNull, size_of};
 
 
 pub struct VecDeque<T, A: Alloc = GlobalAlloc> {
