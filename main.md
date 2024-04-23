@@ -1,8 +1,4 @@
 
-- todo:
-    - update readme.
-    - push to crates.io.
-
 
 
 ### backlog:
