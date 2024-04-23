@@ -1,6 +1,5 @@
 
 - todo:
-    - spinlock slow path with yield.
     - update readme.
     - push to crates.io.
 

@@ -12,7 +12,9 @@ impl<T> Box<T, GlobalAlloc> {
     pub fn new(value: T) -> Self {
         Box::new_in(GlobalAlloc, value)
     }
+}
 
+impl<T: ?Sized> Box<T, GlobalAlloc> {
     #[inline]
     pub fn into_raw_parts(self) -> NonNull<T> {
         let this = ManuallyDrop::new(self);
@@ -28,7 +30,6 @@ impl<T> Box<T, GlobalAlloc> {
     pub unsafe fn from_raw_parts(value: NonNull<T>) -> Self {
         Self { value, alloc: GlobalAlloc }
     }
-
 }
 
 impl<T> Box<[T], GlobalAlloc> {

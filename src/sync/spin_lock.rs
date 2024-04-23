@@ -7,11 +7,6 @@ pub struct SpinLock<T> {
     value: UnsafeCell<T>,
 }
 
-pub struct Guard<'a, T> {
-    lock: &'a SpinLock<T>,
-}
-
-
 impl<T> SpinLock<T> {
     #[inline]
     pub const fn new(value: T) -> Self {
@@ -23,8 +18,8 @@ impl<T> SpinLock<T> {
 
     #[inline]
     pub fn lock(&self) -> Guard<T> {
-        while self.locked.swap(true, Ordering::Acquire) {
-            core::hint::spin_loop();
+        if !try_lock(&self.locked) {
+            lock(&self.locked);
         }
 
         return Guard { lock: self };
@@ -32,7 +27,7 @@ impl<T> SpinLock<T> {
 
     #[inline]
     pub fn try_lock(&self) -> Option<Guard<T>> {
-        if self.locked.swap(true, Ordering::Acquire) {
+        if !try_lock(&self.locked) {
             return None;
         }
 
@@ -55,6 +50,43 @@ unsafe impl<T: Send> Sync for SpinLock<T> {}
 unsafe impl<T: Send> Send for SpinLock<T> {}
 
 
+#[inline]
+fn try_lock(a: &AtomicBool) -> bool {
+    a.swap(true, Ordering::Acquire) == false
+}
+
+// exponential backoff -> 127 in total before yielding.
+const MAX_SPINS: u32 = 64;
+
+#[cold]
+fn lock(a: &AtomicBool) {
+    let mut n = 1;
+    loop {
+        if try_lock(a) {
+            return;
+        }
+
+        if cfg!(feature = "std") && n > MAX_SPINS {
+            #[cfg(feature = "std")]
+            std::thread::yield_now();
+
+            n = 1;
+        }
+        else {
+            for _ in 0..n {
+                core::hint::spin_loop();
+            }
+
+            n = (n << 1).min(MAX_SPINS+1);
+        }
+    }
+}
+
+
+
+pub struct Guard<'a, T> {
+    lock: &'a SpinLock<T>,
+}
 
 impl<'a, T> core::ops::Deref for Guard<'a, T> {
     type Target = T;
