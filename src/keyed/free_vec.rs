@@ -16,7 +16,7 @@ enum Entry<K: Key, V> {
 
 
 impl<K: Key, V> KFreeVec<K, V, GlobalAlloc> {
-    #[inline(always)]
+    #[inline]
     pub fn new() -> Self {
         KFreeVec { entries: KVec::new(), first_free: None.into() }
     }
@@ -93,7 +93,7 @@ impl<K: Key, V, A: Alloc> KFreeVec<K, V, A> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get(&self, k: K) -> Option<&V> {
         self.entries.get(k)
         .and_then(|e| match e {
@@ -102,7 +102,7 @@ impl<K: Key, V, A: Alloc> KFreeVec<K, V, A> {
         })
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_mut(&mut self, k: K) -> Option<&mut V> {
         self.entries.get_mut(k)
         .and_then(|e| match e {
@@ -118,7 +118,7 @@ impl<K: Key, V, A: Alloc> core::ops::Index<K> for KFreeVec<K, V, A> {
     type Output = V;
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     fn index(&self, index: K) -> &Self::Output {
         let e = &self.entries[index];
         let Entry::Used(v) = e else { unreachable!() };
@@ -128,7 +128,7 @@ impl<K: Key, V, A: Alloc> core::ops::Index<K> for KFreeVec<K, V, A> {
 
 impl<K: Key, V, A: Alloc> core::ops::IndexMut<K> for KFreeVec<K, V, A> {
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     fn index_mut(&mut self, index: K) -> &mut Self::Output {
         let e = &mut self.entries[index];
         let Entry::Used(v) = e else { unreachable!() };

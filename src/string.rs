@@ -74,10 +74,15 @@ impl<A: Alloc> String<A> {
         self.buffer.extend_from_slice(s.as_bytes())
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn push_char(&mut self, c: char) {
-        self.buffer.extend_from_slice(
-            c.encode_utf8(&mut [0; 4]).as_bytes())
+        if (c as u32) < 256 {
+            self.buffer.push(c as u8)
+        }
+        else {
+            self.buffer.extend_from_slice(
+                c.encode_utf8(&mut [0; 4]).as_bytes())
+        }
     }
 
 

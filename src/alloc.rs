@@ -14,7 +14,7 @@ pub unsafe trait Alloc {
     ///     - the returned pointer refers to a live allocation.
     ///     - `layout` is the active layout of the returned memory block.
     ///
-    #[inline(always)]
+    #[inline]
     fn alloc(&self, layout: Layout) -> Option<NonNull<u8>> {
         if layout.size() != 0 {
             // layout.size() > 0.
@@ -52,7 +52,7 @@ pub unsafe trait Alloc {
     ///     - `ptr` must be a live allocation, allocated from this allocator.
     ///     - `layout` must be the active layout of the memory block.
     ///
-    #[inline(always)]
+    #[inline]
     unsafe fn free(&self, ptr: NonNull<u8>, layout: Layout) {
         if layout.size() != 0 {
             // invariants upheld by the caller, because `layout.size() > 0`.
@@ -86,7 +86,7 @@ pub unsafe trait Alloc {
     ///     - `old_layout` must be the active layout of the memory block.
     /// - `old_layout.align() == new_layout.align()`.
     ///
-    #[inline(always)]
+    #[inline]
     unsafe fn try_realloc(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
         debug_assert!(old_layout.align() == new_layout.align());
 
@@ -110,7 +110,7 @@ pub unsafe trait Alloc {
     /// - `old_layout.size() > 0`.
     /// - `new_layout.size() > 0`.
     ///
-    #[inline(always)]
+    #[inline]
     unsafe fn try_realloc_nonzero(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
         debug_assert!(old_layout.align() == new_layout.align());
 
@@ -167,7 +167,7 @@ pub unsafe trait Alloc {
 }
 
 
-#[inline(always)]
+#[inline]
 pub fn alloc_ptr<T, A: Alloc>(alloc: &A) -> Option<NonNull<T>> {
     match alloc.alloc(Layout::new::<T>()) {
         Some(ptr) => Some(ptr.cast()),
@@ -175,7 +175,7 @@ pub fn alloc_ptr<T, A: Alloc>(alloc: &A) -> Option<NonNull<T>> {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn alloc_array<T, A: Alloc>(alloc: &A, len: usize) -> Option<NonNull<T>> {
     match Layout::array::<T>(len) {
         Ok(layout) => match alloc.alloc(layout) {
@@ -186,7 +186,7 @@ pub fn alloc_array<T, A: Alloc>(alloc: &A, len: usize) -> Option<NonNull<T>> {
     }
 }
 
-#[inline(always)]
+#[inline]
 pub fn alloc_new<T, A: Alloc>(alloc: &A, value: T) -> Option<NonNull<T>> {
     match alloc_ptr::<T, A>(alloc) {
         Some(ptr) => {
@@ -200,7 +200,7 @@ pub fn alloc_new<T, A: Alloc>(alloc: &A, value: T) -> Option<NonNull<T>> {
 /// #safety:
 /// - safety requirements of `Alloc::free`.
 /// - `ptr.as_ref()` must be properly initialized.
-#[inline(always)]
+#[inline]
 pub unsafe fn drop_and_free<T: ?Sized, A: Alloc>(alloc: &A, ptr: NonNull<T>) {
     unsafe {
         let layout = Layout::for_value(ptr.as_ref());
@@ -211,14 +211,14 @@ pub unsafe fn drop_and_free<T: ?Sized, A: Alloc>(alloc: &A, ptr: NonNull<T>) {
 
 
 
-#[inline(always)]
+#[inline]
 pub fn dangling(layout: Layout) -> NonNull<u8> {
     // this is kinda sketchy.
     // taken from the unstable impl of `Layout::dangling`
     unsafe { NonNull::new_unchecked(core::mem::transmute(layout.align())) }
 }
 
-#[inline(always)]
+#[inline]
 pub fn cat_join(a: Layout, b: Layout) -> Option<Layout> {
     let b_begin = ceil_to_multiple_pow2(a.size(), b.align());
 
@@ -227,12 +227,12 @@ pub fn cat_join(a: Layout, b: Layout) -> Option<Layout> {
     Layout::from_size_align(new_size, new_align).ok()
 }
 
-#[inline(always)]
+#[inline]
 pub unsafe fn cat_next<T, U>(base: *const T, len: usize) -> *const U {
     unsafe { cat_next_bytes(base, len*size_of::<T>(), align_of::<U>()) }
 }
 
-#[inline(always)]
+#[inline]
 pub unsafe fn cat_next_bytes<T, U>(base: *const T, base_size: usize, next_align: usize) -> *const U {
     let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
     #[cfg(miri)] {
@@ -245,12 +245,12 @@ pub unsafe fn cat_next_bytes<T, U>(base: *const T, base_size: usize, next_align:
     }
 }
 
-#[inline(always)]
+#[inline]
 pub unsafe fn cat_next_mut<T, U>(base: *mut T, len: usize) -> *mut U {
     unsafe { cat_next_mut_bytes(base, len*size_of::<T>(), align_of::<U>()) }
 }
 
-#[inline(always)]
+#[inline]
 pub unsafe fn cat_next_mut_bytes<T, U>(base: *mut T, base_size: usize, next_align: usize) -> *mut U {
     let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
     #[cfg(miri)] {

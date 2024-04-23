@@ -24,7 +24,7 @@ pub struct Slot<K, V> {
 
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
-    #[inline(always)]
+    #[inline]
     pub fn new(seed: S, alloc: A) -> Self {
         Self {
             seed,
@@ -37,7 +37,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn with_cap(cap: usize, seed: S, alloc: A) -> Self {
         let mut this = Self::new(seed, alloc);
         let cap = cap.try_into().expect("capacity overflow");
@@ -60,7 +60,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         self.num_groups as usize * load::EMPTY_PER_GROUP as usize
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn resident(&self) -> usize {
         self.cap() - self.empty as usize
     }
@@ -382,7 +382,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn iter(&self) -> RawIter<K, V> {
         RawIter {
             groups: self.groups,
@@ -404,7 +404,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn iter_mut(&mut self) -> RawIterMut<K, V> {
         RawIterMut {
             groups: self.groups,
@@ -546,7 +546,7 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     fn layout(num_groups: u32) -> Option<Layout> {
         let num_groups: usize = num_groups.try_into().expect("unreachable");
         let num_slots = num_groups.checked_mul(Group::WIDTH)?;
@@ -555,13 +555,13 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> RawHashMap<K, V, S, A> {
             Layout::array::<Slot<K, V>>(num_slots).ok()?)
     }
 
-    #[inline(always)]
+    #[inline]
     fn slots_ptr(groups: NonNull<Group>, num_groups: u32) -> NonNull<Slot<K, V>> {
         unsafe { NonNull::new_unchecked(cat_next_mut(groups.as_ptr(), num_groups as usize)) }
     }
 }
 
-#[inline(always)]
+#[inline]
 unsafe fn group_ref<'a>(groups: NonNull<Group>, idx: usize) -> &'a mut Group {
     unsafe { &mut *groups.as_ptr().add(idx) }
 }
@@ -716,7 +716,7 @@ mod load {
 
     // max load: 14/16 = 7/8.
 
-    #[inline(always)]
+    #[inline]
     pub const fn num_groups_for_cap(cap: u32) -> Option<u32> {
         const W: u32 = Group::WIDTH as u32;
 
@@ -740,7 +740,7 @@ mod load {
 }
 
 
-#[inline(always)]
+#[inline]
 fn group_first(hash: u32, num_groups: u32) -> usize {
     // note: we're quadratic.
     // because we're using the high bits of the 64 bit product,
@@ -797,7 +797,7 @@ fn group_first(hash: u32, num_groups: u32) -> usize {
     return result;
 }
 
-#[inline(always)]
+#[inline]
 fn group_next(i: &mut usize, num_groups: u32) {
     debug_assert!(*i < num_groups as usize);
 
@@ -825,23 +825,23 @@ mod group_u64 {
         const HASH_MASK: u32 = 0x7f;
 
 
-        #[inline(always)]
+        #[inline]
         pub const fn empty() -> Group {
             Self(crate::bit::splat_8(Self::EMPTY))
         }
 
-        #[inline(always)]
+        #[inline]
         const fn mask_hash(hash: u32) -> u8 {
             (hash & Self::HASH_MASK) as u8
         }
 
 
-        #[inline(always)]
+        #[inline]
         pub fn match_hash(&self, hash: u32) -> Bitmask {
             Bitmask::find_equal_bytes(self.0, Self::mask_hash(hash))
         }
 
-        #[inline(always)]
+        #[inline]
         pub fn match_empty(&self) -> Bitmask {
             // check high bit and second highest bit set.
             // only empty & tombstone have the high bit.
@@ -849,20 +849,20 @@ mod group_u64 {
             Bitmask::find_high_bit_bytes(self.0 & (self.0 << 1))
         }
 
-        #[inline(always)]
+        #[inline]
         pub fn match_free(&self) -> Bitmask {
             // only empty & tombstone have the high bit.
             Bitmask::find_high_bit_bytes(self.0)
         }
 
-        #[inline(always)]
+        #[inline]
         pub fn match_used(&self) -> Bitmask {
             // used entries don't have the high bit.
             Bitmask::find_high_bit_bytes(self.0).not()
         }
 
 
-        #[inline(always)]
+        #[inline]
         fn set(&mut self, idx: usize, value: u8) {
             // note: the hashmap ops only ever mutate <= 1 byte
             // of a group. so we can just use a single byte store.
@@ -873,12 +873,12 @@ mod group_u64 {
             }
         }
 
-        #[inline(always)]
+        #[inline]
         pub fn use_entry(&mut self, idx: usize, hash: u32) {
             self.set(idx, Self::mask_hash(hash))
         }
 
-        #[inline(always)]
+        #[inline]
         pub fn free_entry(&mut self, idx: usize) -> u32 {
             if self.match_empty().any() {
                 self.set(idx, Self::EMPTY);

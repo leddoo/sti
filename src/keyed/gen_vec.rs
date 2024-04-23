@@ -31,13 +31,14 @@ enum Entry<K: Key, G, V> {
 }
 
 impl<K: Key, G: Gen, V> KGenVec<K, G, V> {
-    #[inline(always)]
+    #[inline]
     pub fn new() -> Self {
         Self::new_in(GlobalAlloc)
     }
 }
 
 impl<K: Key, G: Gen, V, A: Alloc> KGenVec<K, G, V, A> {
+    #[inline]
     pub fn new_in(alloc: A) -> Self {
         Self {
             inner: KVec::new_in(alloc),
@@ -49,7 +50,7 @@ impl<K: Key, G: Gen, V, A: Alloc> KGenVec<K, G, V, A> {
     #[inline(always)]
     pub fn alloc(&self) -> &A { self.inner.alloc() }
 
-    #[inline]
+    #[inline(always)]
     pub fn cap(&self) -> usize { self.inner.cap() }
 
 
@@ -88,33 +89,33 @@ impl<K: Key, G: Gen, V, A: Alloc> KGenVec<K, G, V, A> {
         return (g, v);
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn kget(&self, key: K) -> Option<(G, &V)> {
         let Some(entry) = self.inner.get(key) else { return None };
         let Entry::Used((g, v)) = entry else { return None };
         return Some((*g, v));
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get(&self, key: K, gen: G) -> Option<&V> {
         let Some((g, v)) = self.kget(key) else { return None };
         if g == gen { Some(v) } else { None }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn kget_mut(&mut self, key: K) -> Option<(G, &mut V)> {
         let Some(entry) = self.inner.get_mut(key) else { return None };
         let Entry::Used((g, v)) = entry else { return None };
         return Some((*g, v));
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get_mut(&mut self, key: K, gen: G) -> Option<&mut V> {
         let Some((g, v)) = self.kget_mut(key) else { return None };
         if g == gen { Some(v) } else { None }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_key(&self) -> K {
         if let Some(k) = self.first_free.to_option() { k }
         else { self.inner.next_key() }
@@ -122,13 +123,13 @@ impl<K: Key, G: Gen, V, A: Alloc> KGenVec<K, G, V, A> {
 
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn check_handle(&self, key: K, gen: G) {
         self.get(key, gen).expect("invalid key/gen");
     }
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn gen(&self, key: K) -> G {
         match &self.inner[key] {
             Entry::Free((g, _)) |
@@ -137,7 +138,7 @@ impl<K: Key, G: Gen, V, A: Alloc> KGenVec<K, G, V, A> {
     }
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn inc_gen(&mut self, key: K) -> G {
         match &mut self.inner[key] {
             Entry::Free((g, _)) |

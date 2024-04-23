@@ -70,7 +70,7 @@ impl<T: ?Sized, A: Alloc> Rc<T, A> {
             Rc::new_in(this.alloc().clone(), this.as_ref().clone()))
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn make_mut_ex<F: FnOnce(&Self) -> Self>(&mut self, clone: F) -> &mut T {
         if self.ref_count() != 1 {
             *self = clone(self);

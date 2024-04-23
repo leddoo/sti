@@ -10,20 +10,20 @@ pub struct KSlice<K: Key, V> {
 }
 
 impl<K: Key, V> KSlice<K, V> {
-    #[inline(always)]
+    #[inline]
     pub const fn new_unck<'a>(slice: &'a [V]) -> &'a Self {
         unsafe { &*(slice as *const [V] as *const Self) }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn new_mut_unck<'a>(slice: &'a mut [V]) -> &'a mut Self {
         unsafe { &mut *(slice as *mut [V] as *mut Self) }
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn empty<'a>() -> &'a Self { Self::new_unck(&[]) }
 
-    #[inline(always)]
+    #[inline]
     pub fn empty_mut<'a>() -> &'a mut Self { Self::new_mut_unck(&mut []) }
 
 
@@ -37,7 +37,7 @@ impl<K: Key, V> KSlice<K, V> {
     pub const fn len(&self) -> usize { self.inner.len() }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn iter(&self) -> KIter<K, V> {
         KIter {
             ptr: unsafe { NonNull::new_unchecked(self.inner.as_ptr() as *mut V) },
@@ -47,7 +47,7 @@ impl<K: Key, V> KSlice<K, V> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn iter_mut(&mut self) -> KIterMut<K, V> {
         KIterMut {
             ptr: unsafe { NonNull::new_unchecked(self.inner.as_mut_ptr() as *mut V) },
@@ -71,7 +71,7 @@ impl<K: Key, V> KSlice<K, V> {
 
 
 impl<'a, K: Key, V> Default for &'a KSlice<K, V> {
-    #[inline(always)]
+    #[inline]
     fn default() -> Self {
         KSlice::new_unck(&[])
     }
@@ -89,14 +89,14 @@ where K: core::fmt::Debug, V: core::fmt::Debug {
 impl<K: Key, V> core::ops::Index<K> for KSlice<K, V> {
     type Output = V;
 
-    #[inline(always)]
+    #[inline]
     fn index(&self, index: K) -> &Self::Output {
         &self.inner[index.usize()]
     }
 }
 
 impl<K: Key, V> core::ops::IndexMut<K> for KSlice<K, V> {
-    #[inline(always)]
+    #[inline]
     fn index_mut(&mut self, index: K) -> &mut Self::Output {
         &mut self.inner[index.usize()]
     }
@@ -104,7 +104,7 @@ impl<K: Key, V> core::ops::IndexMut<K> for KSlice<K, V> {
 
 
 impl<K: Key, V: PartialEq> PartialEq for KSlice<K, V> {
-    #[inline(always)]
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.inner() == other.inner()
     }
@@ -126,7 +126,7 @@ pub struct KIter<'a, K: Key, V> {
 impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
     type Item = (K, &'a V);
 
-    #[inline(always)]
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.len {
             let k = K::from_usize_unck(self.idx);
@@ -137,7 +137,7 @@ impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     fn nth(&mut self, i: usize) -> Option<Self::Item> {
         if i < self.len - self.idx {
             self.idx += i;
@@ -150,7 +150,7 @@ impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     fn last(self) -> Option<Self::Item> {
         if self.idx < self.len {
             let idx = self.len - 1;
@@ -161,7 +161,7 @@ impl<'a, K: Key, V> Iterator for KIter<'a, K, V> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.len - self.idx;
         (len, Some(len))
@@ -180,7 +180,7 @@ pub struct KIterMut<'a, K: Key, V> {
 impl<'a, K: Key, V> Iterator for KIterMut<'a, K, V> {
     type Item = (K, &'a mut V);
 
-    #[inline(always)]
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.len {
             let k = K::from_usize_unck(self.idx);
@@ -191,7 +191,7 @@ impl<'a, K: Key, V> Iterator for KIterMut<'a, K, V> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     fn nth(&mut self, i: usize) -> Option<Self::Item> {
         if i < self.len - self.idx {
             self.idx += i;
@@ -204,7 +204,7 @@ impl<'a, K: Key, V> Iterator for KIterMut<'a, K, V> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     fn last(self) -> Option<Self::Item> {
         if self.idx < self.len {
             let idx = self.len - 1;
@@ -215,7 +215,7 @@ impl<'a, K: Key, V> Iterator for KIterMut<'a, K, V> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.len - self.idx;
         (len, Some(len))

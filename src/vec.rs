@@ -48,7 +48,7 @@ impl<T> Vec<T> {
 }
 
 impl<T, A: Alloc> Vec<T, A> {
-    #[inline(always)]
+    #[inline]
     pub const fn new_in(alloc: A) -> Self {
         Vec {
             alloc,
@@ -162,7 +162,7 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn push(&mut self, value: T) {
         if self.len == self.cap {
             self.reserve_one_extra();
@@ -295,7 +295,7 @@ impl<T, A: Alloc> Vec<T, A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.len > 0 {
             self.len -= 1;
@@ -311,7 +311,7 @@ impl<T, A: Alloc> Vec<T, A> {
 
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn remove_swap(&mut self, index: usize) -> T {
         assert!(index < self.len, "index {index} out of bounds (len: {})", self.len);
 
@@ -330,7 +330,7 @@ impl<T, A: Alloc> Vec<T, A> {
     /// #safety:
     /// - `new_len < self.cap()`.
     /// - all values in `self[0..new_len]` must be properly initialized.
-    #[inline(always)]
+    #[inline]
     pub unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.cap);
         self.len = new_len;
@@ -361,7 +361,7 @@ impl<T, A: Alloc> Vec<T, A> {
         self.truncate(0);
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn resize(&mut self, new_len: usize, value: T)  where T: Clone {
         if new_len <= self.len {
             self.truncate(new_len);
@@ -407,7 +407,7 @@ impl<T, A: Alloc> Vec<T, A> {
         self.len = dst;
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn take(&mut self) -> Self  where A: Clone {
         let result = Self {
             alloc: self.alloc.clone(),
@@ -585,7 +585,6 @@ impl<A: Alloc> std::io::Write for Vec<u8, A> {
 
 
 impl<T: core::fmt::Debug, A: Alloc> core::fmt::Debug for Vec<T, A> {
-    #[inline(always)]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         self.as_slice().fmt(f)
     }
@@ -677,7 +676,7 @@ impl<'a, T, A: Alloc> IntoIterator for &'a Vec<T, A> {
     type Item = &'a T;
     type IntoIter = core::slice::Iter<'a, T>;
 
-    #[inline(always)]
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
@@ -708,7 +707,7 @@ impl<'a, T, A: Alloc> IntoIterator for &'a mut Vec<T, A> {
     type Item = &'a mut T;
     type IntoIter = core::slice::IterMut<'a, T>;
 
-    #[inline(always)]
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
     }
@@ -755,14 +754,14 @@ impl<T, A: Alloc> Extend<T> for Vec<T, A> {
 
 
 impl<T, A: Alloc> core::borrow::Borrow<[T]> for Vec<T, A> {
-    #[inline(always)]
+    #[inline]
     fn borrow(&self) -> &[T] {
         self.as_slice()
     }
 }
 
 impl<T, A: Alloc> core::borrow::BorrowMut<[T]> for Vec<T, A> {
-    #[inline(always)]
+    #[inline]
     fn borrow_mut(&mut self) -> &mut [T] {
         self.as_slice_mut()
     }
@@ -770,7 +769,7 @@ impl<T, A: Alloc> core::borrow::BorrowMut<[T]> for Vec<T, A> {
 
 
 impl<T: Clone> From<&[T]> for Vec<T, GlobalAlloc> {
-    #[inline(always)]
+    #[inline]
     fn from(value: &[T]) -> Self {
         Self::from_slice(value)
     }

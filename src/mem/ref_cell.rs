@@ -8,7 +8,7 @@ pub struct RefCell<T: ?Sized> {
 }
 
 impl<T> RefCell<T> {
-    #[inline(always)]
+    #[inline]
     pub fn new(value: T) -> Self {
         Self {
             flag: BorrowFlag::new(),
@@ -24,7 +24,7 @@ impl<T: ?Sized> RefCell<T> {
     }}
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn borrow(&self) -> Ref<T> { unsafe {
         Ref::new(self.flag.borrow(), NonNull::new_unchecked(self.value.get()))
     }}

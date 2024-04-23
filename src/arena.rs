@@ -69,7 +69,7 @@ impl<A: Alloc> Arena<A> {
         assert!(used >= size_of::<BlockHeader>() || cap == 0);
     }
 
-    #[inline(always)]
+    #[inline]
     fn debug_integrity_check(&self) {
         #[cfg(debug_assertions)]
         self._integrity_check();
@@ -303,7 +303,7 @@ impl<A: Alloc> Arena<A> {
     /// - creates a save point that can later be restored.
     /// - includes all allocations made before this call.
     ///
-    #[inline(always)]
+    #[inline]
     pub fn save(&self) -> ArenaSavePoint {
         let block = self.block.get().as_ptr() as usize;
         let used_end = block + self.used.get();
@@ -411,7 +411,7 @@ unsafe impl<A: Alloc> Alloc for Arena<A> {
         let _ = (ptr, layout);
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn try_realloc_nonzero(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
         debug_assert!(old_layout.size() > 0);
         debug_assert!(new_layout.size() > 0);

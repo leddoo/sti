@@ -22,14 +22,14 @@ fn add_to_hash_u64(hash: &mut u64, value: u64) {
 }
 
 
-#[inline(always)]
+#[inline]
 pub fn fxhash32<T: Hash + ?Sized>(value: &T) -> u32 {
     let mut hasher = FxHasher32::new();
     value.hash(&mut hasher);
     hasher.hash
 }
 
-#[inline(always)]
+#[inline]
 pub fn fxhash64<T: Hash + ?Sized>(value: &T) -> u64 {
     let mut hasher = FxHasher64::new();
     value.hash(&mut hasher);
@@ -57,7 +57,7 @@ impl FxHasher32 {
         self.hash
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn finish_u64(&self) -> u64 {
         let mut hasher = FxHasher64::new();
         hasher.write_u32(self.hash);
@@ -65,7 +65,6 @@ impl FxHasher32 {
     }
 
 
-    #[inline]
     pub fn write_bytes(&mut self, mut bytes: &[u8]) {
         // llvm can be a bit silly with pointers.
         let mut hash = self.hash;
@@ -98,7 +97,7 @@ impl FxHasher32 {
         self.hash = hash;
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn hash_bytes(bytes: &[u8]) -> u32 {
         let mut hasher = Self::new();
         hasher.write_bytes(bytes);
@@ -118,7 +117,7 @@ impl<T: Hash + ?Sized> HashFn<T> for FxHasher32 {
 
     const DEFAULT_SEED: u32 = INI32;
 
-    #[inline(always)]
+    #[inline]
     fn hash_with_seed(seed: u32, value: &T) -> u32 {
         let mut hasher = Self::from_seed(seed);
         value.hash(&mut hasher);
@@ -138,26 +137,27 @@ impl Hasher for FxHasher32 {
         self.finish_u64()
     }
 
+    #[inline]
     fn write(&mut self, bytes: &[u8]) {
         self.write_bytes(bytes);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u8(&mut self, i: u8) {
         add_to_hash_u32(&mut self.hash, i as u32);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u16(&mut self, i: u16) {
         add_to_hash_u32(&mut self.hash, i as u32);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u32(&mut self, i: u32) {
         add_to_hash_u32(&mut self.hash, i);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u64(&mut self, i: u64) {
         let mut hash = self.hash;
         add_to_hash_u32(&mut hash, (i >>  0) as u32);
@@ -165,7 +165,7 @@ impl Hasher for FxHasher32 {
         self.hash = hash;
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u128(&mut self, i: u128) {
         let mut hash = self.hash;
         add_to_hash_u32(&mut hash, (i >>  0) as u32);
@@ -176,13 +176,13 @@ impl Hasher for FxHasher32 {
     }
 
     #[cfg(target_pointer_width = "32")]
-    #[inline(always)]
+    #[inline]
     fn write_usize(&mut self, i: usize) {
         self.write_u32(i as u32)
     }
 
     #[cfg(target_pointer_width = "64")]
-    #[inline(always)]
+    #[inline]
     fn write_usize(&mut self, i: usize) {
         self.write_u64(i as u64)
     }
@@ -204,7 +204,6 @@ impl FxHasher64 {
     pub fn from_seed(seed: u64) -> Self { Self { hash: seed } }
 
 
-    #[inline]
     pub fn write_bytes(&mut self, mut bytes: &[u8]) {
         let mut hash = self.hash;
 
@@ -244,7 +243,7 @@ impl FxHasher64 {
         self.hash = hash;
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn hash_bytes(bytes: &[u8]) -> u64 {
         let mut hasher = Self::new();
         hasher.write_bytes(bytes);
@@ -264,7 +263,7 @@ impl<T: Hash + ?Sized> HashFn<T> for FxHasher64 {
 
     const DEFAULT_SEED: u64 = INI64;
 
-    #[inline(always)]
+    #[inline]
     fn hash_with_seed(seed: u64, value: &T) -> u64 {
         let mut hasher = Self::from_seed(seed);
         value.hash(&mut hasher);
@@ -277,31 +276,32 @@ impl Hasher for FxHasher64 {
     #[inline(always)]
     fn finish(&self) -> u64 { self.hash }
 
+    #[inline]
     fn write(&mut self, bytes: &[u8]) {
         self.write_bytes(bytes);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u8(&mut self, i: u8) {
         add_to_hash_u64(&mut self.hash, i as u64);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u16(&mut self, i: u16) {
         add_to_hash_u64(&mut self.hash, i as u64);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u32(&mut self, i: u32) {
         add_to_hash_u64(&mut self.hash, i as u64);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u64(&mut self, i: u64) {
         add_to_hash_u64(&mut self.hash, i);
     }
 
-    #[inline(always)]
+    #[inline]
     fn write_u128(&mut self, i: u128) {
         let mut hash = self.hash;
         add_to_hash_u64(&mut hash, (i >>  0) as u64);
@@ -310,13 +310,13 @@ impl Hasher for FxHasher64 {
     }
 
     #[cfg(target_pointer_width = "32")]
-    #[inline(always)]
+    #[inline]
     fn write_usize(&mut self, i: usize) {
         self.write_u32(i as u32)
     }
 
     #[cfg(target_pointer_width = "64")]
-    #[inline(always)]
+    #[inline]
     fn write_usize(&mut self, i: usize) {
         self.write_u64(i as u64)
     }

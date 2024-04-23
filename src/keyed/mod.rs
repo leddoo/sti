@@ -24,39 +24,40 @@ pub trait Key: Copy + PartialEq + PartialOrd {
     fn usize(self) -> usize;
 
 
-    #[inline(always)]
+    #[inline]
     fn from_usize(value: usize) -> Option<Self> {
-        (value < Self::LIMIT).then(|| Self::from_usize_unck(value))
+        if value < Self::LIMIT { Some(Self::from_usize_unck(value)) }
+        else { None }
     }
 
-    #[inline(always)]
+    #[inline]
     fn sub_unck(self, other: Self) -> usize {
         self.usize() - other.usize()
     }
 
-    #[inline(always)]
+    #[inline]
     fn sub(self, other: Self) -> Option<usize> {
         self.usize().checked_sub(other.usize())
     }
 
-    #[inline(always)]
+    #[inline]
     fn add_unck(self, offset: usize) -> Self {
         Self::from_usize_unck(self.usize() + offset)
     }
 
-    #[inline(always)]
+    #[inline]
     fn add(self, offset: usize) -> Option<Self> {
         Self::from_usize(self.usize().checked_add(offset)?)
     }
 
-    #[inline(always)]
+    #[inline]
     fn max(self, other: Self) -> Self {
         if self.usize() >= other.usize() { self  }
         else                             { other }
     }
 
 
-    #[inline(always)]
+    #[inline]
     fn next(&mut self) -> Option<Self> {
         let result = *self;
         *self = self.add(1)?;

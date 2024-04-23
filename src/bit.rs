@@ -38,7 +38,7 @@ macro_rules! bitmask_impl {
             }
 
 
-            #[inline(always)]
+            #[inline]
             pub fn find_zero_bytes(value: $ty) -> Self {
                 // https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
                 let zero_or_high = value.wrapping_sub($splat(1));

@@ -28,7 +28,7 @@ impl<T> VecDeque<T> {
 }
 
 impl<T, A: Alloc> VecDeque<T, A> {
-    #[inline(always)]
+    #[inline]
     pub const fn new_in(alloc: A) -> Self {
         Self {
             alloc,
@@ -156,7 +156,7 @@ impl<T, A: Alloc> VecDeque<T, A> {
         self.grow_by(1);
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn push_back(&mut self, value: T) {
         if self.len == self.cap {
             self.grow_for_push();
@@ -172,7 +172,7 @@ impl<T, A: Alloc> VecDeque<T, A> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn push_front(&mut self, value: T) {
         if self.len == self.cap {
             self.grow_for_push();
@@ -189,7 +189,7 @@ impl<T, A: Alloc> VecDeque<T, A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn pop_back(&mut self) -> Option<T> {
         if self.len == 0 {
             return None;
@@ -202,7 +202,7 @@ impl<T, A: Alloc> VecDeque<T, A> {
         return Some(unsafe { self.data.as_ptr().add(i).read() });
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn pop_front(&mut self) -> Option<T> {
         if self.len == 0 {
             return None;
@@ -217,7 +217,7 @@ impl<T, A: Alloc> VecDeque<T, A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn as_slices(&self) -> (&[T], &[T]) {
         let wrapped = (self.head + self.len).checked_sub(self.cap).unwrap_or(0);
         return unsafe {(

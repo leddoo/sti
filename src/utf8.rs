@@ -3,7 +3,7 @@ use crate::bit::{Bitmask4, Bitmask8};
 
 pub use core::str::from_utf8_unchecked as str_unck;
 
-#[inline(always)]
+#[inline]
 pub unsafe fn str_from_parts_unck<'a>(ptr: *const u8, len: usize) -> &'a str {
     unsafe { str_unck(core::slice::from_raw_parts(ptr, len)) }
 }
@@ -75,7 +75,7 @@ pub struct Utf8Error {
 /// check one utf-8 encoded codepoint.
 /// - assumes `buffer.len() > 0`.
 /// - on success, returns the remaining buffer after the codepoint.
-#[inline(always)]
+#[inline]
 pub fn check_1(buffer: &[u8]) -> Result<&[u8], ()> {
     let b = buffer;
     match b[0] {

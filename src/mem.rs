@@ -3,9 +3,9 @@ pub use core::{
     marker::{PhantomData, Unpin},
     mem::{
         MaybeUninit, ManuallyDrop,
-            transmute, transmute_copy,
-            take, replace, swap,
-            size_of, size_of_val, align_of,
+        transmute, transmute_copy,
+        take, replace, swap,
+        size_of, size_of_val, align_of,
     },
     ptr::{
         NonNull,

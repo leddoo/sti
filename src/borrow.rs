@@ -42,7 +42,7 @@ impl BorrowFlag {
     }
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn borrow(&self) -> BorrowRef {
         self.try_borrow().expect("already mutably borrowed")
     }
@@ -58,7 +58,7 @@ impl BorrowFlag {
     }
 
     #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn borrow_mut(&self) -> BorrowRefMut {
         self.try_borrow_mut().expect("already borrowed")
     }
@@ -123,7 +123,7 @@ pub struct Ref<'a, T: ?Sized> {
 }
 
 impl<'a, T: ?Sized> Ref<'a, T> {
-    #[inline(always)]
+    #[inline]
     pub unsafe fn new(borrow: BorrowRef<'a>, value: NonNull<T>) -> Self {
         Self { value, borrow, phantom: PhantomData }
     }
@@ -156,7 +156,7 @@ pub struct RefMut<'a, T: ?Sized> {
 }
 
 impl<'a, T: ?Sized> RefMut<'a, T> {
-    #[inline(always)]
+    #[inline]
     pub unsafe fn new(borrow: BorrowRefMut<'a>, value: NonNull<T>) -> Self {
         Self { value, _borrow: borrow, phantom: PhantomData }
     }

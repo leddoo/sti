@@ -13,7 +13,7 @@ pub struct Guard<'a, T> {
 
 
 impl<T> SpinLock<T> {
-    #[inline(always)]
+    #[inline]
     pub const fn new(value: T) -> Self {
         Self {
             locked: AtomicBool::new(false),
@@ -21,7 +21,7 @@ impl<T> SpinLock<T> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn lock(&self) -> Guard<T> {
         while self.locked.swap(true, Ordering::Acquire) {
             core::hint::spin_loop();
@@ -30,7 +30,7 @@ impl<T> SpinLock<T> {
         return Guard { lock: self };
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn try_lock(&self) -> Option<Guard<T>> {
         if self.locked.swap(true, Ordering::Acquire) {
             return None;
@@ -39,12 +39,12 @@ impl<T> SpinLock<T> {
         return Some(Guard { lock: self });
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn get(&mut self) -> &mut T {
         return unsafe { &mut *self.value.get() };
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn with_lock<R, F: FnOnce(&mut T) -> R>(&self, f: F) -> R {
         let mut guard = self.lock();
         return f(&mut guard);

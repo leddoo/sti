@@ -16,7 +16,7 @@ pub struct WriteGuard<'a, T> {
 }
 
 impl<T> RwSpinLock<T> {
-    #[inline(always)]
+    #[inline]
     pub const fn new(value: T) -> Self {
         Self {
             state: AtomicState::new(UNLOCKED),
@@ -43,8 +43,7 @@ impl<T> RwSpinLock<T> {
     }
 
 
-    #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn write(&self) -> WriteGuard<T> {
         if !try_write(&self.state) {
             lock(&self.state, true);
@@ -53,8 +52,7 @@ impl<T> RwSpinLock<T> {
         return WriteGuard { lock: self };
     }
 
-    #[track_caller]
-    #[inline(always)]
+    #[inline]
     pub fn try_write(&self) -> Option<WriteGuard<T>> {
         if !try_write(&self.state) {
             return None;
@@ -64,7 +62,7 @@ impl<T> RwSpinLock<T> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn get(&mut self) -> &mut T {
         unsafe { &mut *self.value.get() }
     }

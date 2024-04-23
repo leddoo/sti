@@ -13,35 +13,35 @@ pub struct KVec<K: Key, V, A: Alloc = GlobalAlloc> {
 }
 
 impl<K: Key, V> KVec<K, V, GlobalAlloc> {
-    #[inline(always)]
+    #[inline]
     pub fn new() -> Self {
         KVec { inner: Vec::new(), phantom: PhantomData }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn with_cap(cap: usize) -> Self {
         KVec { inner: Vec::with_cap(cap), phantom: PhantomData }
     }
 }
 
 impl<K: Key, V, A: Alloc> KVec<K, V, A> {
-    #[inline(always)]
+    #[inline]
     pub fn new_in(alloc: A) -> Self {
         KVec { inner: Vec::new_in(alloc), phantom: PhantomData }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn with_cap_in(alloc: A, cap: usize) -> Self {
         KVec { inner: Vec::with_cap_in(alloc, cap), phantom: PhantomData }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_inner(inner: Vec<V, A>) -> Self {
         assert!(inner.len() < K::LIMIT);
         KVec { inner, phantom: PhantomData }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_inner_unck(inner: Vec<V, A>) -> Self {
         KVec { inner, phantom: PhantomData }
     }
@@ -79,20 +79,20 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn range(&self) -> KRange<K> {
         KRange::new_unck(
             K::from_usize_unck(0),
             K::from_usize_unck(self.inner.len()))
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn next_key(&self) -> K {
         K::from_usize_unck(self.len())
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn push(&mut self, value: V) -> K {
         assert!(self.len() + 1 < K::LIMIT, "too many elements");
         let result = K::from_usize_unck(self.len());
@@ -121,40 +121,41 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
         self.inner.clear();
     }
 
-    #[inline(always)]
+    #[track_caller]
+    #[inline]
     pub fn resize(&mut self, new_len: usize, value: V)  where V: Clone {
         assert!(new_len < K::LIMIT);
         self.inner.resize(new_len, value);
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn as_slice(&self) -> &KSlice<K, V> {
         KSlice::new_unck(&self.inner)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn as_slice_mut(&mut self) -> &mut KSlice<K, V> {
         KSlice::new_mut_unck(&mut self.inner)
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn map_in<V2, A2: Alloc, F: FnMut((K, &V)) -> V2>(&self, alloc: A2, f: F) -> KVec<K, V2, A2> {
         KVec { inner: Vec::from_in(alloc, self.iter().map(f)), phantom: PhantomData }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn map<V2, F: FnMut((K, &V)) -> V2>(&self, f: F) -> KVec<K, V2, A>  where A: Clone {
         self.map_in(self.alloc().clone(), f)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn clone_in<B: Alloc>(&self, alloc: B) -> KVec<K, V, B> where V: Clone {
         KVec { inner: self.inner.clone_in(alloc), phantom: PhantomData }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn leak<'a>(self) -> &'a mut KSlice<K, V>  where A: 'a {
         KSlice::new_mut_unck(self.inner.leak())
     }
@@ -179,7 +180,7 @@ impl<K: Key, V, A: Alloc> core::ops::DerefMut for KVec<K, V, A> {
 
 
 impl<K: Key, V: PartialEq, A: Alloc> PartialEq for KVec<K, V, A> {
-    #[inline(always)]
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.as_slice() == other.as_slice()
     }

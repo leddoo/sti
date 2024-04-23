@@ -10,13 +10,13 @@ pub struct KRange<K: Key> {
 impl<K: Key> KRange<K> {
     pub const ZERO: Self = Self { begin: K::ZERO, end: K::ZERO };
 
-    #[inline(always)]
+    #[inline]
     pub fn new_unck(begin: K, end: K) -> KRange<K> {
         debug_assert!(begin.usize() <= end.usize());
         KRange { begin, end }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn new(begin: K, end: K) -> KRange<K> {
         KRange {
             begin,
@@ -24,12 +24,12 @@ impl<K: Key> KRange<K> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn collapsed(k: K) -> KRange<K> {
         KRange { begin: k, end: k }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn from_key(k: K) -> KRange<K> {
         debug_assert!(K::from_usize(k.usize() + 1).is_some());
         KRange { begin: k, end: K::from_usize_unck(k.usize() + 1) }
@@ -41,7 +41,7 @@ impl<K: Key> KRange<K> {
         self.begin
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn set_begin(&mut self, new_begin: K) {
         self.begin = new_begin;
         self.end   = self.end.max(new_begin);
@@ -53,7 +53,7 @@ impl<K: Key> KRange<K> {
         self.end
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn set_end(&mut self, new_end: K) {
         self.end = new_end.max(self.begin);
     }
@@ -65,7 +65,7 @@ impl<K: Key> KRange<K> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn try_idx(self, i: usize) -> Option<K> {
         if i < self.len() {
             return Some(self.begin.add_unck(i));
@@ -73,7 +73,7 @@ impl<K: Key> KRange<K> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn idx(self, i: usize) -> K {
         self.try_idx(i).expect("invalid index")
     }
@@ -89,7 +89,7 @@ impl<K: Key> KRange<K> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn try_rev(self, i: usize) -> Option<K> {
         if i < self.len() {
             let r = (self.len() - 1) - i;
@@ -98,7 +98,7 @@ impl<K: Key> KRange<K> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn rev(self, i: usize) -> K {
         self.try_rev(i).expect("invalid index")
     }
@@ -114,7 +114,7 @@ impl<K: Key> KRange<K> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn contains(self, k: K) -> bool {
         k >= self.begin && k < self.end
     }
@@ -131,7 +131,7 @@ impl<K: Key + core::fmt::Debug> core::fmt::Debug for KRange<K> {
 impl<K: Key> Iterator for KRange<K> {
     type Item = K;
 
-    #[inline(always)]
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.len() > 0 {
             let result = self.begin;
@@ -141,7 +141,7 @@ impl<K: Key> Iterator for KRange<K> {
         None
     }
 
-    #[inline(always)]
+    #[inline]
     fn nth(&mut self, i: usize) -> Option<Self::Item> {
         if i < self.len() {
             let result = self.begin.add_unck(i);
@@ -156,7 +156,7 @@ impl<K: Key> Iterator for KRange<K> {
         self.try_last()
     }
 
-    #[inline(always)]
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         (self.len(), Some(self.len()))
     }

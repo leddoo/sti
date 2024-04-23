@@ -1,20 +1,18 @@
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct PackedOption<T: Reserved> {
+    value: T
+}
 
 pub trait Reserved: Copy + PartialEq {
     const RESERVED: Self;
 
+    #[track_caller]
     #[inline(always)]
     fn some(self) -> PackedOption<Self> {
         debug_assert!(self != Self::RESERVED);
         PackedOption { value: self }
     }
-}
-
-
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(transparent)]
-pub struct PackedOption<T: Reserved> {
-    value: T
 }
 
 impl<T: Reserved> PackedOption<T> {
@@ -35,23 +33,23 @@ impl<T: Reserved> PackedOption<T> {
         self.value != T::RESERVED
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn to_option(self) -> Option<T> {
         self.is_some().then_some(self.value)
     }
 
-    #[inline(always)]
     #[track_caller]
+    #[inline]
     pub fn unwrap(self) -> T {
         self.to_option().unwrap()
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn unwrap_unck(self) -> T {
         self.value
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn take(&mut self) -> Self {
         core::mem::replace(self, Self::NONE)
     }
@@ -59,7 +57,7 @@ impl<T: Reserved> PackedOption<T> {
 
 
 impl<T: Reserved> From<Option<T>> for PackedOption<T> {
-    #[inline(always)]
+    #[inline]
     fn from(value: Option<T>) -> Self {
         if let Some(value) = value {
             PackedOption { value }

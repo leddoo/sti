@@ -7,7 +7,7 @@ pub struct StaticVec<T, const N: usize> {
 }
 
 impl<T, const N: usize> StaticVec<T, N> {
-    #[inline(always)]
+    #[inline]
     pub const fn new() -> Self {
         Self {
             values: unsafe {
@@ -25,7 +25,7 @@ impl<T, const N: usize> StaticVec<T, N> {
     pub fn len(&self) -> usize { self.len }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn push(&mut self, value: T) -> Result<&mut T, T> {
         if self.len < N {
             return Ok(unsafe { self.push_unck(value) })
@@ -37,7 +37,7 @@ impl<T, const N: usize> StaticVec<T, N> {
 
     /// # safety:
     /// - `self.len() < self.cap()`
-    #[inline(always)]
+    #[inline]
     pub unsafe fn push_unck(&mut self, value: T) -> &mut T {
         debug_assert!(self.len < N);
 
@@ -70,7 +70,7 @@ impl<T, const N: usize> StaticVec<T, N> {
 }
 
 impl<T, const N: usize> Drop for StaticVec<T, N> {
-    #[inline(always)]
+    #[inline]
     fn drop(&mut self) {
         unsafe {
             let slice = self.as_slice_mut();

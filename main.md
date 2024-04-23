@@ -1,38 +1,43 @@
 
 - todo:
-    - remove unnecessary `inline(always)`
+    - rc from/into raw parts in.
+    - `unsize_box!()`, `unsize_rc!()`.
     - what about the float module?
     - move `ceil_to_multiple_pow2` into an extension trait.
     - spinlock slow path with yield.
-    - improve rwspinlock test.
-    - arena:
-        - large allocations -> globalalloc.
-        - stats isize, sub, include total used.
     - simp key:
         - only from/to usize.
         - don't make ZERO/MAX pub on impl.
-    - leb128:
-        - single byte fast path inline fns.
-        - writing.
-        - tests.
-    - cell & unck docs.
-        - why we have them, what they're for.
-        - how to use them correctly.
     - update readme.
     - push to crates.io.
-    - mimalloc.
 
 
 
 ### backlog:
 
+- sync:
+    - improve rwspinlock test.
+
+- cell & unck docs.
+    - why we have them, what they're for.
+    - how to use them correctly.
+
 - arena:
+    - large allocations -> globalalloc.
+    - stats isize, sub, include total used.
     - test temp arena overflow case.
     - consider returning growing arena for temp overflow case.
+
+- leb128:
+    - single byte fast path inline fns.
+    - writing.
+    - tests.
 
 - kslice index proper panic & track caller.
 
 - str::Repeat.
+
+- mimalloc.
 
 - utf-8 module:
     - ceil/floor.

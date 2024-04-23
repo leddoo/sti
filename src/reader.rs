@@ -13,20 +13,20 @@ pub struct Reader<'a, T> {
 }
 
 impl<'a, T> Reader<'a, T> {
-    #[inline(always)]
+    #[inline]
     pub fn new(data: &'a [T]) -> Self {
         Reader { start: data.as_ptr(), remaining: data }
     }
 
 
     /// number of values in original slice.
-    #[inline(always)]
+    #[inline]
     pub fn original_len(&self) -> usize {
         self.consumed() + self.remaining()
     }
 
     /// returns the original slice, that was passed to `new`.
-    #[inline(always)]
+    #[inline]
     pub fn original_slice(&self) -> &'a [T] {
         unsafe {
             core::slice::from_raw_parts(
@@ -38,7 +38,7 @@ impl<'a, T> Reader<'a, T> {
     /// returns the consumed slice.
     ///
     /// - same as `&original_slice[..offset]`
-    #[inline(always)]
+    #[inline]
     pub fn consumed_slice(&self) -> &'a [T] {
         unsafe {
             core::slice::from_raw_parts(
@@ -57,7 +57,7 @@ impl<'a, T> Reader<'a, T> {
     }
 
     /// returns the current offset from the start of the `original_slice`.
-    #[inline(always)]
+    #[inline]
     pub fn offset(&self) -> usize {
         unsafe { self.remaining.as_ptr().offset_from(self.start) as usize }
     }
@@ -66,7 +66,7 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// # panics
     /// - if `new_offset > self.original_len()`.
-    #[inline(always)]
+    #[inline]
     pub fn set_offset(&mut self, new_offset: usize) {
         self.remaining = &self.original_slice()[new_offset..];
     }
@@ -111,7 +111,7 @@ impl<'a, T> Reader<'a, T> {
     }
 
     /// next `n` elements.
-    #[inline(always)]
+    #[inline]
     pub fn peek_n(&self, n: usize) -> Option<&'a [T]> {
         if n <= self.remaining.len() {
             return Some(&self.remaining[..n]);
@@ -122,8 +122,8 @@ impl<'a, T> Reader<'a, T> {
 
 
     /// reference to next element and advance offset.
-    #[inline(always)]
     #[must_use]
+    #[inline]
     pub fn next_ref(&mut self) -> Option<&'a T> {
         let result = self.remaining.get(0);
         if result.is_some() {
@@ -133,15 +133,15 @@ impl<'a, T> Reader<'a, T> {
     }
 
     /// value of next element and advance offset.
-    #[inline(always)]
     #[must_use]
+    #[inline(always)]
     pub fn next(&mut self) -> Option<T>  where T: Copy {
         self.next_ref().copied()
     }
 
     /// next `n` elements and advance offset.
-    #[inline(always)]
     #[must_use]
+    #[inline]
     pub fn next_n(&mut self, n: usize) -> Option<&'a [T]> {
         if n <= self.remaining.len() {
             let result = &self.remaining[..n];
@@ -152,7 +152,7 @@ impl<'a, T> Reader<'a, T> {
     }
 
     /// reference to next element and advance offset, if predicate true.
-    #[inline(always)]
+    #[inline]
     pub fn next_ref_if<F: FnOnce(&T) -> bool>(&mut self, f: F) -> Option<&'a T> {
         if let Some(at) = self.remaining.get(0) {
             if f(at) {
@@ -175,7 +175,7 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// # panics
     /// - if there are fewer than `n` elements remaining.
-    #[inline(always)]
+    #[inline]
     pub fn consume(&mut self, n: usize) {
         self.remaining = &self.remaining[n..];
     }
@@ -184,7 +184,7 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// - returns `true`, if the predicate returned true.
     /// - returns `false` otherwise, or if no input was left.
-    #[inline(always)]
+    #[inline]
     pub fn consume_if<F: FnOnce(&T) -> bool>(&mut self, f: F) -> bool {
         self.next_ref_if(f).is_some()
     }
@@ -193,7 +193,7 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// - returns `true`, if the next element was equal.
     /// - returns `false` otherwise, or if no input was left.
-    #[inline(always)]
+    #[inline]
     pub fn consume_if_eq(&mut self, v: &T) -> bool  where T: PartialEq {
         self.next_ref_if(|at| at == v).is_some()
     }
@@ -202,7 +202,7 @@ impl<'a, T> Reader<'a, T> {
     ///
     /// - returns a bool `no_eoi`, that's `false`, if the end of input was reached
     ///   before the predicate returned `false`.
-    #[inline(always)]
+    #[inline]
     pub fn consume_while<F: FnMut(&T) -> bool>(&mut self, mut f: F) -> bool {
         while let Some(at) = self.remaining.get(0) {
             if f(at) { self.consume(1); }
@@ -218,7 +218,7 @@ impl<'a, T> Reader<'a, T> {
     /// - returns a bool `no_eoi`, that's `false`, if the end of input was reached
     ///   before the predicate returned `false`. (same as `consume_while`)
     /// - useful for parsing strings.
-    #[inline(always)]
+    #[inline]
     pub fn consume_while_slice<F: FnMut(&T) -> bool>(&mut self, f: F) -> (&'a [T], bool) {
         let offset = self.offset();
         self.consume_while_slice_from(offset, f)
@@ -233,7 +233,7 @@ impl<'a, T> Reader<'a, T> {
     /// - elements from the specified `from_offset` to the (initial) current offset are
     ///   included in the slice, without being passed to the predicate.
     /// - useful for parsing strings & identifiers.
-    #[inline(always)]
+    #[inline]
     pub fn consume_while_slice_from<F: FnMut(&T) -> bool>(&mut self, from_offset: usize, f: F) -> (&'a [T], bool) {
         assert!(from_offset <= self.offset());
 
@@ -245,15 +245,15 @@ impl<'a, T> Reader<'a, T> {
 
 
 impl<'a, T: Copy> Reader<'a, T> {
-    #[inline(always)]
     #[must_use]
+    #[inline]
     pub fn next_array<const N: usize>(&mut self) -> Option<[T; N]> {
         let slice = self.next_n(N)?;
         Some(slice.try_into().expect("unreachable"))
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn expect(&mut self, value: T) -> Result<(), ()>  where T: PartialEq {
         if let Some(at) = self.peek() {
             if at == value {
@@ -264,7 +264,7 @@ impl<'a, T: Copy> Reader<'a, T> {
         return Err(());
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn expect_n(&mut self, values: &[T]) -> Result<(), ()>  where T: PartialEq {
         if self.len() < values.len() {
             return Err(());

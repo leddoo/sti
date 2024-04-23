@@ -23,13 +23,13 @@ pub type HashMapF<K, V, F, A = GlobalAlloc> = HashMap<K, V, DefaultHashFnSeed<F>
 
 impl<K: Hash + Eq, V> HashMap<K, V, DefaultSeed, GlobalAlloc> {
     /// construct with default seed in `GlobalAlloc`.
-    #[inline(always)]
+    #[inline]
     pub fn new() -> Self {
         Self { inner: RawHashMap::new(DefaultSeed::new(), GlobalAlloc) }
     }
 
     /// construct with capacity, with default seed in `GlobalAlloc`.
-    #[inline(always)]
+    #[inline]
     pub fn with_cap(cap: usize) -> Self {
         Self { inner: RawHashMap::with_cap(cap, DefaultSeed::new(), GlobalAlloc) }
     }
@@ -37,13 +37,13 @@ impl<K: Hash + Eq, V> HashMap<K, V, DefaultSeed, GlobalAlloc> {
 
 impl<K: Hash + Eq, V, A: Alloc> HashMap<K, V, DefaultSeed, A> {
     /// construct with default seed in `alloc`.
-    #[inline(always)]
+    #[inline]
     pub fn new_in(alloc: A) -> Self {
         Self { inner: RawHashMap::new(DefaultSeed::new(), alloc) }
     }
 
     /// construct with capacity, with default seed in `alloc`.
-    #[inline(always)]
+    #[inline]
     pub fn with_cap_in(alloc: A, cap: usize) -> Self {
         Self { inner: RawHashMap::with_cap(cap, DefaultSeed::new(), alloc) }
     }
@@ -51,25 +51,25 @@ impl<K: Hash + Eq, V, A: Alloc> HashMap<K, V, DefaultSeed, A> {
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMap<K, V, S, GlobalAlloc> {
     /// construct with default seed in `GlobalAlloc`.
-    #[inline(always)]
+    #[inline]
     pub fn fnew() -> Self where S: Default {
         Self { inner: RawHashMap::new(S::default(), GlobalAlloc) }
     }
 
     /// construct with capacity, with default seed in `GlobalAlloc`.
-    #[inline(always)]
+    #[inline]
     pub fn fwith_cap(cap: usize) -> Self where S: Default {
         Self { inner: RawHashMap::with_cap(cap, S::default(), GlobalAlloc) }
     }
 
     /// construct with `seed` in `GlobalAlloc`.
-    #[inline(always)]
+    #[inline]
     pub fn with_seed(seed: S) -> Self {
         Self { inner: RawHashMap::new(seed, GlobalAlloc) }
     }
 
     /// construct with capacity, with `seed` in `GlobalAlloc`.
-    #[inline(always)]
+    #[inline]
     pub fn with_cap_with_seed(cap: usize, seed: S) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, GlobalAlloc) }
     }
@@ -77,25 +77,25 @@ impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>> HashMap<K, V, S, GlobalAlloc> {
 
 impl<K: Eq, V, S: HashFnSeed<K, Hash=u32>, A: Alloc> HashMap<K, V, S, A> {
     /// construct with default seed in `alloc`.
-    #[inline(always)]
+    #[inline]
     pub fn fnew_in(alloc: A) -> Self where S: Default {
         Self { inner: RawHashMap::new(S::default(), alloc) }
     }
 
     /// construct with capacity, with default seed in `alloc`.
-    #[inline(always)]
+    #[inline]
     pub fn fwith_cap_in(alloc: A, cap: usize) -> Self where S: Default {
         Self { inner: RawHashMap::with_cap(cap, S::default(), alloc) }
     }
 
     /// construct with `seed` in `alloc`.
-    #[inline(always)]
+    #[inline]
     pub fn with_seed_in(alloc: A, seed: S) -> Self {
         Self { inner: RawHashMap::new(seed, alloc) }
     }
 
     /// construct with capacity, with `seed` in `alloc`.
-    #[inline(always)]
+    #[inline]
     pub fn with_cap_with_seed_in(alloc: A, cap: usize, seed: S) -> Self {
         Self { inner: RawHashMap::with_cap(cap, seed, alloc) }
     }
