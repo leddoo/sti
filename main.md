@@ -1,7 +1,5 @@
 
 - todo:
-    - what about the float module?
-    - move `ceil_to_multiple_pow2` into an extension trait.
     - spinlock slow path with yield.
     - simp key:
         - only from/to usize.

@@ -9,6 +9,7 @@
 - bring back `prelude`.
 - add `Box::{into, from}_raw_parts_in`.
 - add `unsize_box!`, `unsize_rc!`.
+- deprecate `float` module for now.
 
 0.4.0:
 - arena pool rework:

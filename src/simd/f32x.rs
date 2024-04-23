@@ -1,3 +1,4 @@
+#[allow(deprecated)]
 use crate::float::F32Ext;
 use super::*;
 
@@ -137,6 +138,7 @@ impl<const N: usize> F32x<N> where (): SimdLanes<N> {
 
     #[inline(always)]
     pub fn length(self) -> f32 {
+        #[allow(deprecated)]
         self.length_sq().fsqrt()
     }
 

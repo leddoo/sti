@@ -8,6 +8,9 @@ pub mod borrow;
 pub mod mem;
 
 pub mod simd;
+// @todo: what should we do with this?
+//  maybe move it into `num`.
+#[deprecated]
 pub mod float;
 pub mod bit;
 pub mod reader;
