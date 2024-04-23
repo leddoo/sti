@@ -12,12 +12,10 @@ pub use gen_vec::*;
 
 
 pub trait Key: Copy + PartialEq + PartialOrd {
+    /// the reserved value.
+    /// `Key` assumes valid keys are less than `LIMIT`.
+    const LIMIT: usize;
     const LIMIT_SELF: Self;
-    const LIMIT:      usize;
-
-    const ZERO: Self;
-    const MAX: Self;
-
 
     fn from_usize_unck(value: usize) -> Self;
 
@@ -28,40 +26,6 @@ pub trait Key: Copy + PartialEq + PartialOrd {
     fn from_usize(value: usize) -> Option<Self> {
         if value < Self::LIMIT { Some(Self::from_usize_unck(value)) }
         else { None }
-    }
-
-    #[inline]
-    fn sub_unck(self, other: Self) -> usize {
-        self.usize() - other.usize()
-    }
-
-    #[inline]
-    fn sub(self, other: Self) -> Option<usize> {
-        self.usize().checked_sub(other.usize())
-    }
-
-    #[inline]
-    fn add_unck(self, offset: usize) -> Self {
-        Self::from_usize_unck(self.usize() + offset)
-    }
-
-    #[inline]
-    fn add(self, offset: usize) -> Option<Self> {
-        Self::from_usize(self.usize().checked_add(offset)?)
-    }
-
-    #[inline]
-    fn max(self, other: Self) -> Self {
-        if self.usize() >= other.usize() { self  }
-        else                             { other }
-    }
-
-
-    #[inline]
-    fn next(&mut self) -> Option<Self> {
-        let result = *self;
-        *self = self.add(1)?;
-        return Some(result);
     }
 }
 
@@ -78,10 +42,8 @@ macro_rules! define_key_basic {
         #[repr(transparent)]
         $name_vis struct $name($ty);
 
+        #[allow(dead_code)]
         impl $name {
-            pub const ZERO: Self = Self(0);
-            pub const MAX:  Self = Self(<$ty>::MAX - 1);
-
             #[inline(always)]
             pub const fn new_unck(value: $ty) -> Self { Self(value) }
 
@@ -103,11 +65,8 @@ macro_rules! define_key_basic {
         }
 
         impl $crate::keyed::Key for $name {
-            const LIMIT_SELF: Self = Self(<$ty>::MAX);
             const LIMIT: usize = <$ty>::MAX as usize;
-
-            const ZERO: Self = Self::ZERO;
-            const MAX:  Self = Self::MAX;
+            const LIMIT_SELF: Self = Self(<$ty>::MAX);
 
             #[inline(always)]
             fn from_usize_unck(value: usize) -> Self {
@@ -173,5 +132,43 @@ macro_rules! define_key {
             }
         )?
     };
+}
+
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn basic() {
+        use super::{Key, KVec};
+
+        crate::define_key!(u32, Id);
+
+        let mut vs: KVec<Id, i32> = KVec::new();
+        let k1 = vs.push(42);
+        let k2 = vs.push(69);
+
+        assert_eq!(k1.usize(), 0);
+        assert_eq!(k2.usize(), 1);
+        assert_eq!(vs[k1], 42);
+        assert_eq!(vs[k2], 69);
+
+        let mut r = vs.range();
+        assert_eq!(r.len(), 2);
+        assert_eq!(r.idx(0), k1);
+        assert_eq!(r.idx(1), k2);
+        assert_eq!(r.rev(0), k2);
+        assert_eq!(r.rev(1), k1);
+
+        assert_eq!(r.next(), Some(k1));
+        assert_eq!(r.len(), 1);
+        assert_eq!(r.idx(0), k2);
+        assert_eq!(r.rev(0), k2);
+
+        assert_eq!(r.next(), Some(k2));
+        assert_eq!(r.len(), 0);
+
+        assert_eq!(r.next(), None);
+        assert_eq!(r.len(), 0);
+    }
 }
 

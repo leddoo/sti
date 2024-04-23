@@ -1,9 +1,6 @@
 
 - todo:
     - spinlock slow path with yield.
-    - simp key:
-        - only from/to usize.
-        - don't make ZERO/MAX pub on impl.
     - update readme.
     - push to crates.io.
 

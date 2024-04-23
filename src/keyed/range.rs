@@ -8,8 +8,6 @@ pub struct KRange<K: Key> {
 }
 
 impl<K: Key> KRange<K> {
-    pub const ZERO: Self = Self { begin: K::ZERO, end: K::ZERO };
-
     #[inline]
     pub fn new_unck(begin: K, end: K) -> KRange<K> {
         debug_assert!(begin.usize() <= end.usize());
@@ -20,7 +18,7 @@ impl<K: Key> KRange<K> {
     pub fn new(begin: K, end: K) -> KRange<K> {
         KRange {
             begin,
-            end: end.max(begin),
+            end: max(begin, end),
         }
     }
 
@@ -32,7 +30,7 @@ impl<K: Key> KRange<K> {
     #[inline]
     pub fn from_key(k: K) -> KRange<K> {
         debug_assert!(K::from_usize(k.usize() + 1).is_some());
-        KRange { begin: k, end: K::from_usize_unck(k.usize() + 1) }
+        KRange { begin: k, end: add(k, 1) }
     }
 
 
@@ -44,7 +42,7 @@ impl<K: Key> KRange<K> {
     #[inline]
     pub fn set_begin(&mut self, new_begin: K) {
         self.begin = new_begin;
-        self.end   = self.end.max(new_begin);
+        self.end   = max(new_begin, self.end);
     }
 
 
@@ -55,20 +53,20 @@ impl<K: Key> KRange<K> {
 
     #[inline]
     pub fn set_end(&mut self, new_end: K) {
-        self.end = new_end.max(self.begin);
+        self.end = max(self.begin, new_end);
     }
 
 
     #[inline(always)]
     pub fn len(self) -> usize {
-        self.end.sub_unck(self.begin)
+        self.end.usize() - self.begin.usize()
     }
 
 
     #[inline]
     pub fn try_idx(self, i: usize) -> Option<K> {
         if i < self.len() {
-            return Some(self.begin.add_unck(i));
+            return Some(add(self.begin, i));
         }
         None
     }
@@ -93,7 +91,7 @@ impl<K: Key> KRange<K> {
     pub fn try_rev(self, i: usize) -> Option<K> {
         if i < self.len() {
             let r = (self.len() - 1) - i;
-            return Some(self.begin.add_unck(r));
+            return Some(add(self.begin, r));
         }
         None
     }
@@ -120,6 +118,16 @@ impl<K: Key> KRange<K> {
     }
 }
 
+#[inline]
+fn max<K: Key>(a: K, b: K) -> K {
+    K::from_usize_unck(a.usize().max(b.usize()))
+}
+
+#[inline]
+fn add<K: Key>(k: K, i: usize) -> K {
+    K::from_usize_unck(k.usize() + i)
+}
+
 
 impl<K: Key + core::fmt::Debug> core::fmt::Debug for KRange<K> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -135,7 +143,7 @@ impl<K: Key> Iterator for KRange<K> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.len() > 0 {
             let result = self.begin;
-            self.begin = self.begin.add_unck(1);
+            self.begin = add(self.begin, 1);
             return Some(result);
         }
         None
@@ -144,8 +152,8 @@ impl<K: Key> Iterator for KRange<K> {
     #[inline]
     fn nth(&mut self, i: usize) -> Option<Self::Item> {
         if i < self.len() {
-            let result = self.begin.add_unck(i);
-            self.begin = result.add_unck(1);
+            let result = add(self.begin, i);
+            self.begin = add(result, 1);
             return Some(result);
         }
         None
