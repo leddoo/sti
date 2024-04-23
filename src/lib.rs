@@ -131,6 +131,23 @@ macro_rules! enclose {
 }
 
 
+#[macro_export]
+macro_rules! unsize_box {
+    ($x:expr) => {{
+        let (ptr, alloc) = $x.into_raw_parts_in();
+        unsafe { $crate::boks::Box::from_raw_parts_in(ptr, alloc) }
+    }};
+}
+
+#[macro_export]
+macro_rules! unsize_rc {
+    ($x:expr) => {{
+        let ptr = $x.into_raw_parts();
+        unsafe { $crate::rc::Rc::from_raw_parts(ptr) }
+    }};
+}
+
+
 #[cfg(test)]
 mod tests {
     static_assert!(true);
@@ -177,6 +194,19 @@ mod tests {
         assert_eq!(foo.get(), 42);
         drop(f);
         assert_eq!(foo.ref_count(), 1);
+    }
+
+    #[test]
+    fn unsize() {
+        use crate::prelude::{Box, Rc};
+
+        let foo: Box<i32> = Box::new(42);
+        let foo: Box<dyn core::fmt::Debug> = crate::unsize_box!(foo);
+        assert_eq!(format!("{:?}", foo), "42".into());
+
+        let bar: Rc<i32> = Rc::new(69);
+        let bar: Rc<dyn core::fmt::Debug> = crate::unsize_rc!(bar);
+        assert_eq!(format!("{:?}", bar), "69".into());
     }
 }
 

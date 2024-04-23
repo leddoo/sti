@@ -38,12 +38,13 @@ impl<T, A: Alloc> Rc<T, A> {
 
 impl<T: ?Sized, A: Alloc> Rc<T, A> {
     #[inline]
-    pub fn into_inner(self) -> NonNull<RcInner<T, A>> {
-        self.inner
+    pub fn into_raw_parts(self) -> NonNull<RcInner<T, A>> {
+        let this = crate::mem::ManuallyDrop::new(self);
+        return this.inner;
     }
 
     #[inline]
-    pub unsafe fn from_inner(inner: NonNull<RcInner<T, A>>) -> Self {
+    pub unsafe fn from_raw_parts(inner: NonNull<RcInner<T, A>>) -> Self {
         Self { inner }
     }
 
@@ -143,6 +144,13 @@ impl<T: ?Sized, A: Alloc> core::borrow::Borrow<T> for Rc<T, A> {
     #[inline(always)]
     fn borrow(&self) -> &T {
         &*self
+    }
+}
+
+
+impl<T: ?Sized + core::fmt::Debug, A: Alloc> core::fmt::Debug for Rc<T, A> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        (&**self).fmt(f)
     }
 }
 

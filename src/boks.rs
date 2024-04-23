@@ -77,8 +77,8 @@ impl<T: ?Sized, A: Alloc> Box<T, A> {
     ///   must be the active layout.
     /// - `value` must be valid at `T`.
     #[inline]
-    pub unsafe fn from_raw_parts_in(value: NonNull<T>, alloc: A) -> Self {
-        Self { value, alloc }
+    pub unsafe fn from_raw_parts_in(ptr: NonNull<T>, alloc: A) -> Self {
+        Self { value: ptr, alloc }
     }
 
     /// - this does not drop the allocator.
@@ -113,6 +113,13 @@ impl<T: ?Sized, A: Alloc> Drop for Box<T, A> {
     #[inline]
     fn drop(&mut self) {
         unsafe { drop_and_free(&self.alloc, self.value) }
+    }
+}
+
+
+impl<T: ?Sized + core::fmt::Debug, A: Alloc> core::fmt::Debug for Box<T, A> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        (&**self).fmt(f)
     }
 }
 

@@ -1,7 +1,5 @@
 
 - todo:
-    - rc from/into raw parts in.
-    - `unsize_box!()`, `unsize_rc!()`.
     - what about the float module?
     - move `ceil_to_multiple_pow2` into an extension trait.
     - spinlock slow path with yield.

@@ -283,7 +283,10 @@ mod tests {
         const READERS: u32 = 10; // more!
         const WRITERS: u32 = 1; // currently broken for multiple writers
                                 // cause writer intention is "weak".
+        #[cfg(not(miri))]
         const ITERS: u32 = 50;
+        #[cfg(miri)]
+        const ITERS: u32 = 10;
 
         fn reader(num_readers: &AtomicU32, num_writers: &AtomicU32, lock: &RwSpinLock<u32>) {
             let mut prev = 0;
