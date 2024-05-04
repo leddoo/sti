@@ -18,6 +18,8 @@
     - remove spin locks.
     - fix rwspinlock sync impl.
     - mimalloc for real this time.
+    - nonblocking file io?
+    - stdio.
     - docs:
         - give examples for kvec & arena.
         - fix `enclose!` docs.

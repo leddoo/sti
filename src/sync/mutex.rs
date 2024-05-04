@@ -60,4 +60,11 @@ impl<'a, T: ?Sized> core::ops::Deref for Guard<'a, T> {
     }
 }
 
+impl<'a, T: ?Sized> core::ops::DerefMut for Guard<'a, T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.deref_mut()
+    }
+}
+
 
