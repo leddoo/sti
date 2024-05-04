@@ -1,3 +1,7 @@
+0.6.0:
+- add `sync::{arc, mutex, rwlock, condvar}`.
+- add `unsize_arc!`.
+
 0.5.0:
 - remove `ManualVec`.
 - remove `OrdUtils`.

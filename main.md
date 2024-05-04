@@ -1,4 +1,26 @@
 
+- todo:
+    - add missing `PhantomData`s for dropck.
+    - box as ptr.
+    - s/boks/boxed.
+    - s/raw parts/raw.
+    - rc from/into raw, hide inner.
+    - rc s/try mut/get mut.
+    - custom arc impl.
+    - custom lock impls.
+        - based on platform futex & spin locks.
+        - rwlock `write_with_attitude`, `write_timid`.
+        - should we just expose `Futex` instead of `Mutex`?
+          not sure we really need 2 locks for condvar use cases.
+          i mean, we could expose futex and condvar. then we can still
+          support non-futex platforms, in theory.
+        - panic abort in guards.
+    - remove spin locks.
+    - fix rwspinlock sync impl.
+    - mimalloc for real this time.
+    - docs:
+        - give examples for kvec & arena.
+        - fix `enclose!` docs.
 
 
 ### backlog:
@@ -11,6 +33,8 @@
     - how to use them correctly.
 
 - arena:
+    - remove max align.
+    - vm alloc.
     - large allocations -> globalalloc.
     - stats isize, sub, include total used.
     - test temp arena overflow case.

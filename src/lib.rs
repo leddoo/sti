@@ -150,6 +150,14 @@ macro_rules! unsize_rc {
     }};
 }
 
+#[macro_export]
+macro_rules! unsize_arc {
+    ($x:expr) => {{
+        let ptr = $x.into_raw();
+        unsafe { $crate::sync::Arc::from_raw(ptr) }
+    }};
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -202,14 +210,25 @@ mod tests {
     #[test]
     fn unsize() {
         use crate::prelude::{Box, Rc};
+        use crate::sync::Arc;
 
-        let foo: Box<i32> = Box::new(42);
-        let foo: Box<dyn core::fmt::Debug> = crate::unsize_box!(foo);
-        assert_eq!(format!("{:?}", foo), "42".into());
+        {
+            let foo: Box<i32> = Box::new(42);
+            let foo: Box<dyn core::fmt::Debug> = crate::unsize_box!(foo);
+            assert_eq!(format!("{:?}", foo), "42".into());
+        }
 
-        let bar: Rc<i32> = Rc::new(69);
-        let bar: Rc<dyn core::fmt::Debug> = crate::unsize_rc!(bar);
-        assert_eq!(format!("{:?}", bar), "69".into());
+        {
+            let foo: Rc<i32> = Rc::new(69);
+            let foo: Rc<dyn core::fmt::Debug> = crate::unsize_rc!(foo);
+            assert_eq!(format!("{:?}", foo), "69".into());
+        }
+
+        {
+            let foo: Arc<i32> = Arc::new(69);
+            let foo: Arc<dyn core::fmt::Debug> = crate::unsize_arc!(foo);
+            assert_eq!(format!("{:?}", foo), "69".into());
+        }
     }
 }
 
