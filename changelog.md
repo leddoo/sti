@@ -1,6 +1,7 @@
 0.6.0:
 - add `sync::{arc, mutex, rwlock, condvar}`.
 - add `unsize_arc!`.
+- add `Box::into_inner`.
 
 0.5.0:
 - remove `ManualVec`.

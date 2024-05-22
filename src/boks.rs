@@ -12,6 +12,12 @@ impl<T> Box<T, GlobalAlloc> {
     pub fn new(value: T) -> Self {
         Box::new_in(GlobalAlloc, value)
     }
+
+    #[inline]
+    pub fn into_inner(self) -> T {
+        let this = core::mem::ManuallyDrop::new(self);
+        return unsafe { this.value.as_ptr().read() };
+    }
 }
 
 impl<T: ?Sized> Box<T, GlobalAlloc> {
