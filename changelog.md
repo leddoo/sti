@@ -2,6 +2,8 @@
 - add `sync::{arc, mutex, rwlock, condvar}`.
 - add `unsize_arc!`.
 - add `Box::into_inner`.
+- add `future`.
+- add re-exports for `core::{slice, ops, fmt, pin, str}`.
 
 0.5.0:
 - remove `ManualVec`.

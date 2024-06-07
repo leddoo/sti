@@ -27,8 +27,15 @@ pub mod hash;
 pub mod static_vec;
 
 pub mod sync;
+pub mod future;
+
+pub use core::slice;
+pub use core::ops;
+pub use core::fmt;
+pub use core::pin;
 
 pub mod utf8;
+pub use core::str;
 pub mod string;
 
 pub mod packed_option;
