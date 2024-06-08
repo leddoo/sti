@@ -42,23 +42,23 @@ const fn arc_waker_vtable<W: ArcWake>() -> &'static RawWakerVTable {
     &RawWakerVTable::new(
         // clone.
         |this| {
-            let arc = ManuallyDrop::new(unsafe { Arc::from_raw(this.cast::<W>()) });
+            let arc = ManuallyDrop::new(unsafe { Arc::from_raw_ptr(this.cast::<W>()) });
             let _clone = ManuallyDrop::new((&*arc).clone());
             return RawWaker::new(this, arc_waker_vtable::<W>())
         },
         // wake.
         |this| {
-            let arc = unsafe { Arc::from_raw(this.cast::<W>()) };
+            let arc = unsafe { Arc::from_raw_ptr(this.cast::<W>()) };
             ArcWake::wake(arc);
         },
         // wake_by_ref.
         |this| {
-            let arc = ManuallyDrop::new(unsafe { Arc::from_raw(this.cast::<W>()) });
+            let arc = ManuallyDrop::new(unsafe { Arc::from_raw_ptr(this.cast::<W>()) });
             ArcWake::wake_by_ref(&arc);
         },
         // drop.
         |this| {
-            drop(unsafe { Arc::from_raw(this.cast::<W>()) });
+            drop(unsafe { Arc::from_raw_ptr(this.cast::<W>()) });
         })
 }
 

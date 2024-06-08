@@ -1,3 +1,5 @@
+use crate::mem::NonNull;
+
 
 pub struct Arc<T: ?Sized> {
     inner: std::sync::Arc<T>,
@@ -27,13 +29,18 @@ impl<T: ?Sized> Arc<T> {
     }
 
     #[inline]
-    pub fn into_raw(self) -> *const T {
-        std::sync::Arc::into_raw(self.inner)
+    pub fn into_raw(self) -> NonNull<T> {
+        unsafe { NonNull::new_unchecked(std::sync::Arc::into_raw(self.inner) as *mut T) }
     }
 
     #[inline]
-    pub unsafe fn from_raw(ptr: *const T) -> Arc<T> {
-        unsafe { Arc { inner: std::sync::Arc::from_raw(ptr) } }
+    pub unsafe fn from_raw(ptr: NonNull<T>) -> Arc<T> {
+        unsafe { Arc { inner: std::sync::Arc::from_raw(ptr.as_ptr()) } }
+    }
+
+    #[inline]
+    pub unsafe fn from_raw_ptr(ptr: *const T) -> Arc<T> {
+        unsafe { Self::from_raw(NonNull::new_unchecked(ptr as *mut T)) }
     }
 
 
