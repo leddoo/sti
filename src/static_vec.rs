@@ -63,7 +63,7 @@ impl<T, const N: usize> StaticVec<T, N> {
     pub fn as_slice_mut(&mut self) -> &mut [T] {
         unsafe {
             core::slice::from_raw_parts_mut(
-                self.values.as_ptr() as *mut T,
+                self.values.as_mut_ptr() as *mut T,
                 self.len)
         }
     }
@@ -72,10 +72,7 @@ impl<T, const N: usize> StaticVec<T, N> {
 impl<T, const N: usize> Drop for StaticVec<T, N> {
     #[inline]
     fn drop(&mut self) {
-        unsafe {
-            let slice = self.as_slice_mut();
-            core::ptr::drop_in_place(slice);
-        }
+        unsafe { core::ptr::drop_in_place(self.as_slice_mut()) }
     }
 }
 
