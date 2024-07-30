@@ -76,7 +76,7 @@ impl<A: Alloc> String<A> {
 
     #[inline]
     pub fn push_char(&mut self, c: char) {
-        if (c as u32) < 256 {
+        if (c as u32) < 128 {
             self.buffer.push(c as u8)
         }
         else {
