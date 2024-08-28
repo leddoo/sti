@@ -1,3 +1,7 @@
+0.7.0:
+- add `fmt!`.
+- make `write!` use `core::fmt::Write` directly, so `use`ing `Write` is no longer necessary.
+
 0.6.0:
 - add `sync::{arc, mutex, rwlock, condvar}`.
 - add `unsize_arc!`.

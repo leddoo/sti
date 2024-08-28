@@ -31,6 +31,7 @@ pub mod future;
 
 pub use core::slice;
 pub use core::ops;
+pub use core::cmp;
 pub use core::fmt;
 pub use core::pin;
 
@@ -69,10 +70,17 @@ macro_rules! static_assert_ne {
 }
 
 #[macro_export]
+macro_rules! fmt {
+    ($($arg:tt)*) => {
+        ::core::format_args!($($arg)*)
+    }
+}
+
+#[macro_export]
 macro_rules! write {
-    ($dst:expr, $($arg:tt)*) => {
-        { let _ = ::core::write!($dst, $($arg)*); }
-    };
+    ($dst:expr, $($arg:tt)*) => {{
+        _ = ::core::fmt::Write::write_fmt($dst, ::core::format_args!($($arg)*));
+    }};
 }
 
 #[macro_export]
@@ -171,6 +179,18 @@ mod tests {
     static_assert!(true);
     static_assert_eq!(33 + 36, 69);
     static_assert_ne!(0, 1);
+
+    #[test]
+    fn fmt() {
+        assert_eq!(&*std::format!("{}", crate::fmt!("<{:?}>", 0.5)), "<0.5>");
+    }
+
+    #[test]
+    fn write() {
+        let mut buf = std::string::String::new();
+        crate::write!(&mut buf, "hey");
+        assert_eq!(buf, "hey");
+    }
 
     #[test]
     fn erase() {

@@ -1,6 +1,15 @@
 
 - todo:
     - add missing `PhantomData`s for dropck.
+    - simple fmt replacement.
+        - without result. (impls can set error flag & ignore)
+        - with stack buffer for speed.
+        - `write!` equiv just generates inline code that does what the fmt string says.
+        - would like ability to nest.
+            - eg in `s.push_fmt(fmt!("hey {}", ",".join(foo.map(|_| { ...; fmt!(...) }))))`,
+              `map` can't return a `fmt!` referencing locals.
+            - unclear how you'd make that work.
+            - maybe by putting all the logic into the `write` macro.
     - box as ptr.
     - s/boks/boxed.
     - s/raw parts/raw.

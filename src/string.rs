@@ -69,7 +69,7 @@ impl<A: Alloc> String<A> {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn push(&mut self, s: &str) {
         self.buffer.extend_from_slice(s.as_bytes())
     }
@@ -83,6 +83,11 @@ impl<A: Alloc> String<A> {
             self.buffer.extend_from_slice(
                 c.encode_utf8(&mut [0; 4]).as_bytes())
         }
+    }
+
+    #[inline]
+    pub fn push_fmt(&mut self, args: core::fmt::Arguments) {
+        _ = core::fmt::Write::write_fmt(self, args);
     }
 
 
