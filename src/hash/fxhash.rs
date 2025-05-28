@@ -1,6 +1,5 @@
-use crate::hash::HashFn;
-use core::hash::{Hash, Hasher};
-use core::ops::BitXor;
+use crate::hash::{Hash, Hasher, HashFn};
+use crate::ops::BitXor;
 
 
 const ROL: u32 = 5;
@@ -66,7 +65,6 @@ impl FxHasher32 {
 
 
     pub fn write_bytes(&mut self, mut bytes: &[u8]) {
-        // llvm can be a bit silly with pointers.
         let mut hash = self.hash;
 
         while bytes.len() >= 4 {
@@ -96,35 +94,7 @@ impl FxHasher32 {
 
         self.hash = hash;
     }
-
-    #[inline]
-    pub fn hash_bytes(bytes: &[u8]) -> u32 {
-        let mut hasher = Self::new();
-        hasher.write_bytes(bytes);
-        return hasher.finish_u32();
-    }
 }
-
-impl Default for FxHasher32 {
-    #[inline(always)]
-    fn default() -> Self { Self::new() }
-}
-
-
-impl<T: Hash + ?Sized> HashFn<T> for FxHasher32 {
-    type Seed = u32;
-    type Hash = u32;
-
-    const DEFAULT_SEED: u32 = INI32;
-
-    #[inline]
-    fn hash_with_seed(seed: u32, value: &T) -> u32 {
-        let mut hasher = Self::from_seed(seed);
-        value.hash(&mut hasher);
-        hasher.hash
-    }
-}
-
 
 impl Hasher for FxHasher32 {
     #[inline(always)]
@@ -242,35 +212,7 @@ impl FxHasher64 {
 
         self.hash = hash;
     }
-
-    #[inline]
-    pub fn hash_bytes(bytes: &[u8]) -> u64 {
-        let mut hasher = Self::new();
-        hasher.write_bytes(bytes);
-        return hasher.finish();
-    }
 }
-
-impl Default for FxHasher64 {
-    #[inline(always)]
-    fn default() -> Self { Self::new() }
-}
-
-
-impl<T: Hash + ?Sized> HashFn<T> for FxHasher64 {
-    type Seed = u64;
-    type Hash = u64;
-
-    const DEFAULT_SEED: u64 = INI64;
-
-    #[inline]
-    fn hash_with_seed(seed: u64, value: &T) -> u64 {
-        let mut hasher = Self::from_seed(seed);
-        value.hash(&mut hasher);
-        hasher.hash
-    }
-}
-
 
 impl Hasher for FxHasher64 {
     #[inline(always)]
@@ -319,6 +261,25 @@ impl Hasher for FxHasher64 {
     #[inline]
     fn write_usize(&mut self, i: usize) {
         self.write_u64(i as u64)
+    }
+}
+
+
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FxHashFn;
+
+impl<T: Hash + ?Sized> HashFn<T, u32> for FxHashFn {
+    #[inline(always)]
+    fn hash(&self, value: &T) -> u32 {
+        fxhash32(value)
+    }
+}
+
+impl<T: Hash + ?Sized> HashFn<T, u64> for FxHashFn {
+    #[inline(always)]
+    fn hash(&self, value: &T) -> u64 {
+        fxhash64(value)
     }
 }
 

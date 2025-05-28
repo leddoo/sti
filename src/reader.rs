@@ -281,6 +281,70 @@ impl<'a, T: Copy> Reader<'a, T> {
     }
 }
 
+impl<'a> Reader<'a, u8> {
+    #[inline]
+    pub fn next_u8_le(&mut self) -> Option<u8> {
+        self.next()
+    }
+
+    #[inline]
+    pub fn next_u8_be(&mut self) -> Option<u8> {
+        self.next()
+    }
+
+    #[inline]
+    pub fn next_u16_le(&mut self) -> Option<u16> {
+        Some(u16::from_le_bytes(self.next_array()?))
+    }
+
+    #[inline]
+    pub fn next_u16_be(&mut self) -> Option<u16> {
+        Some(u16::from_be_bytes(self.next_array()?))
+    }
+
+    #[inline]
+    pub fn next_u32_le(&mut self) -> Option<u32> {
+        Some(u32::from_le_bytes(self.next_array()?))
+    }
+
+    #[inline]
+    pub fn next_u32_be(&mut self) -> Option<u32> {
+        Some(u32::from_be_bytes(self.next_array()?))
+    }
+
+    #[inline]
+    pub fn next_u64_le(&mut self) -> Option<u64> {
+        Some(u64::from_le_bytes(self.next_array()?))
+    }
+
+    #[inline]
+    pub fn next_u64_be(&mut self) -> Option<u64> {
+        Some(u64::from_be_bytes(self.next_array()?))
+    }
+
+    #[inline]
+    pub fn next_u128_le(&mut self) -> Option<u128> {
+        Some(u128::from_le_bytes(self.next_array()?))
+    }
+
+    #[inline]
+    pub fn next_u128_be(&mut self) -> Option<u128> {
+        Some(u128::from_be_bytes(self.next_array()?))
+    }
+
+
+    #[inline]
+    pub unsafe fn next_ctype<T>(&mut self) -> Option<T> {
+        if self.len() < size_of::<T>() {
+            return None;
+        }
+
+        let result = unsafe { self.as_ptr().cast::<T>().read() };
+        self.consume(size_of::<T>());
+        return Some(result);
+    }
+}
+
 impl<'a, T> core::ops::Deref for Reader<'a, T> {
     type Target = [T];
 

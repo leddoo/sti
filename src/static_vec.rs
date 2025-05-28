@@ -1,20 +1,24 @@
 use crate::mem::MaybeUninit;
+use crate::key::Key;
+use crate::slice::KSlice;
 
 
-pub struct StaticVec<T, const N: usize> {
-    values: [MaybeUninit<T>; N],
-    len: usize,
+pub type StaticVec<V, const N: usize> = KStaticVec<usize, V, N>;
+
+pub struct KStaticVec<K: Key, V, const N: usize> {
+    values: [MaybeUninit<V>; N],
+    len: K,
 }
 
-impl<T, const N: usize> StaticVec<T, N> {
+impl<K: Key, V, const N: usize> KStaticVec<K, V, N> {
     #[inline]
     pub const fn new() -> Self {
         Self {
             values: unsafe {
                 // cf MaybeUninit::uninit_array()
-                MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init()
+                MaybeUninit::<[MaybeUninit<V>; N]>::uninit().assume_init()
             },
-            len: 0,
+            len: K::ZERO,
         }
     }
 
@@ -22,91 +26,180 @@ impl<T, const N: usize> StaticVec<T, N> {
     pub fn cap(&self) -> usize { N }
 
     #[inline(always)]
-    pub fn len(&self) -> usize { self.len }
+    pub fn len(&self) -> usize { self.len.usize() }
+
+    #[inline(always)]
+    pub fn klen(&self) -> K { self.len }
 
 
     #[inline]
-    pub fn push(&mut self, value: T) -> Result<&mut T, T> {
-        if self.len < N {
+    pub fn push(&mut self, value: V) -> Result<K, V> {
+        if self.len.usize() < N {
             return Ok(unsafe { self.push_unck(value) })
         }
-
-        Err(value)
+        else {
+            return Err(value);
+        }
     }
 
+    #[inline]
+    pub fn push_strict(&mut self, value: V) -> K {
+        if self.len.usize() < N {
+            return unsafe { self.push_unck(value) };
+        }
+        else {
+            panic!("StaticVec overflow");
+        }
+    }
 
     /// # safety:
     /// - `self.len() < self.cap()`
     #[inline]
-    pub unsafe fn push_unck(&mut self, value: T) -> &mut T {
-        debug_assert!(self.len < N);
+    pub unsafe fn push_unck(&mut self, value: V) -> K { unsafe {
+        debug_assert!(self.len.usize() < N);
 
-        let result = unsafe {
-            self.values.get_unchecked_mut(self.len)
-            .write(value)
-        };
-        self.len += 1;
+        let result = self.len;
+
+        self.values.get_unchecked_mut(self.len.usize()).write(value);
+
+        self.len = K::from_usize_unck(self.len.usize() + 1);
         return result;
+    }}
+
+
+    #[inline]
+    pub fn extend_from_slice(&mut self, values: &[V]) -> usize
+    where V: Clone {
+        let n = values.len().min(self.cap().usize() - self.len.usize());
+
+        unsafe {
+            let ptr = self.values.as_mut_ptr().add(self.len.usize());
+            for i in 0..n {
+                ptr.add(i).write(MaybeUninit::new(values[i].clone()));
+            }
+            self.len = K::from_usize_unck(self.len.usize() + n);
+        }
+
+        return n;
+    }
+
+    #[inline]
+    pub fn pop(&mut self) -> Option<V> {
+        if self.len.usize() > 0 { unsafe {
+            let last = self.len.sub(1);
+
+            let ptr = self.values.as_mut_ptr().add(last.usize());
+            let result = ptr.read().assume_init();
+
+            self.len = last;
+            return Some(result);
+        }}
+        else { None }
     }
 
 
-    #[inline(always)]
-    pub fn as_slice(&self) -> &[T] {
+    #[inline]
+    pub unsafe fn set_len(&mut self, new_len: usize) {
+        debug_assert!(new_len <= self.cap());
+        self.len = unsafe { K::from_usize_unck(new_len) };
+    }
+
+    pub fn truncate(&mut self, new_len: usize) {
+        assert!(new_len <= self.len.usize());
+        if new_len == self.len.usize() {
+            return;
+        }
+
         unsafe {
-            core::slice::from_raw_parts(
-                self.values.as_ptr() as *const T,
-                self.len)
+            let ptr = self.values.as_mut_ptr().add(new_len).cast::<V>();
+            let len = self.len.usize() - new_len;
+
+            crate::mem::drop_in_place(
+                crate::slice::from_raw_parts_mut(ptr, len));
+
+            self.len = K::from_usize_unck(new_len);
         }
     }
 
-    #[inline(always)]
-    pub fn as_slice_mut(&mut self) -> &mut [T] {
-        unsafe {
-            core::slice::from_raw_parts_mut(
-                self.values.as_mut_ptr() as *mut T,
-                self.len)
-        }
+    #[inline]
+    pub fn clear(&mut self) {
+        self.truncate(0);
     }
+
+
+    #[inline]
+    pub fn as_slice(&self) -> &[V] { unsafe {
+        crate::slice::from_raw_parts(self.values.as_ptr().cast(), self.len.usize())
+    }}
+
+    #[inline]
+    pub fn as_mut_slice(&mut self) -> &mut [V] { unsafe {
+        crate::slice::from_raw_parts_mut(self.values.as_mut_ptr().cast(), self.len.usize())
+    }}
+
+    #[inline(always)]
+    pub fn as_kslice(&self) -> &KSlice<K, V> {
+        unsafe { KSlice::new_unck(self.as_slice()) }
+    }
+
+    #[inline(always)]
+    pub fn as_mut_kslice(&mut self) -> &mut KSlice<K, V> {
+        unsafe { KSlice::new_mut_unck(self.as_mut_slice()) }
+    }
+
+    #[inline]
+    pub fn uninit_slice_mut(&mut self) -> &mut [MaybeUninit<V>] { unsafe {
+        crate::slice::from_raw_parts_mut(
+            self.values.as_mut_ptr().add(self.len().usize()), 
+            self.cap().usize() - self.len().usize())
+    }}
 }
 
-impl<T, const N: usize> Drop for StaticVec<T, N> {
+impl<K: Key, V, const N: usize> Drop for KStaticVec<K, V, N> {
     #[inline]
     fn drop(&mut self) {
-        unsafe { core::ptr::drop_in_place(self.as_slice_mut()) }
+        unsafe { crate::mem::drop_in_place(self.as_mut_slice()) }
     }
 }
 
-impl<T, const N: usize> core::ops::Deref for StaticVec<T, N> {
-    type Target = [T];
+
+impl<K: Key, V, const N: usize> crate::ops::Deref for KStaticVec<K, V, N> {
+    type Target = KSlice<K, V>;
 
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
-        self.as_slice()
+        self.as_kslice()
     }
 }
 
-impl<T, const N: usize> core::ops::DerefMut for StaticVec<T, N> {
+impl<K: Key, V, const N: usize> crate::ops::DerefMut for KStaticVec<K, V, N> {
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.as_slice_mut()
+        self.as_mut_kslice()
     }
 }
 
-impl<T, const N: usize, I> core::ops::Index<I> for StaticVec<T, N>
-where I: core::slice::SliceIndex<[T]>{
-    type Output = I::Output;
 
-    #[inline(always)]
-    fn index(&self, index: I) -> &Self::Output {
-        core::ops::Index::index(&**self, index)
+impl<K: Key + crate::fmt::Debug, V: crate::fmt::Debug, const N: usize> crate::fmt::Debug for KStaticVec<K, V, N> {
+    fn fmt(&self, f: &mut crate::fmt::Formatter) -> crate::fmt::Result {
+        self.as_kslice().fmt(f)
     }
 }
 
-impl<T, const N: usize, I> core::ops::IndexMut<I> for StaticVec<T, N>
-where I: core::slice::SliceIndex<[T]>{
-    #[inline(always)]
-    fn index_mut(&mut self, index: I) -> &mut Self::Output {
-        core::ops::IndexMut::index_mut(&mut **self, index)
+
+impl<K: Key, const N: usize> crate::fmt::Write for KStaticVec<K, u8, N> {
+    fn write_str(&mut self, s: &str) -> crate::fmt::Result {
+        if s.len() <= self.cap().usize() - self.len().usize() { unsafe {
+            crate::mem::copy_nonoverlapping(
+                s.as_ptr(),
+                self.values.as_mut_ptr().cast::<u8>().add(self.len().usize()),
+                s.len());
+
+            self.len = K::from_usize_unck(self.len().usize() + s.len());
+
+            return Ok(());
+        }}
+        else { Err(crate::fmt::Error) }
     }
 }
 

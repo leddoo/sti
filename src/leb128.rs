@@ -10,6 +10,9 @@ pub enum Leb128Error {
 type Result<T> = core::result::Result<T, Leb128Error>;
 
 
+pub const MAX_SIZE_64: usize = 10;
+
+
 const CONT: u8 = 0x80;
 const SIGN: u8 = 0x40;
 const MASK: u8 = 0x7f;
@@ -75,5 +78,4 @@ pub fn decode_u32(reader: &mut Reader<u8>) -> Result<u32> {
     decode_u64(reader)?
     .try_into().ok().ok_or(Leb128Error::Overflow)
 }
-
 

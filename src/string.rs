@@ -1,91 +1,101 @@
+use crate::fmt::Arguments;
 use crate::alloc::{Alloc, GlobalAlloc};
-use crate::vec::Vec;
-use crate::utf8;
+use crate::vec::ZVec;
 
 
-pub struct String<A: Alloc = GlobalAlloc> {
-    buffer: Vec<u8, A>,
-}
+#[derive(Clone)]
+pub struct String<A: Alloc = GlobalAlloc>(ZVec<u8, A>);
 
 impl String<GlobalAlloc> {
     #[inline(always)]
     pub fn new() -> Self {
-        String::new_in(GlobalAlloc)
+        Self::new_in(GlobalAlloc)
     }
 
     #[inline(always)]
     pub fn with_cap(cap: usize) -> Self {
-        String::with_cap_in(GlobalAlloc, cap)
+        Self::with_cap_in(GlobalAlloc, cap)
     }
 
 
     #[inline(always)]
-    pub fn from_str(value: &str) -> Self {
-        String::from_str_in(GlobalAlloc, value)
+    pub fn from_str(str: &str) -> Self {
+        Self::from_str_in(GlobalAlloc, str)
+    }
+
+    #[inline(always)]
+    pub fn from_fmt(args: Arguments) -> Self {
+        Self::from_fmt_in(GlobalAlloc, args)
     }
 }
 
 impl<A: Alloc> String<A> {
     #[inline(always)]
     pub fn new_in(alloc: A) -> Self {
-        Self { buffer: Vec::new_in(alloc) }
+        Self(ZVec::new_in(alloc))
     }
 
     #[inline(always)]
     pub fn with_cap_in(alloc: A, cap: usize) -> Self {
-        Self { buffer: Vec::with_cap_in(alloc, cap) }
+        Self(ZVec::with_cap_in(alloc, cap))
+    }
+
+
+    #[inline]
+    pub fn from_str_in(alloc: A, str: &str) -> Self {
+        Self(ZVec::from_slice_in(alloc, str.as_bytes()))
+    }
+
+    #[inline(always)]
+    pub fn from_fmt_in(alloc: A, args: Arguments) -> Self {
+        let mut this = String::new_in(alloc);
+        this.push_fmt(args);
+        return this;
     }
 
 
     #[inline(always)]
-    pub fn from_str_in(alloc: A, value: &str) -> Self {
-        Self { buffer: Vec::from_slice_in(alloc, value.as_bytes()) }
-    }
+    pub fn cap(&self) -> usize { self.0.cap() }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize { self.0.len() }
+
+    #[inline(always)]
+    pub unsafe fn inner_mut(&mut self) -> &mut ZVec<u8, A> { &mut self.0 }
 
 
     #[inline(always)]
-    pub fn len(&self) -> usize { self.buffer.len() }
-
-    #[inline(always)]
-    pub fn cap(&self) -> usize { self.buffer.cap() }
-
-    #[inline(always)]
-    pub fn alloc(&self) -> &A { self.buffer.alloc() }
-
-
-    #[inline(always)]
-    pub fn reserve(&mut self, min_cap: usize) {
-        self.buffer.reserve(min_cap);
+    pub fn as_str(&self) -> &str {
+        unsafe { crate::str::from_utf8_unchecked(self.0.as_slice()) }
     }
 
     #[inline(always)]
-    pub fn reserve_exactly(&mut self, min_cap: usize) {
-        self.buffer.reserve_exactly(min_cap);
-    }
-
-    #[inline(always)]
-    pub fn reserve_extra(&mut self, extra: usize) {
-        self.buffer.reserve_extra(extra);
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_slice()
     }
 
 
     #[inline]
     pub fn push(&mut self, s: &str) {
-        self.buffer.extend_from_slice(s.as_bytes())
+        self.0.extend_from_slice(s.as_bytes());
     }
 
     #[inline]
     pub fn push_char(&mut self, c: char) {
         if (c as u32) < 128 {
-            self.buffer.push(c as u8)
+            self.0.push(c as u8);
         }
         else {
-            self.buffer.extend_from_slice(
-                c.encode_utf8(&mut [0; 4]).as_bytes())
+            #[cold]
+            fn cold<A: Alloc>(this: &mut String<A>, c: char) {
+                this.0.extend_from_slice(
+                    c.encode_utf8(&mut [0; 4]).as_bytes());
+            }
+            cold(self, c);
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn push_fmt(&mut self, args: core::fmt::Arguments) {
         _ = core::fmt::Write::write_fmt(self, args);
     }
@@ -93,96 +103,56 @@ impl<A: Alloc> String<A> {
 
     #[inline(always)]
     pub fn clear(&mut self) {
-        self.buffer.clear();
+        self.0.clear();
     }
 
 
     #[inline(always)]
-    pub fn clone_in<A2: Alloc>(&self, alloc: A2) -> String<A2> {
-        String { buffer: self.buffer.clone_in(alloc) }
+    pub fn take(&mut self) -> Self where A: Clone {
+        Self(self.0.take())
     }
 
-    #[inline(always)]
-    pub fn leak<'a>(self) -> &'a str  where A: 'a {
-        unsafe { utf8::str_unck(self.buffer.leak()) }
-    }
-
-
-    #[inline(always)]
-    pub fn as_bytes(&self) -> &[u8] { &self.buffer }
-
-    #[inline(always)]
-    pub fn as_str(&self) -> &str {
-        unsafe { utf8::str_unck(self.buffer.as_slice()) }
-    }
-
-
-    #[inline(always)]
-    pub fn inner(&self) -> &Vec<u8, A> { &self.buffer }
-
-    #[inline(always)]
-    pub unsafe fn inner_mut(&mut self) -> &mut Vec<u8, A> { &mut self.buffer }
-
-    #[inline(always)]
-    pub fn into_inner(self) -> Vec<u8, A> { self.buffer }
-}
-
-
-impl<A: Alloc + Clone> Clone for String<A> {
-    #[inline(always)]
-    fn clone(&self) -> Self {
-        self.clone_in(self.buffer.alloc().clone())
+    #[inline]
+    pub fn leak<'a>(self) -> &'a str where A: 'a {
+        let bytes = self.0.leak();
+        unsafe { crate::str::from_utf8_unchecked(bytes) }
     }
 }
 
-
-impl<A: Alloc> core::fmt::Debug for String<A> {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl<A: Alloc> crate::fmt::Debug for String<A> {
+    fn fmt(&self, f: &mut crate::fmt::Formatter) -> crate::fmt::Result {
         self.as_str().fmt(f)
     }
 }
 
-impl<A: Alloc> core::fmt::Display for String<A> {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+impl<A: Alloc> crate::fmt::Display for String<A> {
+    fn fmt(&self, f: &mut crate::fmt::Formatter) -> crate::fmt::Result {
         self.as_str().fmt(f)
     }
 }
 
 
-impl<A: Alloc> core::borrow::Borrow<str> for String<A> {
-    #[inline(always)]
-    fn borrow(&self) -> &str { self.as_str() }
-}
-
-impl<A: Alloc> core::ops::Deref for String<A> {
+impl<A: Alloc> crate::ops::Deref for String<A> {
     type Target = str;
 
     #[inline(always)]
-    fn deref(&self) -> &Self::Target { self.as_str() }
-}
-
-
-impl<A: Alloc> core::hash::Hash for String<A> {
-    #[inline(always)]
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        self.as_str().hash(state)
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
     }
 }
 
-impl<A: Alloc> PartialEq for String<A> {
+impl<A: Alloc> crate::borrow::Borrow<str> for String<A> {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.as_str().eq(other.as_str())
+    fn borrow(&self) -> &str {
+        self.as_str()
     }
 }
 
-impl<A: Alloc> Eq for String<A> {}
 
-
-impl<A: Alloc> core::fmt::Write for String<A> {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        self.push(s);
-        Ok(())
+impl<A: Alloc + Default> Default for String<A> {
+    #[inline]
+    fn default() -> Self {
+        Self::new_in(A::default())
     }
 }
 
@@ -194,18 +164,52 @@ impl From<&str> for String<GlobalAlloc> {
     }
 }
 
-#[inline]
-pub fn format_in<A: Alloc>(alloc: A, args: core::fmt::Arguments) -> String<A> {
-    use core::fmt::Write;
 
-    let mut result = String::new_in(alloc);
-    _ = result.write_fmt(args);
-    return result;
+impl<A: Alloc> crate::cmp::PartialEq for String<A> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
+    }
 }
 
-#[inline]
-pub fn format(args: core::fmt::Arguments) -> String {
-    format_in(GlobalAlloc, args)
+impl<A: Alloc> crate::cmp::Eq for String<A> {}
+
+
+impl<A: Alloc> crate::cmp::PartialEq<&str> for String<A> {
+    #[inline]
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
 }
 
+
+impl<A: Alloc> crate::cmp::PartialOrd for String<A> {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<crate::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<A: Alloc> crate::cmp::Ord for String<A> {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> crate::cmp::Ordering {
+        self.as_str().cmp(other.as_str())
+    }
+}
+
+
+impl<A: Alloc> crate::hash::Hash for String<A> {
+    #[inline]
+    fn hash<H: crate::hash::Hasher>(&self, state: &mut H) {
+        self.as_str().hash(state)
+    }
+}
+
+
+impl<A: Alloc> crate::fmt::Write for String<A> {
+    fn write_str(&mut self, s: &str) -> crate::fmt::Result {
+        self.push(s);
+        Ok(())
+    }
+}
 

@@ -4,17 +4,21 @@ pub use core::{
     mem::{
         MaybeUninit, ManuallyDrop,
         transmute, transmute_copy,
-        take, replace, swap,
-        size_of, size_of_val, align_of,
+        take, replace, swap, forget,
+        size_of, size_of_val, align_of, offset_of,
     },
     ptr::{
         NonNull,
-        read, read_unaligned, write, write_unaligned,
         write_bytes, copy, copy_nonoverlapping,
         drop_in_place,
     },
+    pin::{Pin, pin},
 };
 
-mod ref_cell;
-pub use ref_cell::RefCell;
+
+pub unsafe fn as_bytes<T>(value: &T) -> &[u8] { unsafe {
+    crate::slice::from_raw_parts(
+        value as *const T as *const u8,
+        size_of_val(value))
+}}
 

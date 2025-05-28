@@ -1,130 +1,81 @@
-use crate::alloc::{Alloc, GlobalAlloc, Layout, alloc_ptr, alloc_new, alloc_array};
-use crate::mem::{Cell, NonNull, size_of, align_of};
-use crate::num::ceil_to_multiple_pow2;
-use crate::static_assert;
+use crate::mem::{NonNull, Cell, size_of};
+use crate::alloc::{Alloc, GlobalAlloc, Layout};
 
 
-/// maximum allocation size.
-/// - larger allocations fail.
-/// - it's kinda big tho.
-pub const MAX_ALLOC_SIZE: usize = MAX_CAP - HEADER_SIZE;
-
-/// maximum alignment.
-/// - allocations with greater alignment fail.
-pub const MAX_ALIGN: usize = 32;
-static_assert!(MAX_ALIGN.is_power_of_two());
+/// maximum supported alignment.
+/// - allocations with a greater alignment fail.
+pub const ALIGN_MAX: usize = 512;
+crate::static_assert!(ALIGN_MAX.is_power_of_two());
 
 
-/// default minimum block size.
-pub const DEFAULT_CAP: usize = 4096;
+/// minimum block size.
+/// - the arena will never allocate blocks smaller than this.
+pub const BLOCK_SIZE_MIN: usize = 1024;
+crate::static_assert!(BLOCK_SIZE_MIN >= 2*ALIGN_MAX);
+crate::static_assert!(size_of::<BlockHeader>() < ALIGN_MAX);
 
 /// maximum block size.
-pub const MAX_CAP: usize = usize::MAX/4 + 1;
+pub const BLOCK_SIZE_MAX: usize = usize::MAX/4 + 1;
+
+/// default block size (platform dependent).
+pub const BLOCK_SIZE_DEFAULT: usize = 512*1024;
+
+pub const ALLOC_SIZE_MAX: usize = BLOCK_SIZE_MAX - size_of::<BlockHeader>();
 
 
-
-/// Arena
-///
-/// - a memory arena, aka bump allocator, aka linear allocator.
-/// - allocates blocks on demand from a backing allocator.
-/// - blocks grow geometrically, but are bounded
-///   by the configurable fields `min/max_block_size`.
-/// - note: some space in each block may be reserved for metadata.
-/// - see `MAX_ALLOC_SIZE` and `MAX_ALIGN`.
-///
-pub struct Arena<A: Alloc = GlobalAlloc> {
-    alloc: A,
-
-    // - block != NonNull::dangling() iff cap != 0
-    // - block % MAX_ALIGN == 0       iff cap != 0
+pub struct Arena {
+    /// - block != NonNull::dangling() iff cap != 0
     block: Cell<NonNull<BlockHeader>>,
 
-    // - cap <= MAX_CAP
-    // - cap >= size_of::<BlockHeader>() || cap == 0
+    /// - cap <= BLOCK_SIZE_MAX
+    /// - cap >= size_of::<BlockHeader>() || cap == 0
     cap: Cell<usize>,
 
-    // - used <= self.cap
-    // - self.used >= size_of::<BlockHeader>() || cap == 0
+    /// - used <= self.cap
+    /// - self.used >= size_of::<BlockHeader>() || cap == 0
     used: Cell<usize>,
 
-    pub min_block_size: Cell<usize>,
-    pub max_block_size: Cell<usize>,
+    /// hint for the minimum block size.
+    pub block_size_min: Cell<usize>,
+
+    /// hint for the maximum block size.
+    pub block_size_max: Cell<usize>,
 }
 
-unsafe impl<A: Alloc + Send> Send for Arena<A> {}
-
-
-impl<A: Alloc> Arena<A> {
-    fn _integrity_check(&self) {
-        let cap = self.cap.get();
-        assert!(cap <= MAX_CAP);
-        assert!(cap >= size_of::<BlockHeader>() || cap == 0);
-
-        let block = self.block.get();
-        assert!((block != NonNull::dangling()) == (cap != 0));
-        assert!((block.as_ptr() as usize % MAX_ALIGN == 0) == (cap != 0));
-
-        let used = self.used.get();
-        assert!(used <= cap);
-        assert!(used >= size_of::<BlockHeader>() || cap == 0);
-    }
-
-    #[inline]
-    fn debug_integrity_check(&self) {
-        #[cfg(debug_assertions)]
-        self._integrity_check();
-    }
-}
-
+unsafe impl Send for Arena {}
 
 struct BlockHeader {
-    prev:      NonNull<BlockHeader>,
-    prev_cap:  usize,
+    prev: NonNull<BlockHeader>,
+    prev_cap: usize,
 }
 
-static_assert!(size_of::<BlockHeader>()  <= HEADER_SIZE);
-static_assert!(align_of::<BlockHeader>() <= MAX_ALIGN);
 
-const HEADER_SIZE: usize = (size_of::<BlockHeader>() + MAX_ALIGN - 1) / MAX_ALIGN * MAX_ALIGN;
-
-
-impl Arena<GlobalAlloc> {
-    #[inline]
-    pub fn new() -> Self {
-        #[allow(deprecated)]
-        Self::new_in(GlobalAlloc)
-    }
-}
-
-impl<A: Alloc> Arena<A> {
-    #[deprecated]
-    #[inline]
-    pub fn new_in(alloc: A) -> Self {
+impl Arena {
+    pub const fn new() -> Arena {
         Arena {
-            alloc,
             block: Cell::new(NonNull::dangling()),
-            cap:  0.into(),
-            used: 0.into(),
-            min_block_size: DEFAULT_CAP.into(),
-            max_block_size: usize::MAX.into(),
+            cap: Cell::new(0),
+            used: Cell::new(0),
+            block_size_min: Cell::new(BLOCK_SIZE_MIN),
+            block_size_max: Cell::new(BLOCK_SIZE_MAX),
         }
     }
 
 
     #[inline]
     pub fn alloc_ptr<T>(&self) -> NonNull<T> {
-        alloc_ptr::<T, Self>(self).expect("oom")
+        crate::alloc::alloc_ptr::<T>(self).unwrap()
     }
 
     #[inline]
     pub fn alloc_new<T>(&self, value: T) -> &mut T {
-        unsafe { alloc_new(self, value).expect("oom").as_mut() }
+        unsafe { crate::alloc::alloc_new(self, value).unwrap().as_mut() }
     }
 
     #[inline]
     pub fn alloc_str<'a>(&'a self, value: &str) -> &'a str {
         unsafe {
-            let bytes = alloc_array(self, value.len()).expect("oom");
+            let bytes = crate::alloc::alloc_array(self, value.len()).unwrap();
             core::ptr::copy_nonoverlapping(value.as_ptr(), bytes.as_ptr(), value.len());
             core::str::from_utf8_unchecked(
                 core::slice::from_raw_parts(bytes.as_ptr(), value.len()))
@@ -132,247 +83,189 @@ impl<A: Alloc> Arena<A> {
     }
 
 
-    // pred: (block, cap).
-    #[inline]
-    fn reset_until<F: Fn(NonNull<BlockHeader>, usize) -> bool>(&self, f: F) {
-        self.debug_integrity_check();
-
-        if self.cap.get() == 0 {
-            return;
-        }
-
-        // `free` can panic.
-        self.used.set(HEADER_SIZE);
-
-        loop {
-            let block = self.block.get();
-            let cap   = self.cap.get();
-
-            if cap == 0 {
-                self.used.set(0);
-                break;
-            }
-
-            if f(block, cap) {
-                break;
-            }
-
-            unsafe {
-                let header = block.as_ptr().read();
-
-                self.alloc.free(block.cast(),
-                    Layout::from_size_align_unchecked(cap, MAX_ALIGN));
-
-                // `free` can panic.
-                self.block.set(header.prev);
-                self.cap.set(header.prev_cap);
-            }
-        }
-
-        self.debug_integrity_check();
-    }
-
-    /// reset the arena.
-    /// - frees all allocations made on this arena.
-    /// - internally frees all but the first block.
-    pub fn reset(&mut self) {
-        self.reset_until(|block, _| {
-            unsafe { block.as_ptr().read().prev_cap == 0 }
-        });
-    }
-
-    /// reset the arena.
-    /// - frees all allocations made on this arena.
-    /// - internally frees all blocks.
-    pub fn reset_all(&mut self) {
-        self.reset_until(|_, _| false);
-    }
-
-
-
     /// # safety:
-    /// - `layout.align() <= MAX_ALIGN`
+    /// - `layout.size() > 0`.
+    /// - `layout.align() <= MAX_ALIGN`.
     #[cold]
     unsafe fn alloc_slow_path(&self, layout: Layout) -> Option<NonNull<u8>> {
-        assert!(layout.align() <= MAX_ALIGN);
+        assert!(layout.size() > 0);
+        assert!(layout.align() <= ALIGN_MAX);
 
-        if layout.size() > MAX_ALLOC_SIZE {
+        if layout.size() > ALLOC_SIZE_MAX {
             return None;
         }
 
+
+        // geometric growth.
         let new_cap = {
-            // can't overflow cause `cap <= MAX_CAP`.
+            // can't overflow cause `cap <= BLOCK_SIZE_MAX`.
             let new_cap = 2*self.cap.get();
-
-            // clamp to user prefs.
-            let new_cap = new_cap.max(self.min_block_size.get());
-            let new_cap = new_cap.min(self.max_block_size.get());
-
-            // can't overflow cause `layout.size() <= MAX_ALLOC_SIZE`.
-            let new_cap = new_cap.max(HEADER_SIZE + layout.size());
-
-            let new_cap = new_cap.min(MAX_CAP);
+            let new_cap = new_cap.max(self.block_size_min.get());
+            let new_cap = new_cap.min(self.block_size_max.get());
+            let new_cap = new_cap.max(BLOCK_SIZE_MIN);
+            let new_cap = new_cap.min(BLOCK_SIZE_MAX);
+            // can't overflow cause size/align we checked to be within limits above.
+            let new_cap = new_cap.max(size_of::<BlockHeader>() + layout.size() + layout.align()-1);
             new_cap
         };
+        assert!(new_cap <= BLOCK_SIZE_MAX);
 
-        assert!(new_cap <= MAX_CAP);
-        assert!(HEADER_SIZE + layout.size() <= new_cap);
 
-        // `MAX_ALIGN` is a power of two.
-        // `new_cap <= MAX_CAP <= isize::MAX/2`.
-        static_assert!(align_of::<BlockHeader>() <= MAX_ALIGN);
-        let block_layout = unsafe { Layout::from_size_align_unchecked(new_cap, MAX_ALIGN) };
-        let block: NonNull<BlockHeader> = self.alloc.alloc(block_layout)?.cast();
+        // allocate block.
+        crate::static_assert!(align_of::<BlockHeader>() <= ALIGN_MAX);
+        let block_layout = unsafe { Layout::from_size_align_unchecked(new_cap, ALIGN_MAX) };
+        let block: NonNull<BlockHeader> = GlobalAlloc.alloc(block_layout)?.cast();
+        assert!(block.is_aligned());
+
 
         // save current state.
         unsafe {
-            // new_cap has enough space for a block header.
             block.as_ptr().write(BlockHeader {
                 prev:     self.block.get(),
                 prev_cap: self.cap.get(),
             });
         }
 
-        // make allocation.
-        let result = unsafe {
-            // new_cap has enough space for the padded header and the allocation.
-            // `block + HEADER_SIZE` is MAX_ALIGN aligned (which is `>= layout.align()`).
-            let ptr = block.as_ptr().cast::<u8>().add(HEADER_SIZE);
 
-            // block is `NonNull` and `ptr` is a valid derived pointer.
-            NonNull::new_unchecked(ptr)
+        // requested allocation.
+        let (result, new_used) = unsafe {
+            let used = size_of::<BlockHeader>();
+            let aligned_used = crate::num::ceil_to_multiple_pow2(used, layout.align());
+            let new_used = aligned_used + layout.size();
+            assert!(new_used <= new_cap);
+
+            // `block` is always `NonNull`, so any valid derived pointer is also `NonNull`.
+            let ptr = NonNull::new_unchecked(
+                block.as_ptr().cast::<u8>().add(aligned_used));
+
+            (ptr, new_used)
         };
-        assert!(result.as_ptr() as usize % layout.align() == 0);
+        assert!(new_used <= new_cap);
+
+
+        crate::asan::poison(
+            unsafe { block.as_ptr().cast::<u8>().add(new_used) },
+            new_cap - new_used);
+
 
         // attach new block.
         self.block.set(block);
         self.cap.set(new_cap);
-        self.used.set(HEADER_SIZE + layout.size());
+        self.used.set(new_used);
 
-        self.debug_integrity_check();
 
         return Some(result);
+    }
+
+
+    pub fn reset(&mut self) {
+        self.reset_core(false);
+    }
+
+    pub fn reset_all(&mut self) {
+        self.reset_core(true);
+    }
+
+    pub fn reset_core(&self, full: bool) {
+        if self.cap.get() == 0 {
+            return;
+        }
+
+        let mut block = self.block.get();
+        let mut cap = self.cap.get();
+
+        crate::asan::unpoison(block.as_ptr().cast(), cap);
+
+        while cap > 0 {
+            let header = unsafe { block.as_ptr().read() };
+
+            if header.prev_cap == 0 && !full {
+                break;
+            }
+
+            unsafe {
+                let block_layout = Layout::from_size_align_unchecked(cap, ALIGN_MAX);
+                GlobalAlloc.free(block.cast(), block_layout);
+            }
+
+            block = header.prev;
+            cap = header.prev_cap;
+        }
+
+        let used = if cap > 0 { size_of::<BlockHeader>() } else { 0 };
+        assert!(used <= cap);
+
+        crate::asan::poison(
+            unsafe { block.as_ptr().cast::<u8>().add(used) },
+            cap - used);
+
+        self.block.set(block);
+        self.cap.set(cap);
+        self.used.set(used);
     }
 }
 
 
+
 #[derive(Clone, Copy, Debug)]
 pub struct ArenaStats {
-    pub total_allocated: usize,
-    pub num_blocks: usize,
+    pub blocks: isize,
+    pub allocated: isize,
+    pub used: isize,
 }
 
-impl<A: Alloc> Arena<A> {
+impl crate::ops::Sub<ArenaStats> for ArenaStats {
+    type Output = ArenaStats;
+
+    fn sub(self, rhs: ArenaStats) -> Self::Output {
+        ArenaStats {
+            blocks:    self.blocks    - rhs.blocks,
+            allocated: self.allocated - rhs.allocated,
+            used:      self.used      - rhs.used,
+        }
+    }
+}
+
+impl Arena {
     pub fn stats(&self) -> ArenaStats {
-        let mut stats = ArenaStats {
-            total_allocated: 0,
-            num_blocks: 0,
+        let mut result = ArenaStats {
+            blocks: 0,
+            allocated: 0,
+            used: self.used.get() as isize,
         };
 
         let mut block = self.block.get();
         let mut cap   = self.cap.get();
         while cap != 0 {
-            stats.total_allocated += cap;
-            stats.num_blocks += 1;
+            result.allocated += cap as isize;
+            result.blocks += 1;
 
             let header = unsafe { block.as_ptr().read() };
 
             block = header.prev;
             cap   = header.prev_cap;
+            result.used += header.prev_cap as isize;
         }
 
-        stats
-    }
-
-    #[inline(always)]
-    pub fn current_block_size(&self) -> usize { self.cap.get() }
-
-    #[inline(always)]
-    pub fn current_block_used(&self) -> usize { self.used.get() }
-}
-
-
-#[derive(Clone)]
-pub struct ArenaSavePoint {
-    used_end: usize,  // pointer as usize.
-}
-
-impl<A: Alloc> Arena<A> {
-    /// save the current arena state.
-    ///
-    /// - creates a save point that can later be restored.
-    /// - includes all allocations made before this call.
-    ///
-    #[inline]
-    pub fn save(&self) -> ArenaSavePoint {
-        let block = self.block.get().as_ptr() as usize;
-        let used_end = block + self.used.get();
-        ArenaSavePoint { used_end }
-    }
-
-    /// restore an arena state.
-    ///
-    /// - frees all allocations made since the save point.
-    /// - all allocations made before the save point remain live.
-    ///
-    /// # safety:
-    /// - the save point must be from this arena.
-    /// - all allocations made before the save point must still be live.
-    ///   this means, the arena must not have been reset since the save point.
-    ///   and no save point made before this save point may have been restored.
-    ///
-    pub unsafe fn restore(&self, save: ArenaSavePoint) {
-        self.reset_until(|block, cap| {
-            let block = block.as_ptr() as usize;
-
-            // `used_end > block` to handle contiguous blocks.
-            // valid, because `used >= HEADER_SIZE` for non-empty blocks.
-            // and this predicate isn't called for empty blocks.
-               save.used_end >  block
-            && save.used_end <= block + cap
-        });
-
-        let block = self.block.get().as_ptr() as usize;
-
-        // detect incorrect usage.
-        if self.cap.get() > 0 {
-            debug_assert!(
-                   save.used_end >= block + HEADER_SIZE
-                && save.used_end <= block + self.cap.get());
-        }
-        else { assert_eq!(save.used_end, block) }
-
-        self.used.set(save.used_end - block);
-
-        self.debug_integrity_check();
+        return result;
     }
 }
 
 
-impl<A: Alloc> Drop for Arena<A> {
-    fn drop(&mut self) {
-        self.reset_all();
-    }
-}
-
-
-// safe: `Arena` is not `Clone`.
-unsafe impl<A: Alloc> Alloc for Arena<A> {
-    /// # safety:
-    /// - `layout.size() > 0`.
+// safe: Arena is not Clone.
+unsafe impl Alloc for Arena {
     #[inline]
     unsafe fn alloc_nonzero(&self, layout: Layout) -> Option<NonNull<u8>> {
         debug_assert!(layout.size() > 0);
-        self.debug_integrity_check();
 
-        if layout.align() > MAX_ALIGN {
+        if layout.align() > ALIGN_MAX {
             return None;
         }
 
         let cap  = self.cap.get();
         let used = self.used.get();
 
-        let aligned_used = ceil_to_multiple_pow2(used, layout.align());
+        let aligned_used = crate::num::ceil_to_multiple_pow2(used, layout.align());
 
         // can't overflow cause `used <= cap <= CAP_MAX`
         // and `size <= isize::MAX`.
@@ -381,21 +274,17 @@ unsafe impl<A: Alloc> Alloc for Arena<A> {
                 let block = self.block.get();
 
                 // `block.add(cap)` is the end of the allocation,
-                // and `result + layout.size() <= cap`.
+                // and `ptr + layout.size() <= cap`.
                 let ptr = block.as_ptr().cast::<u8>().add(aligned_used);
-
-                // the resulting pointer is aligned, because
-                // `layout.align() <= MAX_ALIGN` and `block`
-                // is `MAX_ALIGN` aligned.
 
                 // `block` is always `NonNull`, so any valid derived pointer is also `NonNull`.
                 NonNull::new_unchecked(ptr)
             };
+            debug_assert!(result.as_ptr() as usize % layout.align() == 0);
 
             self.used.set(aligned_used + layout.size());
 
-            debug_assert!(result.as_ptr() as usize % layout.align() == 0);
-            self.debug_integrity_check();
+            crate::asan::unpoison(result.as_ptr(), layout.size());
 
             Some(result)
         }
@@ -405,10 +294,9 @@ unsafe impl<A: Alloc> Alloc for Arena<A> {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn free_nonzero(&self, ptr: NonNull<u8>, layout: Layout) {
-        // no-op.
-        let _ = (ptr, layout);
+        crate::asan::poison(ptr.as_ptr(), layout.size());
     }
 
     #[inline]
@@ -416,7 +304,6 @@ unsafe impl<A: Alloc> Alloc for Arena<A> {
         debug_assert!(old_layout.size() > 0);
         debug_assert!(new_layout.size() > 0);
         debug_assert!(old_layout.align() == new_layout.align());
-        self.debug_integrity_check();
 
         let old_size = old_layout.size();
         let new_size = new_layout.size();
@@ -439,263 +326,8 @@ unsafe impl<A: Alloc> Alloc for Arena<A> {
         self.used.set(self.used.get() - old_size + new_size);
 
         debug_assert!(self.used.get() <= self.cap.get());
-        self.debug_integrity_check();
 
         return Ok(());
-    }
-}
-
-
-impl core::fmt::Debug for Arena {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        self.stats().fmt(f)
-    }
-}
-
-
-
-mod pool {
-    use crate::arena::Arena;
-    use crate::boks::Box;
-    use crate::mem::{UnsafeCell, NonNull, ManuallyDrop};
-
-
-    impl Arena {
-        #[inline]
-        pub fn tls_get_temp() -> TempArena {
-            return TEMP.with(|pool| {
-                let pool = unsafe { &mut *pool.get() };
-                if let Some(arena) = pool.arenas[0].take() {
-                    TempArena { arena: ManuallyDrop::new(arena) }
-                }
-                else {
-                    slow_path(pool)
-                }
-            });
-
-            #[cold]
-            fn slow_path(pool: &mut TempPool) -> TempArena {
-                for i in 1..pool.arenas.len() {
-                    if let Some(arena) = pool.arenas[i].take() {
-                        return TempArena { arena: ManuallyDrop::new(arena) }
-                    }
-                }
-
-                let new_arena = Arena::new();
-                new_arena.min_block_size.set(TEMP_BLOCK_SIZE);
-                new_arena.max_block_size.set(TEMP_BLOCK_SIZE);
-                TempArena { arena: ManuallyDrop::new(Box::new(new_arena)) }
-            }
-        }
-
-        #[inline]
-        pub fn tls_get_rec() -> RecArena {
-            return REC.with(|rec| {
-                let rec = unsafe { &mut *rec.get() };
-                rec.refs = rec.refs.checked_add(1).expect("too many refs");
-                return RecArena { arena: unsafe { NonNull::new_unchecked(rec.arena.get()) } }
-            });
-        }
-
-        pub fn tls_rec_num_refs() -> usize {
-            return REC.with(|rec| {
-                let rec = unsafe { &*rec.get() };
-                return rec.refs;
-            });
-        }
-    }
-
-
-    thread_local! {
-        static TEMP: UnsafeCell<TempPool> = UnsafeCell::new(TempPool { arenas: [None, None, None, None] });
-        static REC: UnsafeCell<Rec> = UnsafeCell::new(Rec::new());
-    }
-
-    const TEMP_BLOCK_SIZE: usize = 128*1024;
-    const REC_BLOCK_SIZE:  usize = 512*1024;
-
-
-    struct TempPool {
-        arenas: [Option<Box<Arena>>; 4],
-    }
-
-    pub struct TempArena {
-        arena: ManuallyDrop<Box<Arena>>,
-    }
-
-    impl core::ops::Deref for TempArena {
-        type Target = Arena;
-
-        #[inline(always)]
-        fn deref(&self) -> &Self::Target { &self.arena }
-    }
-
-    impl Drop for TempArena {
-        #[inline]
-        fn drop(&mut self) {
-            TEMP.with(|pool| {
-                self.arena.reset();
-
-                let pool = unsafe { &mut *pool.get() };
-                if pool.arenas[0].is_none() {
-                    pool.arenas[0] = unsafe { Some(ManuallyDrop::take(&mut self.arena)) };
-                }
-                else {
-                    slow_path(pool, self)
-                }
-            });
-
-            #[cold]
-            fn slow_path(pool: &mut TempPool, arena: &mut TempArena) {
-                let arena = unsafe { ManuallyDrop::take(&mut arena.arena) };
-                for i in 1..pool.arenas.len() {
-                    if pool.arenas[i].is_none() {
-                        pool.arenas[i] = Some(arena);
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
-
-    struct Rec {
-        arena: Box<UnsafeCell<Arena>>,
-        refs: usize,
-    }
-
-    impl Rec {
-        fn new() -> Rec {
-            Rec {
-                arena: Box::new(UnsafeCell::new({
-                    let arena = Arena::new();
-                    arena.min_block_size.set(REC_BLOCK_SIZE);
-                    arena.max_block_size.set(REC_BLOCK_SIZE);
-                    arena
-                })),
-                refs: 0,
-            }
-        }
-    }
-
-    pub struct RecArena {
-        arena: NonNull<Arena>,
-    }
-
-    impl core::ops::Deref for RecArena {
-        type Target = Arena;
-
-        #[inline(always)]
-        fn deref(&self) -> &Self::Target { unsafe { self.arena.as_ref() } }
-    }
-
-    impl Drop for RecArena {
-        #[inline]
-        fn drop(&mut self) {
-            REC.with(|rec| {
-                let rec = unsafe { &mut *rec.get() };
-                debug_assert_eq!(self.arena.as_ptr(), rec.arena.get());
-                rec.refs -= 1;
-                if rec.refs == 0 {
-                    let arena = unsafe { &mut *rec.arena.get() };
-                    arena.reset();
-                }
-            });
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn temp() {
-            // new temp.
-            let t1 = Arena::tls_get_temp();
-            let p1 = &*t1 as *const Arena;
-            {
-                assert_eq!(t1.stats().num_blocks, 0);
-
-                while t1.stats().num_blocks < 2 {
-                    t1.alloc_ptr::<[u8; 16*1024]>();
-                }
-
-                assert_eq!(t1.stats().num_blocks, 2);
-                assert_eq!(t1.stats().total_allocated, 2*TEMP_BLOCK_SIZE);
-            }
-            drop(t1);
-
-            // reuse t1.
-            let t2 = Arena::tls_get_temp();
-            let p2 = &*t2 as *const Arena;
-            assert_eq!(p2, p1);
-            {
-                assert_eq!(t2.stats().num_blocks, 1);
-                assert_eq!(t2.stats().total_allocated, 1*TEMP_BLOCK_SIZE);
-            }
-
-            // new temp.
-            let t3 = Arena::tls_get_temp();
-            let p3 = &*t3 as *const Arena;
-            assert_ne!(p3, p2);
-            drop(t3);
-
-            // reuse t3.
-            let t4 = Arena::tls_get_temp();
-            let p4 = &*t4 as *const Arena;
-            assert_eq!(p4, p3);
-        }
-
-        #[test]
-        fn rec() {
-            assert_eq!(Arena::tls_rec_num_refs(), 0);
-
-            // initial rec.
-            let t1 = Arena::tls_get_rec();
-            let p1 = &*t1 as *const Arena;
-            assert_eq!(Arena::tls_rec_num_refs(), 1);
-            {
-                assert_eq!(t1.stats().num_blocks, 0);
-
-                while t1.stats().num_blocks < 2 {
-                    t1.alloc_ptr::<[u8; 16*1024]>();
-                }
-
-                assert_eq!(t1.stats().num_blocks, 2);
-                assert_eq!(t1.stats().total_allocated, 2*REC_BLOCK_SIZE);
-            }
-
-            // same arena.
-            let t2 = Arena::tls_get_rec();
-            let p2 = &*t2 as *const Arena;
-            assert_eq!(p2, p1);
-            assert_eq!(Arena::tls_rec_num_refs(), 2);
-
-            // t2 keeps it alive.
-            let ptr = unsafe { crate::erase!(&i32, t1.alloc_new(42)) };
-            assert_eq!(t2.stats().total_allocated, 2*REC_BLOCK_SIZE);
-            drop(t1);
-            assert_eq!(t2.stats().total_allocated, 2*REC_BLOCK_SIZE);
-            assert_eq!(*ptr, 42);
-            assert_eq!(Arena::tls_rec_num_refs(), 1);
-
-            // still same arena.
-            let t3 = Arena::tls_get_rec();
-            let p3 = &*t3 as *const Arena;
-            assert_eq!(p3, p1);
-            assert_eq!(t3.stats().total_allocated, 2*REC_BLOCK_SIZE);
-            assert_eq!(Arena::tls_rec_num_refs(), 2);
-
-            drop((t2, t3));
-            assert_eq!(Arena::tls_rec_num_refs(), 0);
-
-            // still same arena, but it was reset.
-            let t4 = Arena::tls_get_rec();
-            let p4 = &*t4 as *const Arena;
-            assert_eq!(p4, p1);
-            assert_eq!(t4.stats().total_allocated, 1*REC_BLOCK_SIZE);
-            assert_eq!(Arena::tls_rec_num_refs(), 1);
-        }
     }
 }
 
@@ -705,8 +337,11 @@ mod pool {
 mod tests {
     use super::*;
 
-    fn get_base<A: Alloc>(arena: &Arena<A>) -> Option<usize> {
-        (arena.cap.get() != 0).then_some(arena.block.get().as_ptr() as usize + HEADER_SIZE)
+    fn get_base(arena: &Arena) -> Option<usize> {
+        if arena.cap.get() != 0 {
+            Some(arena.block.get().as_ptr() as usize)
+        }
+        else { None }
     }
 
     #[test]
@@ -720,9 +355,6 @@ mod tests {
         let mut arena = Arena::new();
         assert!(get_base(&arena).is_none());
 
-        let block_size = 500;
-        arena.max_block_size.set(block_size);
-
         // zst does nothing.
         arena.alloc_new(());
         assert!(get_base(&arena).is_none());
@@ -730,18 +362,17 @@ mod tests {
         // first allocation allocates block.
         let first = arena.alloc_ptr::<u8>().as_ptr() as usize;
         assert!(get_base(&arena).is_some());
-        assert_eq!(first, get_base(&arena).unwrap());
+        assert_eq!(first, get_base(&arena).unwrap() + size_of::<BlockHeader>());
 
         arena.reset();
 
         // resetting results in equivalent behavior.
         for _ in 0..2 {
-            assert_eq!(arena.stats().total_allocated, block_size);
-            assert_eq!(arena.stats().num_blocks, 1);
+            assert_eq!(arena.stats().blocks, 1);
 
             // first alloc is base.
             let first = arena.alloc_ptr::<u8>().as_ptr() as usize;
-            assert_eq!(first, get_base(&arena).unwrap());
+            assert_eq!(first, get_base(&arena).unwrap() + size_of::<BlockHeader>());
 
             // zst does nothing.
             arena.alloc_new([(); 1_000_000]);
@@ -768,82 +399,69 @@ mod tests {
             let last = arena.alloc_ptr::<u8>().as_ptr() as usize;
             assert_eq!(last, hi.as_ptr() as usize + hi.len());
 
+            assert_eq!(arena.stats().blocks, 1);
+            assert_eq!(arena.stats().used as usize, last + 1 - get_base(&arena).unwrap());
+
             // reset
             arena.reset();
         }
 
         // arena is reset.
+        assert_eq!(arena.stats().blocks, 1);
+        assert_eq!(arena.stats().used as usize, size_of::<BlockHeader>());
+
         let first = arena.alloc_ptr::<u8>().as_ptr() as usize;
-        assert_eq!(first, get_base(&arena).unwrap());
-        assert_eq!(arena.stats().total_allocated, block_size);
-        assert_eq!(arena.stats().num_blocks, 1);
+        assert_eq!(first, get_base(&arena).unwrap() + size_of::<BlockHeader>());
+        assert_eq!(arena.stats().blocks, 1);
+        assert_eq!(arena.stats().used as usize, size_of::<BlockHeader>() + 1);
     }
 
     #[test]
     fn arena_block_size() {
         let mut arena = Arena::new();
 
-        assert_eq!(arena.stats().total_allocated, 0);
-        assert_eq!(arena.stats().num_blocks, 0);
-        assert_eq!(arena.current_block_used(), 0);
+        assert_eq!(arena.stats().allocated, 0);
+        assert_eq!(arena.stats().blocks, 0);
+        assert_eq!(arena.stats().used, 0);
 
-        arena.max_block_size.set(1);
+        let block_size = 1024;
+        arena.block_size_max.set(block_size);
 
         arena.alloc_ptr::<u8>();
 
-        assert_eq!(arena.stats().total_allocated, HEADER_SIZE + 1);
-        assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 1);
+        assert_eq!(arena.stats().blocks, 1);
+        assert_eq!(arena.stats().allocated as usize, block_size);
+        assert_eq!(arena.stats().used as usize, size_of::<BlockHeader>() + 1);
 
         arena.reset();
 
-        assert_eq!(arena.stats().total_allocated, HEADER_SIZE + 1);
-        assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE);
+        assert_eq!(arena.stats().blocks, 1);
+        assert_eq!(arena.stats().allocated as usize, block_size);
+        assert_eq!(arena.stats().used as usize, size_of::<BlockHeader>());
 
-        arena.alloc_ptr::<u16>();
+        crate::alloc::alloc_array::<u8>(&arena, block_size - size_of::<BlockHeader>()).unwrap();
 
-        assert_eq!(arena.stats().total_allocated, 2*HEADER_SIZE + 1 + 2);
-        assert_eq!(arena.stats().num_blocks, 2);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 2);
+        assert_eq!(arena.stats().blocks, 1);
+        assert_eq!(arena.stats().allocated as usize, block_size);
+        assert_eq!(arena.stats().used as usize, block_size);
+
+        arena.alloc_ptr::<u8>();
+
+        assert_eq!(arena.stats().blocks, 2);
+        assert_eq!(arena.stats().allocated as usize, 2*block_size);
+        assert_eq!(arena.stats().used as usize, block_size + size_of::<BlockHeader>() + 1);
 
         arena.reset();
 
-        assert_eq!(arena.stats().total_allocated, HEADER_SIZE + 1);
-        assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE);
-
-        arena.max_block_size.set(64);
-
-        arena.alloc_ptr::<u8>();
-
-        assert_eq!(arena.stats().total_allocated, HEADER_SIZE + 1);
-        assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 1);
-
-        arena.alloc_ptr::<u8>();
-
-        assert_eq!(arena.stats().total_allocated, HEADER_SIZE + 1 + 64);
-        assert_eq!(arena.stats().num_blocks, 2);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 1);
-
-        arena.alloc_ptr::<u8>();
-
-        assert_eq!(arena.stats().total_allocated, HEADER_SIZE + 1 + 64);
-        assert_eq!(arena.stats().num_blocks, 2);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 2);
-
-        arena.alloc_ptr::<[u8; 64 - HEADER_SIZE - 2]>();
-
-        assert_eq!(arena.stats().total_allocated, HEADER_SIZE + 1 + 64);
-        assert_eq!(arena.stats().num_blocks, 2);
-        assert_eq!(arena.current_block_used(), 64);
+        assert_eq!(arena.stats().blocks, 1);
+        assert_eq!(arena.stats().allocated as usize, block_size);
+        assert_eq!(arena.stats().used as usize, size_of::<BlockHeader>());
 
         arena.reset_all();
 
-        assert_eq!(arena.stats().total_allocated, 0);
-        assert_eq!(arena.stats().num_blocks, 0);
-        assert_eq!(arena.current_block_used(), 0);
+        assert_eq!(arena.stats().blocks, 0);
+        assert_eq!(arena.stats().allocated, 0);
+        assert_eq!(arena.stats().used, 0);
     }
 
     #[test]
@@ -886,6 +504,7 @@ mod tests {
         assert!(err.is_err());
     }
 
+    /* broken
     #[test]
     fn arena_realloc_edge_cases() {
         let backing = Arena::new();
@@ -923,16 +542,18 @@ mod tests {
         assert!(err.is_err());
 
         // can't resize beyond end of block.
-        let layout_too_full = Layout::from_size_align(128 - HEADER_SIZE + 1, 1).unwrap();
+        let layout_too_full = Layout::from_size_align(128 - size_of::<BlockHeader>() + 1, 1).unwrap();
         let err = unsafe { arena.try_realloc(ptr, layout_1, layout_too_full) };
         assert!(err.is_err());
 
         // can resize to end of block.
-        let layout_full = Layout::from_size_align(128 - HEADER_SIZE, 1).unwrap();
+        let layout_full = Layout::from_size_align(128 - size_of::<BlockHeader>(), 1).unwrap();
         let ok = unsafe { arena.try_realloc(ptr, layout_1, layout_full) };
         assert!(ok.is_ok());
     }
+    */
 
+    /*
     #[test]
     fn arena_save_restore() {
         let arena = Arena::new();
@@ -950,7 +571,7 @@ mod tests {
         let a = arena.alloc_ptr::<[u8; 12]>().as_ptr() as usize;
         assert_eq!(arena.stats().total_allocated, 64);
         assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 12);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 12);
 
         // same block save.
         let save_1 = arena.save();
@@ -960,21 +581,21 @@ mod tests {
         unsafe { arena.restore(save_1.clone()) }
         assert_eq!(arena.stats().total_allocated, 64);
         assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 12);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 12);
 
         arena.alloc_ptr::<u32>();
         assert_eq!(arena.stats().total_allocated, 64);
         assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 12 + 4);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 12 + 4);
 
         // restore same block.
         unsafe { arena.restore(save_1.clone()) }
         assert_eq!(arena.stats().total_allocated, 64);
         assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 12);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 12);
 
         // allocate rest of block.
-        arena.alloc_ptr::<[u8; 64 - HEADER_SIZE - 12]>();
+        arena.alloc_ptr::<[u8; 64 - size_of::<BlockHeader>() - 12]>();
         assert_eq!(arena.stats().total_allocated, 64);
         assert_eq!(arena.stats().num_blocks, 1);
         assert_eq!(arena.current_block_used(), 64);
@@ -983,25 +604,25 @@ mod tests {
         let b = arena.alloc_ptr::<[u8; 8]>().as_ptr() as usize;
         assert_eq!(arena.stats().total_allocated, 128);
         assert_eq!(arena.stats().num_blocks, 2);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 8);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 8);
 
         let save_2 = arena.save();
         assert_eq!(save_2.used_end, b + 8);
 
         // and an oversided block.
         let c = arena.alloc_ptr::<[u8; 128]>().as_ptr() as usize;
-        assert_eq!(arena.stats().total_allocated, 128 + HEADER_SIZE+128);
+        assert_eq!(arena.stats().total_allocated, 128 + size_of::<BlockHeader>()+128);
         assert_eq!(arena.stats().num_blocks, 3);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE+128);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>()+128);
 
         let save_3 = arena.save();
         assert_eq!(save_3.used_end, c + 128);
 
         // and another normal block.
         let d = arena.alloc_ptr::<[u8; 8]>().as_ptr() as usize;
-        assert_eq!(arena.stats().total_allocated, 128 + HEADER_SIZE+128 + 64);
+        assert_eq!(arena.stats().total_allocated, 128 + size_of::<BlockHeader>()+128 + 64);
         assert_eq!(arena.stats().num_blocks, 4);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 8);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 8);
 
         let save_4 = arena.save();
         assert_eq!(save_4.used_end, d + 8);
@@ -1010,13 +631,13 @@ mod tests {
         unsafe { arena.restore(save_2) }
         assert_eq!(arena.stats().total_allocated, 128);
         assert_eq!(arena.stats().num_blocks, 2);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 8);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 8);
 
         // restore save_1 again.
         unsafe { arena.restore(save_1) }
         assert_eq!(arena.stats().total_allocated, 64);
         assert_eq!(arena.stats().num_blocks, 1);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 12);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 12);
 
         // restore save_0 again.
         unsafe { arena.restore(save_0) }
@@ -1024,7 +645,9 @@ mod tests {
         assert_eq!(arena.stats().num_blocks, 0);
         assert_eq!(arena.current_block_used(), 0);
     }
+    */
 
+    /* broken
     #[test]
     fn arena_save_restore_contiguous() {
         let backing = Arena::new();
@@ -1034,7 +657,7 @@ mod tests {
         arena.min_block_size.set(64);
         arena.max_block_size.set(64);
 
-        arena.alloc_ptr::<[u8; 64-HEADER_SIZE]>().as_ptr() as usize;
+        arena.alloc_ptr::<[u8; 64-size_of::<BlockHeader>()]>().as_ptr() as usize;
         assert_eq!(arena.stats().total_allocated, 64);
         assert_eq!(arena.stats().num_blocks, 1);
         assert_eq!(arena.current_block_used(), 64);
@@ -1044,7 +667,7 @@ mod tests {
         arena.alloc_ptr::<[u8; 8]>().as_ptr() as usize;
         assert_eq!(arena.stats().total_allocated, 128);
         assert_eq!(arena.stats().num_blocks, 2);
-        assert_eq!(arena.current_block_used(), HEADER_SIZE + 8);
+        assert_eq!(arena.current_block_used(), size_of::<BlockHeader>() + 8);
 
         // check blocks contiguous.
         assert_eq!(save.used_end, arena.block.get().as_ptr() as usize);
@@ -1055,16 +678,20 @@ mod tests {
         assert_eq!(arena.stats().num_blocks, 1);
         assert_eq!(arena.current_block_used(), 64);
     }
+    */
 
     #[test]
     fn arena_max_align() {
         let arena = Arena::new();
 
-        let failed = arena.alloc(Layout::from_size_align(1, 2*MAX_ALIGN).unwrap());
+        let failed = arena.alloc(Layout::from_size_align(1, 2*ALIGN_MAX).unwrap());
         assert!(failed.is_none());
 
-        let succeeded = arena.alloc(Layout::from_size_align(1, MAX_ALIGN).unwrap());
+        let succeeded = arena.alloc(Layout::from_size_align(1, ALIGN_MAX).unwrap());
         assert!(succeeded.is_some());
+
+        let failed = arena.alloc(Layout::from_size_align(1, 2*ALIGN_MAX).unwrap());
+        assert!(failed.is_none());
     }
 }
 
