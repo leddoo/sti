@@ -51,8 +51,8 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
     pub const fn new_in(alloc: A) -> Self {
         Self {
             alloc,
-            cap: K::ZERO,
-            len: K::ZERO,
+            cap: K::MIN,
+            len: K::MIN,
             ptr: NonNull::dangling(),
             phantom: PhantomData,
         }
@@ -190,7 +190,7 @@ impl<K: Key, V, A: Alloc> KVec<K, V, A> {
         let v_size = size_of::<V>();
         let size_max = isize::MAX as usize - (align_of::<V>() - 1);
         let cap_max = size_max / if v_size > 0 { v_size } else { 1 };
-        let cap_max = if cap_max <= K::MAX { cap_max } else { K::MAX };
+        let cap_max = if cap_max <= K::MAX_USIZE { cap_max } else { K::MAX_USIZE };
         cap_max
     };
 
@@ -574,7 +574,7 @@ impl<K: Key, V, A: Alloc> IntoIterator for KVec<K, V, A> {
             cap: vec.cap,
             ptr: vec.ptr,
             len: vec.len,
-            idx: K::ZERO,
+            idx: K::MIN,
             alloc: unsafe { crate::ptr::read(&vec.alloc) },
         };
     }

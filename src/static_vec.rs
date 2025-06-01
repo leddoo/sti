@@ -18,7 +18,7 @@ impl<K: Key, V, const N: usize> KStaticVec<K, V, N> {
                 // cf MaybeUninit::uninit_array()
                 MaybeUninit::<[MaybeUninit<V>; N]>::uninit().assume_init()
             },
-            len: K::ZERO,
+            len: K::MIN,
         }
     }
 

@@ -18,7 +18,7 @@ pub struct KSlice<K: Key, V> {
 impl<K: Key, V> KSlice<K, V> {
     #[inline]
     pub fn new(slice: &[V]) -> Option<&Self> {
-        if slice.len() <= K::MAX {
+        if slice.len() <= K::MAX_USIZE {
             Some(unsafe { &*(slice as *const [V] as *const Self) })
         }
         else { None }
@@ -26,13 +26,13 @@ impl<K: Key, V> KSlice<K, V> {
 
     #[inline]
     pub unsafe fn new_unck(slice: &[V]) -> &Self {
-        debug_assert!(slice.len() <= K::MAX);
+        debug_assert!(slice.len() <= K::MAX_USIZE);
         unsafe { &*(slice as *const [V] as *const Self) }
     }
 
     #[inline]
     pub fn new_mut(slice: &mut [V]) -> Option<&mut Self> {
-        if slice.len() <= K::MAX {
+        if slice.len() <= K::MAX_USIZE {
             Some(unsafe { &mut *(slice as *mut [V] as *mut Self) })
         }
         else { None }
@@ -40,7 +40,7 @@ impl<K: Key, V> KSlice<K, V> {
 
     #[inline]
     pub unsafe fn new_mut_unck(slice: &mut [V]) -> &mut Self {
-        debug_assert!(slice.len() <= K::MAX);
+        debug_assert!(slice.len() <= K::MAX_USIZE);
         unsafe { &mut *(slice as *mut [V] as *mut Self) }
     }
 
@@ -52,7 +52,7 @@ impl<K: Key, V> KSlice<K, V> {
 
     #[inline]
     pub fn krange(&self) -> KRange<K> {
-        KRange { begin: K::ZERO, end: self.klen() }
+        KRange { begin: K::MIN, end: self.klen() }
     }
 
     #[inline(always)]
@@ -80,7 +80,7 @@ impl<K: Key, V> KSlice<K, V> {
     #[inline]
     pub fn kiter(&self) -> KIter<K, V> {
         KIter {
-            idx: K::ZERO,
+            idx: K::MIN,
             len: self.klen(),
             ptr: unsafe { NonNull::new_unchecked(self.as_ptr() as *mut V) },
             phantom: PhantomData,
@@ -90,7 +90,7 @@ impl<K: Key, V> KSlice<K, V> {
     #[inline]
     pub fn kiter_mut(&mut self) -> KIterMut<K, V> {
         KIterMut {
-            idx: K::ZERO,
+            idx: K::MIN,
             len: self.klen(),
             ptr: unsafe { NonNull::new_unchecked(self.as_mut_ptr()) },
             phantom: PhantomData,
