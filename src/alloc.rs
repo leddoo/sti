@@ -329,14 +329,7 @@ pub unsafe fn cat_next<T, U>(base: *const T, len: usize) -> *const U {
 #[inline]
 pub unsafe fn cat_next_bytes<T, U>(base: *const T, base_size: usize, next_align: usize) -> *const U {
     let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
-    #[cfg(miri)] {
-        // miri doesn't like int->ptr casts.
-        let delta = result - base as usize;
-        return unsafe { (base as *const u8).add(delta) as *const U };
-    }
-    #[cfg(not(miri))] {
-        return result as *const U;
-    }
+    return base.with_addr(result).cast();
 }
 
 #[inline]
@@ -347,14 +340,7 @@ pub unsafe fn cat_next_mut<T, U>(base: *mut T, len: usize) -> *mut U {
 #[inline]
 pub unsafe fn cat_next_mut_bytes<T, U>(base: *mut T, base_size: usize, next_align: usize) -> *mut U {
     let result = ceil_to_multiple_pow2(base as usize + base_size, next_align);
-    #[cfg(miri)] {
-        // miri doesn't like int->ptr casts.
-        let delta = result - base as usize;
-        return unsafe { (base as *mut u8).add(delta) as *mut U };
-    }
-    #[cfg(not(miri))] {
-        return result as *mut U;
-    }
+    return base.with_addr(result).cast();
 }
 
 
@@ -365,51 +351,40 @@ pub struct GlobalAlloc;
 unsafe impl Sync for GlobalAlloc {}
 unsafe impl Send for GlobalAlloc {}
 
-#[cfg(target_os = "macos")]
-mod libc {
-    #[link(name = "System")]
-    extern "C" {
-        pub fn malloc(size: usize) -> *mut u8;
-        pub fn free(ptr: *mut u8);
-        pub fn realloc(ptr: *mut u8, new_size: usize) -> *mut u8;
-        pub fn aligned_alloc(align: usize, size: usize) -> *mut u8;
-    }
-}
-
-#[cfg(target_os = "macos")]
+#[cfg(feature="std")]
 // safe: GlobalAlloc is zst.
 unsafe impl Alloc for GlobalAlloc {
     unsafe fn alloc_nonzero(&self, layout: Layout) -> Option<NonNull<u8>> {
         debug_assert!(layout.size() > 0);
         unsafe {
-            if layout.align() <= crate::mem::size_of::<usize>() {
-                NonNull::new(libc::malloc(layout.size()))
-            }
-            else {
-                NonNull::new(libc::aligned_alloc(layout.align(), layout.size()))
-            }
+            return NonNull::new(std::alloc::alloc(layout));
         }
     }
 
     unsafe fn free_nonzero(&self, ptr: NonNull<u8>, layout: Layout) {
         debug_assert!(layout.size() > 0);
         unsafe {
-            _ = layout;
-            libc::free(ptr.as_ptr());
+            std::alloc::dealloc(ptr.as_ptr(), layout);
         }
     }
 
     unsafe fn realloc(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Option<NonNull<u8>> {
         debug_assert_eq!(old_layout.align(), new_layout.align());
-        unsafe {
-            if new_layout.align() <= crate::mem::size_of::<usize>()
-            && old_layout.size() > 0
-            && new_layout.size() > 0 {
-                return NonNull::new(libc::realloc(ptr.as_ptr(), new_layout.size()));
+        if old_layout.size() != 0 {
+            if new_layout.size() != 0 {
+                // allocation invariants upheld by the caller, because `old_layout.size() > 0`
+                // new_size is non-zero. `Layout` guarantees rounding requirements.
+                let result = unsafe { std::alloc::realloc(ptr.as_ptr(), old_layout, new_layout.size()) };
+                NonNull::new(result)
             }
             else {
-                return default_realloc(self, ptr, old_layout, new_layout);
+                // invariants upheld by the caller, because `old_layout.size() > 0`.
+                unsafe { std::alloc::dealloc(ptr.as_ptr(), old_layout) };
+                return Some(dangling(new_layout));
             }
+        }
+        else {
+            return self.alloc(new_layout);
         }
     }
 }

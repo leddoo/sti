@@ -1,3 +1,4 @@
+#![allow(unexpected_cfgs)]
 
 #[cfg(asan)]
 mod target {

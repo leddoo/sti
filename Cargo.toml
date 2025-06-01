@@ -9,3 +9,7 @@ repository = "https://github.com/leddoo/sti"
 documentation = "https://docs.rs/sti"
 readme = "readme.md"
 
+[features]
+default = ["std"]
+std = []
+

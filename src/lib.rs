@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(feature="std"), no_std)]
 #![forbid(unsafe_op_in_unsafe_fn)]
 
 pub mod prelude;

@@ -805,6 +805,25 @@ mod tests {
 
     use crate::string::String;
 
+    /*
+    struct DumbHash;
+    impl HashFn<u32, u32> for DumbHash {
+        fn hash(&self, value: &u32) -> u32 { *value % 32 / 2 }
+    }
+    */
+
+    struct IdHash;
+    impl HashFn<u32, u32> for IdHash {
+        fn hash(&self, value: &u32) -> u32 { *value }
+    }
+
+    struct ConstHash;
+    impl<T> HashFn<T, u32> for ConstHash {
+        fn hash(&self, _value: &T) -> u32 { 0 }
+    }
+    impl Default for ConstHash { fn default() -> Self { ConstHash } }
+
+
     #[test]
     fn hm_basic() {
         let mut hm: HashMap<String, u32> = HashMap::with_cap(69);
@@ -1263,25 +1282,6 @@ mod tests {
         assert_eq!(x, 0);
     }
     */
-
-
-    use crate::hash::HashFn;
-
-    struct DumbHash;
-    impl HashFn<u32, u32> for DumbHash {
-        fn hash(&self, value: &u32) -> u32 { *value % 32 / 2 }
-    }
-
-    struct IdHash;
-    impl HashFn<u32, u32> for IdHash {
-        fn hash(&self, value: &u32) -> u32 { *value }
-    }
-
-    struct ConstHash;
-    impl<T> HashFn<T, u32> for ConstHash {
-        fn hash(&self, _value: &T) -> u32 { 0 }
-    }
-    impl Default for ConstHash { fn default() -> Self { ConstHash } }
 
 
     #[test]

@@ -2,25 +2,19 @@ use crate::mem::{NonNull, Cell, size_of};
 use crate::alloc::{Alloc, GlobalAlloc, Layout};
 
 
-/// maximum supported alignment.
-/// - allocations with a greater alignment fail.
-pub const ALIGN_MAX: usize = 512;
-crate::static_assert!(ALIGN_MAX.is_power_of_two());
-
-
 /// minimum block size.
 /// - the arena will never allocate blocks smaller than this.
 pub const BLOCK_SIZE_MIN: usize = 1024;
-crate::static_assert!(BLOCK_SIZE_MIN >= 2*ALIGN_MAX);
-crate::static_assert!(size_of::<BlockHeader>() < ALIGN_MAX);
+
+/// default maximum block size.
+/// - by default, the arena will never allocate blocks larger than this.
+pub const BLOCK_SIZE_DEFAULT_MAX: usize = 16*1024*1024;
 
 /// maximum block size.
-pub const BLOCK_SIZE_MAX: usize = usize::MAX/4 + 1;
+const BLOCK_SIZE_MAX: usize = usize::MAX/4 + 1;
+const ALLOC_SIZE_MAX: usize = BLOCK_SIZE_MAX - size_of::<BlockHeader>();
 
-/// default block size (platform dependent).
-pub const BLOCK_SIZE_DEFAULT: usize = 512*1024;
-
-pub const ALLOC_SIZE_MAX: usize = BLOCK_SIZE_MAX - size_of::<BlockHeader>();
+const BLOCK_ALIGN: usize = 16;
 
 
 pub struct Arena {
@@ -57,7 +51,7 @@ impl Arena {
             cap: Cell::new(0),
             used: Cell::new(0),
             block_size_min: Cell::new(BLOCK_SIZE_MIN),
-            block_size_max: Cell::new(BLOCK_SIZE_MAX),
+            block_size_max: Cell::new(BLOCK_SIZE_DEFAULT_MAX),
         }
     }
 
@@ -85,16 +79,14 @@ impl Arena {
 
     /// # safety:
     /// - `layout.size() > 0`.
-    /// - `layout.align() <= MAX_ALIGN`.
     #[cold]
     unsafe fn alloc_slow_path(&self, layout: Layout) -> Option<NonNull<u8>> {
         assert!(layout.size() > 0);
-        assert!(layout.align() <= ALIGN_MAX);
 
-        if layout.size() > ALLOC_SIZE_MAX {
+        let padded_size = layout.size().checked_add(layout.align() - 1)?;
+        if padded_size > ALLOC_SIZE_MAX {
             return None;
         }
-
 
         // geometric growth.
         let new_cap = {
@@ -105,27 +97,24 @@ impl Arena {
             let new_cap = new_cap.max(BLOCK_SIZE_MIN);
             let new_cap = new_cap.min(BLOCK_SIZE_MAX);
             // can't overflow cause size/align we checked to be within limits above.
-            let new_cap = new_cap.max(size_of::<BlockHeader>() + layout.size() + layout.align()-1);
+            let new_cap = new_cap.max(size_of::<BlockHeader>() + padded_size);
             new_cap
         };
         assert!(new_cap <= BLOCK_SIZE_MAX);
 
-
         // allocate block.
-        crate::static_assert!(align_of::<BlockHeader>() <= ALIGN_MAX);
-        let block_layout = unsafe { Layout::from_size_align_unchecked(new_cap, ALIGN_MAX) };
+        crate::static_assert!(align_of::<BlockHeader>() <= BLOCK_ALIGN);
+        let block_layout = unsafe { Layout::from_size_align_unchecked(new_cap, BLOCK_ALIGN) };
         let block: NonNull<BlockHeader> = GlobalAlloc.alloc(block_layout)?.cast();
         assert!(block.is_aligned());
-
 
         // save current state.
         unsafe {
             block.as_ptr().write(BlockHeader {
-                prev:     self.block.get(),
+                prev: self.block.get(),
                 prev_cap: self.cap.get(),
             });
         }
-
 
         // requested allocation.
         let (result, new_used) = unsafe {
@@ -135,24 +124,20 @@ impl Arena {
             assert!(new_used <= new_cap);
 
             // `block` is always `NonNull`, so any valid derived pointer is also `NonNull`.
-            let ptr = NonNull::new_unchecked(
-                block.as_ptr().cast::<u8>().add(aligned_used));
+            let ptr = NonNull::new_unchecked(block.as_ptr().cast::<u8>().add(aligned_used));
 
             (ptr, new_used)
         };
         assert!(new_used <= new_cap);
 
-
         crate::asan::poison(
             unsafe { block.as_ptr().cast::<u8>().add(new_used) },
             new_cap - new_used);
-
 
         // attach new block.
         self.block.set(block);
         self.cap.set(new_cap);
         self.used.set(new_used);
-
 
         return Some(result);
     }
@@ -166,7 +151,7 @@ impl Arena {
         self.reset_core(true);
     }
 
-    pub fn reset_core(&self, full: bool) {
+    pub fn reset_core(&self, including_first: bool) {
         if self.cap.get() == 0 {
             return;
         }
@@ -179,12 +164,12 @@ impl Arena {
         while cap > 0 {
             let header = unsafe { block.as_ptr().read() };
 
-            if header.prev_cap == 0 && !full {
+            if header.prev_cap == 0 && !including_first {
                 break;
             }
 
             unsafe {
-                let block_layout = Layout::from_size_align_unchecked(cap, ALIGN_MAX);
+                let block_layout = Layout::from_size_align_unchecked(cap, BLOCK_ALIGN);
                 GlobalAlloc.free(block.cast(), block_layout);
             }
 
@@ -235,7 +220,7 @@ impl Arena {
         };
 
         let mut block = self.block.get();
-        let mut cap   = self.cap.get();
+        let mut cap = self.cap.get();
         while cap != 0 {
             result.allocated += cap as isize;
             result.blocks += 1;
@@ -243,7 +228,7 @@ impl Arena {
             let header = unsafe { block.as_ptr().read() };
 
             block = header.prev;
-            cap   = header.prev_cap;
+            cap = header.prev_cap;
             result.used += header.prev_cap as isize;
         }
 
@@ -254,20 +239,17 @@ impl Arena {
 
 // safe: Arena is not Clone.
 unsafe impl Alloc for Arena {
-    #[inline]
     unsafe fn alloc_nonzero(&self, layout: Layout) -> Option<NonNull<u8>> {
         debug_assert!(layout.size() > 0);
 
-        if layout.align() > ALIGN_MAX {
-            return None;
-        }
-
-        let cap  = self.cap.get();
+        let cap = self.cap.get();
         let used = self.used.get();
 
+        // can't overflow cause `used <= BLOCK_SIZE_MAX`.
+        // and `align <= 2^63`.
         let aligned_used = crate::num::ceil_to_multiple_pow2(used, layout.align());
 
-        // can't overflow cause `used <= cap <= CAP_MAX`
+        // can't overflow cause `used <= BLOCK_SIZE_MAX`.
         // and `size <= isize::MAX`.
         if aligned_used + layout.size() <= cap {
             let result = unsafe {
@@ -280,17 +262,16 @@ unsafe impl Alloc for Arena {
                 // `block` is always `NonNull`, so any valid derived pointer is also `NonNull`.
                 NonNull::new_unchecked(ptr)
             };
-            debug_assert!(result.as_ptr() as usize % layout.align() == 0);
+            debug_assert!(result.as_ptr() as usize & (layout.align() - 1) == 0);
 
             self.used.set(aligned_used + layout.size());
 
             crate::asan::unpoison(result.as_ptr(), layout.size());
 
-            Some(result)
+            return Some(result);
         }
         else {
-            // layout.align() <= MAX_ALIGN.
-            unsafe { self.alloc_slow_path(layout) }
+            return unsafe { self.alloc_slow_path(layout) };
         }
     }
 
@@ -299,7 +280,6 @@ unsafe impl Alloc for Arena {
         crate::asan::poison(ptr.as_ptr(), layout.size());
     }
 
-    #[inline]
     unsafe fn try_realloc_nonzero(&self, ptr: NonNull<u8>, old_layout: Layout, new_layout: Layout) -> Result<(), ()> {
         debug_assert!(old_layout.size() > 0);
         debug_assert!(new_layout.size() > 0);
@@ -312,7 +292,7 @@ unsafe impl Alloc for Arena {
         let block = self.block.get().as_ptr() as usize;
 
         let alloc_end = ptr + old_size;
-        let used_end  = block + self.used.get();
+        let used_end = block + self.used.get();
         if alloc_end != used_end {
             return Err(())
         }
@@ -679,19 +659,5 @@ mod tests {
         assert_eq!(arena.current_block_used(), 64);
     }
     */
-
-    #[test]
-    fn arena_max_align() {
-        let arena = Arena::new();
-
-        let failed = arena.alloc(Layout::from_size_align(1, 2*ALIGN_MAX).unwrap());
-        assert!(failed.is_none());
-
-        let succeeded = arena.alloc(Layout::from_size_align(1, ALIGN_MAX).unwrap());
-        assert!(succeeded.is_some());
-
-        let failed = arena.alloc(Layout::from_size_align(1, 2*ALIGN_MAX).unwrap());
-        assert!(failed.is_none());
-    }
 }
 
