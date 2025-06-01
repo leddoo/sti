@@ -1,7 +1,7 @@
 pub use core::num::*;
 
 
-#[derive(Clone, Copy, PartialEq, Eq, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct NonMaxU32(NonZeroU32);
 
 impl NonMaxU32 {
@@ -31,6 +31,13 @@ impl crate::cmp::PartialOrd for NonMaxU32 {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         self.get().partial_cmp(&other.get())
+    }
+}
+
+impl crate::cmp::Ord for NonMaxU32 {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.get().cmp(&other.get())
     }
 }
 
@@ -86,6 +93,24 @@ mod tests {
         assert_eq!(max.get(), u32::MAX - 1);
 
         assert!(NonMaxU32::new(u32::MAX).is_none());
+    }
+
+    #[test]
+    fn non_max_u32_ord() {
+        use core::cmp::Ordering;
+
+        let zero = NonMaxU32::new(0).unwrap();
+        let one = NonMaxU32::new(1).unwrap();
+
+        assert!(zero.partial_cmp(&zero).unwrap() == Ordering::Equal);
+        assert!(zero.partial_cmp(&one).unwrap() == Ordering::Less);
+        assert!(one.partial_cmp(&zero).unwrap() == Ordering::Greater);
+        assert!(one.partial_cmp(&one).unwrap() == Ordering::Equal);
+
+        assert!(zero.cmp(&zero) == Ordering::Equal);
+        assert!(zero.cmp(&one) == Ordering::Less);
+        assert!(one.cmp(&zero) == Ordering::Greater);
+        assert!(one.cmp(&one) == Ordering::Equal);
     }
 }
 
