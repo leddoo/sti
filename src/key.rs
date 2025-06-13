@@ -133,7 +133,7 @@ unsafe impl Key for NonZeroU32 {
 unsafe impl Key for NonMaxU32 {
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
-    const MAX_USIZE: usize = NonMaxU32::MAX.get() as usize;
+    const MAX_USIZE: usize = u32::MAX as usize - 1;
 
     #[inline(always)]
     unsafe fn from_usize_unck(value: usize) -> Self {
